@@ -1,0 +1,69 @@
+licoreria/
+├── assets/
+│   ├── css/
+│   │   ├── dashgum/
+│   │   └── style.css
+│   ├── js/
+│   │   └── custom.js
+│   ├── img/
+│   └── fonts/
+├── config/
+│   └── database.php
+├── controllers/
+│   ├── AuthController.php
+│   ├── ProductoController.php
+│   ├── ClienteController.php
+│   ├── DashboardController.php
+│   ├── VentaController.php
+│   ├── ProveedorController.php
+│   ├── CategoriaController.php
+│   └── UsuarioController.php
+├── helpers/
+│   └── functions.php
+├── models/
+│   ├── ProductoModel.php
+│   ├── ClienteModel.php
+│   ├── VentaModel.php
+│   ├── ProveedorModel.php
+│   ├── CategoriaModel.php
+│   ├── UsuarioModel.php
+│   └── Database.php
+├── views/
+│   ├── layouts/
+│   │   ├── header.php
+│   │   ├── footer.php
+│   │   └──sidebar.php
+│   ├── auth/
+│   │   ├── login.php
+│   ├── productos/
+│   │   ├── index.php
+│   │   ├── crear.php
+│   │   ├── editar.php
+│   │   └── mostrar.php
+│   ├── clientes/
+│   │   ├── index.php
+│   │   ├── crear.php
+│   │   ├── editar.php
+│   │   └── mostrar.php
+│   ├── ventas/
+│   │   ├── index.php
+│   │   ├── crear.php
+│   │   └── mostrar.php
+│   ├── proveedores/
+│   │   ├── index.php
+│   │   ├── crear.php
+│   │   ├── editar.php
+│   │   └── mostrar.php
+│   ├── categorias/
+│   │   ├── index.php
+│   │   ├── crear.php
+│   │   ├── editar.php
+│   │   └── mostrar.php
+│   ├── usuarios/
+│   │   ├── index.php
+│   │   ├── crear.php
+│   │   ├── editar.php
+│   │   └── mostrar.php
+│   └── dashboard.php
+├── .htaccess
+└── index.php
