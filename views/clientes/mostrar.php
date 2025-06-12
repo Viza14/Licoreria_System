@@ -71,9 +71,11 @@
                         <div class="form-group">
                             <div class="col-sm-offset-2 col-sm-10">
                                 <a href="<?= BASE_URL ?>index.php?action=clientes" class="btn btn-default"><i class="fa fa-arrow-left"></i> Volver</a>
+                                <?php if ($_SESSION['user_rol'] != 2): ?>
                                 <a href="<?= BASE_URL ?>index.php?action=clientes&method=editar&cedula=<?= $cliente['cedula'] ?>" class="btn btn-primary">
                                     <i class="fa fa-edit"></i> Editar
                                 </a>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
