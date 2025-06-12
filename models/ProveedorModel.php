@@ -158,4 +158,12 @@ class ProveedorModel
 
         return false;
     }
+
+    public function obtenerProveedoresActivos()
+    {
+        $query = "SELECT * FROM proveedores WHERE id_estatus = 1";
+        $stmt = $this->db->prepare($query);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }

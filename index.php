@@ -15,6 +15,9 @@ require_once ROOT_PATH . 'controllers/ProveedorController.php';
 require_once ROOT_PATH . 'controllers/ProductoProveedorController.php';
 require_once ROOT_PATH . 'controllers/ClienteController.php';
 require_once ROOT_PATH . 'controllers/ProductoController.php';
+require_once ROOT_PATH . 'controllers/MovimientoInventarioController.php';
+require_once ROOT_PATH . 'controllers/CategoriaController.php';
+require_once ROOT_PATH . 'controllers/TipoCategoriaController.php';
 
 // 3. Iniciar sesión con configuración segura
 if (session_status() === PHP_SESSION_NONE) {
@@ -162,6 +165,7 @@ try {
                 $controller->index();
             }
             break;
+
         case 'productos':
             $controller = new ProductoController();
 
@@ -179,6 +183,87 @@ try {
             } elseif ($method === 'mostrar' && $id) {
                 $controller->mostrar($id);
             } elseif ($method === 'cambiarEstado' && $id) {
+                $controller->cambiarEstado($id);
+            } elseif ($method === 'registrarEntrada') {
+                $controller->registrarEntrada();
+            } else {
+                $controller->index();
+            }
+            break;
+
+        case 'movimientos-inventario':
+            if (!isset($_SESSION['user_id'])) {
+                header("Location: " . BASE_URL . "index.php?action=login");
+                exit();
+            }
+            $controller = new MovimientoInventarioController();
+            $method = $_GET['method'] ?? 'index';
+            $id = $_GET['id'] ?? null;
+
+            if ($method === 'mostrar' && $id) {
+                $controller->mostrar($id);
+            } elseif ($method === 'porProducto' && $id) {
+                $controller->porProducto($id);
+            } elseif ($method === 'resumen') {
+                $controller->resumen();
+            } else {
+                $controller->index();
+            }
+            break;
+
+        case 'categorias':
+            try {
+                $controller = new CategoriaController();
+                $method = $_GET['method'] ?? 'index';
+                $id = $_GET['id'] ?? null;
+
+                // Métodos sin parámetro
+                if (in_array($method, ['index', 'crear', 'guardar'])) {
+                    $controller->{$method}();
+                }
+                // Métodos con parámetro ID
+                elseif (in_array($method, ['editar', 'actualizar', 'mostrar', 'cambiarEstado']) && $id) {
+                    $controller->{$method}($id);
+                }
+                // Método no reconocido
+                else {
+                    throw new Exception("Método no válido");
+                }
+            } catch (Exception $e) {
+                error_log("Error en categorías: " . $e->getMessage());
+                $_SESSION['error'] = [
+                    'title' => 'Error',
+                    'text' => 'Ocurrió un error al procesar la solicitud',
+                    'icon' => 'error'
+                ];
+                header("Location: " . BASE_URL . "index.php?action=categorias");
+                exit();
+            }
+            break;
+
+        case 'tipos-categoria':
+            if (!isset($_SESSION['user_id'])) {
+                header("Location: " . BASE_URL . "index.php?action=login");
+                exit();
+            }
+            $controller = new TipoCategoriaController();
+            $method = $_GET['method'] ?? 'index';
+
+            if ($method === 'crear') {
+                $controller->crear();
+            } elseif ($method === 'guardar') {
+                $controller->guardar();
+            } elseif ($method === 'editar') {
+                $id = $_GET['id'] ?? 0;
+                $controller->editar($id);
+            } elseif ($method === 'actualizar') {
+                $id = $_GET['id'] ?? 0;
+                $controller->actualizar($id);
+            } elseif ($method === 'mostrar') {
+                $id = $_GET['id'] ?? 0;
+                $controller->mostrar($id);
+            } elseif ($method === 'cambiarEstado') {
+                $id = $_GET['id'] ?? 0;
                 $controller->cambiarEstado($id);
             } else {
                 $controller->index();

@@ -159,6 +159,18 @@
                 </li>
             <?php endif; ?>
 
+            <li class="sub-menu">
+                <a href="javascript:;">
+                    <i class="fa fa-exchange"></i>
+                    <span>Movimientos</span>
+                </a>
+                <ul class="sub">
+                    <li><a href="<?= BASE_URL ?>index.php?action=movimientos-inventario">Historial</a></li>
+                    <li><a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=resumen">Resumen</a></li>
+<!--                     <li><a href="<?= BASE_URL ?>index.php?action=productos&method=registrarEntrada">Entrada Productos</a></li> -->
+                </ul>
+            </li>
+
             <!-- Menú Configuración -->
             <?php if ($_SESSION['user_rol'] != 2): ?> <!-- Asumiendo que 2 es el rol de empleado -->
                 <li class="sub-menu">

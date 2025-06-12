@@ -1,5 +1,5 @@
 <?php
-class CategoriaModel
+class TipoCategoriaModel
 {
     private $db;
     private $errors = [];
@@ -16,34 +16,35 @@ class CategoriaModel
         return $this->errors;
     }
 
-    public function obtenerTodasCategorias()
+    public function obtenerTodosTiposCategoria()
     {
-        $query = "SELECT c.*, t.nombre as tipo_categoria, e.nombre as estatus 
-              FROM categorias c
-              JOIN tipos_categoria t ON c.id_tipo_categoria = t.id
-              JOIN estatus e ON c.id_estatus = e.id";  // ← Correcto: usa c.id_estatus
+        $query = "SELECT t.*, e.nombre as estatus 
+                 FROM tipos_categoria t
+                 JOIN estatus e ON t.id_estatus = e.id";
         $stmt = $this->db->prepare($query);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function obtenerCategoriaPorId($id)
+    public function obtenerTipoCategoriaPorId($id)
     {
-        $query = "SELECT * FROM categorias WHERE id = :id";
+        $query = "SELECT t.*, e.nombre as estatus 
+                 FROM tipos_categoria t
+                 JOIN estatus e ON t.id_estatus = e.id
+                 WHERE t.id = :id";
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(":id", $id);
         $stmt->execute();
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    public function crearCategoria($nombre, $id_tipo_categoria, $id_estatus)
+    public function crearTipoCategoria($nombre, $id_estatus)
     {
         try {
-            $query = "INSERT INTO categorias (nombre, id_tipo_categoria, id_estatus) 
-                      VALUES (:nombre, :id_tipo_categoria, :id_estatus)";
+            $query = "INSERT INTO tipos_categoria (nombre, id_estatus) 
+                      VALUES (:nombre, :id_estatus)";
             $stmt = $this->db->prepare($query);
             $stmt->bindParam(":nombre", $nombre);
-            $stmt->bindParam(":id_tipo_categoria", $id_tipo_categoria);
             $stmt->bindParam(":id_estatus", $id_estatus);
             return $stmt->execute();
         } catch (PDOException $e) {
@@ -52,17 +53,15 @@ class CategoriaModel
         }
     }
 
-    public function actualizarCategoria($id, $nombre, $id_tipo_categoria, $id_estatus)
+    public function actualizarTipoCategoria($id, $nombre, $id_estatus)
     {
         try {
-            $query = "UPDATE categorias SET 
+            $query = "UPDATE tipos_categoria SET 
                       nombre = :nombre, 
-                      id_tipo_categoria = :id_tipo_categoria,
                       id_estatus = :id_estatus
                       WHERE id = :id";
             $stmt = $this->db->prepare($query);
             $stmt->bindParam(":nombre", $nombre);
-            $stmt->bindParam(":id_tipo_categoria", $id_tipo_categoria);
             $stmt->bindParam(":id_estatus", $id_estatus);
             $stmt->bindParam(":id", $id);
             return $stmt->execute();
@@ -75,7 +74,7 @@ class CategoriaModel
     public function cambiarEstado($id, $nuevoEstado)
     {
         try {
-            $query = "UPDATE categorias SET id_estatus = :estatus WHERE id = :id";
+            $query = "UPDATE tipos_categoria SET id_estatus = :estatus WHERE id = :id";
             $stmt = $this->db->prepare($query);
             $stmt->bindParam(":estatus", $nuevoEstado);
             $stmt->bindParam(":id", $id);
@@ -86,19 +85,11 @@ class CategoriaModel
         }
     }
 
-    public function obtenerTiposCategoria()
-    {
-        $query = "SELECT * FROM tipos_categoria WHERE id_estatus = 1";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    // En CategoriaModel.php
-    public function existeCategoria($nombre, $id = null)
+    // En TipoCategoriaModel.php
+    public function existeTipoCategoria($nombre, $id = null)
     {
         try {
-            $query = "SELECT COUNT(*) as count FROM categorias WHERE nombre = :nombre";
+            $query = "SELECT COUNT(*) as count FROM tipos_categoria WHERE nombre = :nombre";
             if ($id !== null) {
                 $query .= " AND id != :id";
             }

@@ -1,39 +1,33 @@
 <?php
-class CategoriaController
+class TipoCategoriaController
 {
     private $model;
 
     public function __construct()
     {
-        require_once ROOT_PATH . 'models/CategoriaModel.php';
-        $this->model = new CategoriaModel();
+        require_once ROOT_PATH . 'models/TipoCategoriaModel.php';
+        $this->model = new TipoCategoriaModel();
     }
 
     public function index()
     {
         $this->checkSession();
-        $categorias = $this->model->obtenerTodasCategorias();
-        $tipos = $this->model->obtenerTiposCategoria();
-        $this->loadView('categorias/index', [
-            'categorias' => $categorias,
-            'tipos' => $tipos
-        ]);
+        $tipos = $this->model->obtenerTodosTiposCategoria();
+        $this->loadView('tipos_categoria/index', ['tipos' => $tipos]);
     }
 
     public function crear()
     {
         $this->checkSession();
-        $tipos = $this->model->obtenerTiposCategoria();
-        $this->loadView('categorias/crear', ['tipos' => $tipos]);
+        $this->loadView('tipos_categoria/crear');
     }
 
-    // En CategoriaController.php - método guardar()
+    // En TipoCategoriaController.php - método guardar()
     public function guardar()
     {
         $this->checkSession();
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $nombre = trim($_POST['nombre']);
-            $id_tipo_categoria = $_POST['id_tipo_categoria'];
             $id_estatus = $_POST['id_estatus'];
 
             if (empty($nombre)) {
@@ -42,37 +36,37 @@ class CategoriaController
                     'text' => 'El nombre no puede estar vacío',
                     'icon' => 'error'
                 ];
-                $this->redirect('categorias&method=crear');
+                $this->redirect('tipos-categoria&method=crear');
                 return;
             }
 
-            // Verificar si ya existe una categoría con el mismo nombre
-            if ($this->model->existeCategoria($nombre)) {
+            // Verificar si ya existe un tipo con el mismo nombre
+            if ($this->model->existeTipoCategoria($nombre)) {
                 $_SESSION['error'] = [
                     'title' => 'Error',
-                    'text' => 'Ya existe una categoría con ese nombre',
+                    'text' => 'Ya existe un tipo de categoría con ese nombre',
                     'icon' => 'error'
                 ];
                 $_SESSION['form_data'] = $_POST; // Para mantener los datos del formulario
-                $this->redirect('categorias&method=crear');
+                $this->redirect('tipos-categoria&method=crear');
                 return;
             }
 
-            if ($this->model->crearCategoria($nombre, $id_tipo_categoria, $id_estatus)) {
+            if ($this->model->crearTipoCategoria($nombre, $id_estatus)) {
                 $_SESSION['mensaje'] = [
                     'title' => 'Éxito',
-                    'text' => 'Categoría creada exitosamente',
+                    'text' => 'Tipo de categoría creado exitosamente',
                     'icon' => 'success'
                 ];
-                $this->redirect('categorias');
+                $this->redirect('tipos-categoria');
             } else {
                 $_SESSION['error'] = [
                     'title' => 'Error',
-                    'text' => 'Error al crear la categoría: ' . implode(', ', $this->model->getErrors()),
+                    'text' => 'Error al crear el tipo de categoría: ' . implode(', ', $this->model->getErrors()),
                     'icon' => 'error'
                 ];
                 $_SESSION['form_data'] = $_POST; // Para mantener los datos del formulario
-                $this->redirect('categorias&method=crear');
+                $this->redirect('tipos-categoria&method=crear');
             }
         }
     }
@@ -80,29 +74,24 @@ class CategoriaController
     public function editar($id)
     {
         $this->checkSession();
-        $categoria = $this->model->obtenerCategoriaPorId($id);
-        if (!$categoria) {
+        $tipo = $this->model->obtenerTipoCategoriaPorId($id);
+        if (!$tipo) {
             $_SESSION['error'] = [
                 'title' => 'Error',
-                'text' => 'Categoría no encontrada',
+                'text' => 'Tipo de categoría no encontrado',
                 'icon' => 'error'
             ];
-            $this->redirect('categorias');
+            $this->redirect('tipos-categoria');
         }
-        $tipos = $this->model->obtenerTiposCategoria();
-        $this->loadView('categorias/editar', [
-            'categoria' => $categoria,
-            'tipos' => $tipos
-        ]);
+        $this->loadView('tipos_categoria/editar', ['tipo' => $tipo]);
     }
 
-    // En CategoriaController.php - método actualizar()
+    // En TipoCategoriaController.php - método actualizar()
     public function actualizar($id)
     {
         $this->checkSession();
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $nombre = trim($_POST['nombre']);
-            $id_tipo_categoria = $_POST['id_tipo_categoria'];
             $id_estatus = $_POST['id_estatus'];
 
             if (empty($nombre)) {
@@ -111,74 +100,74 @@ class CategoriaController
                     'text' => 'El nombre no puede estar vacío',
                     'icon' => 'error'
                 ];
-                $this->redirect('categorias&method=editar&id=' . $id);
+                $this->redirect('tipos-categoria&method=editar&id=' . $id);
                 return;
             }
 
-            // Verificar si ya existe otra categoría con el mismo nombre
-            if ($this->model->existeCategoria($nombre, $id)) {
+            // Verificar si ya existe otro tipo con el mismo nombre
+            if ($this->model->existeTipoCategoria($nombre, $id)) {
                 $_SESSION['error'] = [
                     'title' => 'Error',
-                    'text' => 'Ya existe otra categoría con ese nombre',
+                    'text' => 'Ya existe otro tipo de categoría con ese nombre',
                     'icon' => 'error'
                 ];
-                $this->redirect('categorias&method=editar&id=' . $id);
+                $this->redirect('tipos-categoria&method=editar&id=' . $id);
                 return;
             }
 
-            if ($this->model->actualizarCategoria($id, $nombre, $id_tipo_categoria, $id_estatus)) {
+            if ($this->model->actualizarTipoCategoria($id, $nombre, $id_estatus)) {
                 $_SESSION['mensaje'] = [
                     'title' => 'Éxito',
-                    'text' => 'Categoría actualizada exitosamente',
+                    'text' => 'Tipo de categoría actualizado exitosamente',
                     'icon' => 'success'
                 ];
             } else {
                 $_SESSION['error'] = [
                     'title' => 'Error',
-                    'text' => 'Error al actualizar la categoría: ' . implode(', ', $this->model->getErrors()),
+                    'text' => 'Error al actualizar el tipo de categoría: ' . implode(', ', $this->model->getErrors()),
                     'icon' => 'error'
                 ];
             }
-            $this->redirect('categorias');
+            $this->redirect('tipos-categoria');
         }
     }
 
     public function mostrar($id)
     {
         $this->checkSession();
-        $categoria = $this->model->obtenerCategoriaPorId($id);
-        if (!$categoria) {
+        $tipo = $this->model->obtenerTipoCategoriaPorId($id);
+        if (!$tipo) {
             $_SESSION['error'] = [
                 'title' => 'Error',
-                'text' => 'Categoría no encontrada',
+                'text' => 'Tipo de categoría no encontrado',
                 'icon' => 'error'
             ];
-            $this->redirect('categorias');
+            $this->redirect('tipos-categoria');
         }
-        $this->loadView('categorias/mostrar', ['categoria' => $categoria]);
+        $this->loadView('tipos_categoria/mostrar', ['tipo' => $tipo]);
     }
 
     public function cambiarEstado($id)
     {
         $this->checkSession();
 
-        $categoria = $this->model->obtenerCategoriaPorId($id);
-        if (!$categoria) {
+        $tipo = $this->model->obtenerTipoCategoriaPorId($id);
+        if (!$tipo) {
             $_SESSION['error'] = [
                 'title' => 'Error',
-                'text' => 'Categoría no encontrada',
+                'text' => 'Tipo de categoría no encontrado',
                 'icon' => 'error'
             ];
-            $this->redirect('categorias');
+            $this->redirect('tipos-categoria');
         }
 
-        $nuevoEstado = $categoria['id_estatus'] == 1 ? 2 : 1;
-        $estadoTexto = $nuevoEstado == 1 ? 'activada' : 'desactivada';
+        $nuevoEstado = $tipo['id_estatus'] == 1 ? 2 : 1;
+        $estadoTexto = $nuevoEstado == 1 ? 'activado' : 'desactivado';
 
         if ($this->model->cambiarEstado($id, $nuevoEstado)) {
             $_SESSION['mensaje'] = [
                 'title' => 'Éxito',
-                'text' => "Categoría $estadoTexto correctamente",
+                'text' => "Tipo de categoría $estadoTexto correctamente",
                 'icon' => 'success'
             ];
         } else {
@@ -189,10 +178,9 @@ class CategoriaController
             ];
         }
 
-        $this->redirect('categorias');
+        $this->redirect('tipos-categoria');
     }
 
-    // Métodos auxiliares
     private function checkSession()
     {
         if (!isset($_SESSION['user_id'])) {

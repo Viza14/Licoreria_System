@@ -16,17 +16,28 @@ class ProductoModel
         return $this->errors;
     }
 
-    public function obtenerTodosProductos()
+    public function obtenerTodosProductos($soloActivos = true)
     {
         $query = "SELECT p.*, c.nombre as categoria, e.nombre as estatus, tc.nombre as tipo_categoria
-                  FROM producto p
-                  JOIN categorias c ON p.id_categoria = c.id
-                  JOIN estatus e ON p.id_estatus = e.id
-                  JOIN tipos_categoria tc ON c.id_tipo_categoria = tc.id";
+              FROM producto p
+              JOIN categorias c ON p.id_categoria = c.id
+              JOIN estatus e ON p.id_estatus = e.id
+              JOIN tipos_categoria tc ON c.id_tipo_categoria = tc.id";
+
+        if ($soloActivos) {
+            $query .= " WHERE p.id_estatus = 1";
+        }
+
         $stmt = $this->db->prepare($query);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    public function obtenerProductosActivos()
+    {
+        return $this->obtenerTodosProductos(true);
+    }
+
 
     public function obtenerProductoPorId($id)
     {
@@ -153,6 +164,51 @@ class ProductoModel
         } catch (PDOException $e) {
             $this->errors[] = "Error al contar productos: " . $e->getMessage();
             return 0;
+        }
+    }
+
+    public function registrarEntradaProducto($id_producto, $cantidad, $precio_compra, $cedula_proveedor, $id_usuario, $observaciones = null)
+    {
+        try {
+            $this->db->beginTransaction();
+
+            // 1. Verificar que el producto esté activo
+            $query = "SELECT id_estatus FROM producto WHERE id = :id_producto";
+            $stmt = $this->db->prepare($query);
+            $stmt->bindParam(":id_producto", $id_producto);
+            $stmt->execute();
+            $producto = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$producto || $producto['id_estatus'] != 1) {
+                throw new PDOException("No se puede registrar entrada para un producto inactivo");
+            }
+
+            // 2. Registrar la entrada en movimientos_inventario
+            $query = "INSERT INTO movimientos_inventario 
+                 (id_producto, tipo_movimiento, cantidad, precio_unitario, id_usuario, observaciones) 
+                 VALUES (:id_producto, 'ENTRADA', :cantidad, :precio_compra, :id_usuario, :observaciones)";
+
+            $stmt = $this->db->prepare($query);
+            $stmt->bindParam(":id_producto", $id_producto);
+            $stmt->bindParam(":cantidad", $cantidad);
+            $stmt->bindParam(":precio_compra", $precio_compra);
+            $stmt->bindParam(":id_usuario", $id_usuario);
+            $stmt->bindParam(":observaciones", $observaciones);
+            $stmt->execute();
+
+            // 3. Actualizar el stock del producto
+            $query = "UPDATE producto SET cantidad = cantidad + :cantidad WHERE id = :id_producto";
+            $stmt = $this->db->prepare($query);
+            $stmt->bindParam(":cantidad", $cantidad);
+            $stmt->bindParam(":id_producto", $id_producto);
+            $stmt->execute();
+
+            $this->db->commit();
+            return true;
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            $this->errors[] = "Error al registrar entrada: " . $e->getMessage();
+            return false;
         }
     }
 }
