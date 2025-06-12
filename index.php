@@ -1,21 +1,26 @@
 <?php
-// 1. Definir constantes básicas (sin cambios)
+// 1. Definir constantes básicas
 define('BASE_URL', 'http://localhost/licoreria/');
 define('ROOT_PATH', __DIR__ . DIRECTORY_SEPARATOR);
 
-// 2. Cargar archivos esenciales (versión original)
+// 2. Cargar archivos esenciales
 require_once ROOT_PATH . 'config/database.php';
 require_once ROOT_PATH . 'models/UsuarioModel.php';
 require_once ROOT_PATH . 'models/ProductoModel.php';
+require_once ROOT_PATH . 'models/ProveedorModel.php';
 require_once ROOT_PATH . 'controllers/AuthController.php';
 require_once ROOT_PATH . 'controllers/DashboardController.php';
 require_once ROOT_PATH . 'controllers/UsuarioController.php';
+require_once ROOT_PATH . 'controllers/ProveedorController.php';
+require_once ROOT_PATH . 'controllers/ProductoProveedorController.php';
+require_once ROOT_PATH . 'controllers/ClienteController.php';
+require_once ROOT_PATH . 'controllers/ProductoController.php';
 
 // 3. Iniciar sesión con configuración segura
 if (session_status() === PHP_SESSION_NONE) {
     session_start([
-        'cookie_lifetime' => 86400, // 1 día
-        'cookie_secure' => false, // Cambiar a true en producción con HTTPS
+        'cookie_lifetime' => 86400,
+        'cookie_secure' => false,
         'cookie_httponly' => true,
         'use_strict_mode' => true
     ]);
@@ -28,16 +33,16 @@ if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > 
     header("Location: " . BASE_URL . "index.php?action=login");
     exit();
 }
-$_SESSION['last_activity'] = time(); // Actualizar tiempo de actividad
+$_SESSION['last_activity'] = time();
 
 // 5. Cabeceras para evitar caché en páginas sensibles
 if (!isset($_GET['action']) || $_GET['action'] != 'login') {
-    header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
-    header("Pragma: no-cache"); // HTTP 1.0.
-    header("Expires: 0"); // Proxies.
+    header("Cache-Control: no-cache, no-store, must-revalidate");
+    header("Pragma: no-cache");
+    header("Expires: 0");
 }
 
-// 6. Manejo de rutas (versión original mejorada)
+// 6. Manejo de rutas
 $action = $_GET['action'] ?? 'login';
 
 try {
@@ -53,7 +58,6 @@ try {
             break;
 
         case 'dashboard':
-            // Verificación de sesión más estricta
             if (!isset($_SESSION['user_id']) || !isset($_SESSION['last_activity'])) {
                 header("Location: " . BASE_URL . "index.php?action=login");
                 exit();
@@ -90,14 +94,103 @@ try {
                 $controller->index();
             }
             break;
+
+        case 'proveedores':
+            if (!isset($_SESSION['user_id'])) {
+                header("Location: " . BASE_URL . "index.php?action=login");
+                exit();
+            }
+            $controller = new ProveedorController();
+            $method = $_GET['method'] ?? 'index';
+
+            if ($method === 'crear') {
+                $controller->crear();
+            } elseif ($method === 'guardar') {
+                $controller->guardar();
+            } elseif ($method === 'editar') {
+                $id = $_GET['id'] ?? 0;
+                $controller->editar($id);
+            } elseif ($method === 'actualizar') {
+                $id = $_GET['id'] ?? 0;
+                $controller->actualizar($id);
+            } elseif ($method === 'mostrar') {
+                $id = $_GET['id'] ?? 0;
+                $controller->mostrar($id);
+            } elseif ($method === 'cambiarEstado') {
+                $id = $_GET['id'] ?? 0;
+                $controller->cambiarEstado($id);
+            } else {
+                $controller->index();
+            }
+            break;
+
+        case 'producto-proveedor':
+            if (!isset($_SESSION['user_id'])) {
+                header("Location: " . BASE_URL . "index.php?action=login");
+                exit();
+            }
+
+            error_log("Enrutador: Acción producto-proveedor detectada");
+
+            $controller = new ProductoProveedorController();
+            $method = $_GET['method'] ?? 'index';
+
+            error_log("Método a ejecutar: " . $method);
+
+            if (method_exists($controller, $method)) {
+                if ($method === 'crear' || $method === 'guardar') {
+                    $controller->$method();
+                } elseif (in_array($method, ['editar', 'actualizar', 'mostrar', 'cambiarEstado'])) {
+                    $id = $_GET['id'] ?? 0;
+                    $controller->$method($id);
+                } else {
+                    $controller->index();
+                }
+            } else {
+                $controller->index();
+            }
+            break;
+        case 'clientes':
+            $controller = new ClienteController();
+            $method = $_GET['method'] ?? 'index';
+            $param = $_GET['cedula'] ?? null;
+            if ($method === 'crear' || $method === 'guardar') {
+                $controller->$method();
+            } elseif ($method === 'editar' || $method === 'actualizar' || $method === 'mostrar' || $method === 'cambiarEstado') {
+                $controller->$method($param);
+            } else {
+                $controller->index();
+            }
+            break;
+        case 'productos':
+            $controller = new ProductoController();
+
+            $method = $_GET['method'] ?? 'index';
+            $id = $_GET['id'] ?? null;
+
+            if ($method === 'crear') {
+                $controller->crear();
+            } elseif ($method === 'guardar') {
+                $controller->guardar();
+            } elseif ($method === 'editar' && $id) {
+                $controller->editar($id);
+            } elseif ($method === 'actualizar' && $id) {
+                $controller->actualizar($id);
+            } elseif ($method === 'mostrar' && $id) {
+                $controller->mostrar($id);
+            } elseif ($method === 'cambiarEstado' && $id) {
+                $controller->cambiarEstado($id);
+            } else {
+                $controller->index();
+            }
+            break;
+
         default:
-            // Página de error 404 más amigable
             header("HTTP/1.0 404 Not Found");
             include ROOT_PATH . 'views/errors/404.php';
             exit();
     }
 } catch (Exception $e) {
-    // Manejo de error básico pero más limpio
     error_log('Error en la aplicación: ' . $e->getMessage());
     header("Location: " . BASE_URL . "index.php?action=login");
     exit();

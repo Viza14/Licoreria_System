@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 09-06-2025 a las 03:59:54
--- Versión del servidor: 10.4.32-MariaDB
--- Versión de PHP: 8.0.30
+-- Tiempo de generación: 10-06-2025 a las 15:49:05
+-- Versión del servidor: 10.4.28-MariaDB
+-- Versión de PHP: 8.2.4
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -344,6 +344,17 @@ CREATE TABLE `proveedores` (
   `id_estatus` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
+--
+-- Volcado de datos para la tabla `proveedores`
+--
+
+INSERT INTO `proveedores` (`cedula`, `id_simbolo_cedula`, `nombre`, `telefono`, `direccion`, `id_estatus`) VALUES
+('11223344', 1, 'Bebidas y Licores Premium', '04261234567', 'Centro Comercial Metrópolis, Local 12', 1),
+('12345678', 2, 'Distribuidora de Snacks Rápidos', '04121234567', 'Urbanización La Floresta, Calle 2', 1),
+('123456789', 4, 'Distribuidora de Bebidas Nacionales C.A.', '04141234567', 'Av. Principal, Zona Industrial, Valencia', 1),
+('98765432', 1, 'Licores del Caribe', '04241234567', 'Calle Comercio #123, Naguanagua', 1),
+('987654321', 4, 'Importadora de Vinos Internacionales S.A.', '04161234567', 'Av. Bolívar, Edificio Torreón, Piso 5', 1);
+
 -- --------------------------------------------------------
 
 --
@@ -445,7 +456,7 @@ CREATE TABLE `usuarios` (
 --
 
 INSERT INTO `usuarios` (`id`, `cedula`, `id_simbolo_cedula`, `nombres`, `apellidos`, `telefono`, `direccion`, `user`, `password`, `id_rol`, `id_estatus`, `ultimo_inicio_sesion`) VALUES
-(1, '31117854', 1, 'Moises', 'Vizamon', '04125050555', 'Naguanagua', 'admin', '$2y$10$68ac78C.jB5jEQuwNBEvJOy7wEu.3X2UbEKwLtEqBix6LQxnNnSpW', 1, 1, '2025-06-08 20:55:53'),
+(1, '31117854', 1, 'Moises', 'Vizamon', '04125050555', 'Naguanagua', 'admin', '$2y$10$68ac78C.jB5jEQuwNBEvJOy7wEu.3X2UbEKwLtEqBix6LQxnNnSpW', 1, 1, '2025-06-10 09:37:16'),
 (2, '30330300', 1, 'Maria', 'Teran', '0414123457', 'Valencia', 'empleado', '$2y$10$InP6m5HokejhvGmvTg9YnuPy14zAy/EB5LKRxv69EndgVdmuf0KMm', 2, 1, '2025-06-08 21:00:21'),
 (4, '16579782', 1, 'Angel', 'Perez', '04125030223', 'Valencia', 'Angel123', '$2y$10$l8ILNvg5AQAUliKoN87M8exnKrXvOecoAqMZR/OJKH3L0oGgHXhjW', 2, 1, NULL);
 

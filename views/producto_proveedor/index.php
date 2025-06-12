@@ -4,10 +4,10 @@
         <!--breadcrumbs start-->
         <div class="row">
             <div class="col-lg-12">
-                <h3 class="page-header"><i class="fa fa-beer"></i> Gestión de Productos</h3>
+                <h3 class="page-header"><i class="fa fa-link"></i> Relaciones Producto-Proveedor</h3>
                 <ol class="breadcrumb">
                     <li><i class="fa fa-home"></i><a href="<?php echo BASE_URL; ?>">Inicio</a></li>
-                    <li><i class="fa fa-beer"></i> Productos</li>
+                    <li><i class="fa fa-link"></i> Producto-Proveedor</li>
                 </ol>
             </div>
         </div>
@@ -17,13 +17,13 @@
             <div class="col-lg-12">
                 <section class="panel">
                     <header class="panel-heading">
-                        Listado de Productos
+                        Listado de Relaciones
                         <div class="pull-right">
                             <button class="btn btn-info btn-xs" data-toggle="modal" data-target="#filtrosModal">
                                 <i class="fa fa-filter"></i> Filtros
                             </button>
-                            <a href="<?php echo BASE_URL; ?>index.php?action=productos&method=crear" class="btn btn-primary btn-xs">
-                                <i class="fa fa-plus"></i> Nuevo Producto
+                            <a href="<?php echo BASE_URL; ?>index.php?action=producto-proveedor&method=crear" class="btn btn-primary btn-xs">
+                                <i class="fa fa-plus"></i> Nueva Relación
                             </a>
                         </div>
                     </header>
@@ -31,48 +31,46 @@
                         <div class="form-group">
                             <div class="input-group">
                                 <span class="input-group-addon"><i class="fa fa-search"></i></span>
-                                <input type="text" id="busqueda" class="form-control" placeholder="Buscar por descripción, categoría...">
+                                <input type="text" id="busqueda" class="form-control" placeholder="Buscar por producto o proveedor...">
                             </div>
                         </div>
 
-                        <table id="tablaProductos" class="table table-striped table-advance table-hover">
+                        <table id="tablaRelaciones" class="table table-striped table-advance table-hover">
                             <thead>
                                 <tr>
-                                    <th>Descripción</th>
-                                    <th>Categoría</th>
-                                    <th>Tipo</th>
-                                    <th>Cantidad</th>
-                                    <th>Precio</th>
+                                    <th>Producto</th>
+                                    <th>Proveedor</th>
+                                    <th>Precio Compra</th>
                                     <th>Estatus</th>
+                                    <th>Última Actualización</th>
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($productos as $producto): ?>
+                                <?php foreach ($relaciones as $relacion): ?>
                                     <tr>
-                                        <td><?= htmlspecialchars($producto['descripcion']); ?></td>
-                                        <td><?= $producto['categoria']; ?></td>
-                                        <td><?= $producto['tipo_categoria']; ?></td>
-                                        <td><?= $producto['cantidad']; ?></td>
-                                        <td><?= number_format($producto['precio'], 2, ',', '.'); ?> Bs</td>
+                                        <td><?= $relacion['producto']; ?></td>
+                                        <td><?= $relacion['simbolo_proveedor'] . '-' . $relacion['cedula_proveedor'] . ' - ' . $relacion['proveedor']; ?></td>
+                                        <td><?= number_format($relacion['precio_compra'], 2); ?></td>
                                         <td>
-                                            <span class="label label-<?= $producto['estatus'] == 'Activo' ? 'success' : 'danger'; ?>">
-                                                <?= $producto['estatus']; ?>
+                                            <span class="label label-<?= $relacion['id_estatus'] == 1 ? 'success' : 'danger'; ?>">
+                                                <?= $relacion['estatus']; ?>
                                             </span>
                                         </td>
+                                        <td><?= date('d/m/Y H:i', strtotime($relacion['fecha_actualizacion'])); ?></td>
                                         <td>
                                             <div class="btn-group">
-                                                <a href="<?= BASE_URL ?>index.php?action=productos&method=mostrar&id=<?= $producto['id']; ?>"
+                                                <a href="<?= BASE_URL ?>index.php?action=producto-proveedor&method=mostrar&id=<?= $relacion['id']; ?>"
                                                     class="btn btn-success btn-xs" title="Ver">
                                                     <i class="fa fa-eye"></i>
                                                 </a>
-                                                <a href="<?= BASE_URL ?>index.php?action=productos&method=editar&id=<?= $producto['id']; ?>"
+                                                <a href="<?= BASE_URL ?>index.php?action=producto-proveedor&method=editar&id=<?= $relacion['id']; ?>"
                                                     class="btn btn-primary btn-xs" title="Editar">
                                                     <i class="fa fa-pencil"></i>
                                                 </a>
-                                                <button onclick="cambiarEstado(<?= $producto['id']; ?>, '<?= $producto['estatus']; ?>')"
-                                                    class="btn btn-<?= $producto['id_estatus'] == 1 ? 'danger' : 'success'; ?> btn-xs"
-                                                    title="<?= $producto['id_estatus'] == 1 ? 'Desactivar' : 'Activar'; ?>">
+                                                <button onclick="cambiarEstado(<?= $relacion['id']; ?>, '<?= $relacion['estatus']; ?>')"
+                                                    class="btn btn-<?= $relacion['id_estatus'] == 1 ? 'danger' : 'success'; ?> btn-xs"
+                                                    title="<?= $relacion['id_estatus'] == 1 ? 'Desactivar' : 'Activar'; ?>">
                                                     <i class="fa fa-power-off"></i>
                                                 </button>
                                             </div>
@@ -99,20 +97,12 @@
             <div class="modal-body">
                 <form id="formFiltros">
                     <div class="form-group">
-                        <label>Categoría:</label>
-                        <select class="form-control" id="filtroCategoria">
-                            <option value="">Todas las categorías</option>
-                            <?php foreach ($categorias as $categoria): ?>
-                                <option value="<?= $categoria['nombre'] ?>"><?= $categoria['nombre'] ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="form-group">
                         <label>Estatus:</label>
                         <select class="form-control" id="filtroEstatus">
                             <option value="">Todos los estatus</option>
-                            <option value="Activo">Activo</option>
-                            <option value="Inactivo">Inactivo</option>
+                            <?php foreach ($estatus as $e): ?>
+                                <option value="<?= $e['nombre'] ?>"><?= $e['nombre'] ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                 </form>
@@ -131,7 +121,7 @@
     $(document).ready(function() {
         // Mensaje cuando no hay resultados
         const sinResultados = $('<div id="sin-resultados" class="alert alert-warning text-center" style="display: none;">' +
-            '<i class="fa fa-exclamation-circle"></i> No se encontraron productos que coincidan con la búsqueda</div>');
+            '<i class="fa fa-exclamation-circle"></i> No se encontraron relaciones que coincidan con la búsqueda</div>');
         $('.panel-body').append(sinResultados);
 
         // Búsqueda en tiempo real
@@ -139,11 +129,11 @@
             const searchValue = $(this).val().trim().toLowerCase();
             let resultados = 0;
 
-            $('#tablaProductos tbody tr').each(function() {
-                const descripcion = $(this).find('td:eq(0)').text().toLowerCase();
-                const categoria = $(this).find('td:eq(1)').text().toLowerCase();
+            $('#tablaRelaciones tbody tr').each(function() {
+                const producto = $(this).find('td:eq(0)').text().toLowerCase();
+                const proveedor = $(this).find('td:eq(1)').text().toLowerCase();
 
-                const match = descripcion.includes(searchValue) || categoria.includes(searchValue);
+                const match = producto.includes(searchValue) || proveedor.includes(searchValue);
 
                 if (match) {
                     $(this).show();
@@ -163,18 +153,15 @@
 
         // Filtros avanzados
         $('#aplicarFiltros').click(function() {
-            const categoria = $('#filtroCategoria').val().toLowerCase();
             const estatus = $('#filtroEstatus').val().toLowerCase();
             let resultados = 0;
 
-            $('#tablaProductos tbody tr').each(function() {
-                const categoriaProducto = $(this).find('td:eq(1)').text().toLowerCase();
-                const estatusProducto = $(this).find('td:eq(5)').text().toLowerCase();
+            $('#tablaRelaciones tbody tr').each(function() {
+                const estatusRelacion = $(this).find('td:eq(3)').text().toLowerCase();
 
-                const matchCategoria = categoria === '' || categoriaProducto.includes(categoria);
-                const matchEstatus = estatus === '' || estatusProducto.includes(estatus);
+                const matchEstatus = estatus === '' || estatusRelacion.includes(estatus);
 
-                if (matchCategoria && matchEstatus) {
+                if (matchEstatus) {
                     $(this).show();
                     resultados++;
                 } else {
@@ -194,7 +181,7 @@
 
         $('#limpiarFiltros').click(function() {
             $('#formFiltros')[0].reset();
-            $('#tablaProductos tbody tr').show();
+            $('#tablaRelaciones tbody tr').show();
             sinResultados.hide();
         });
     });
@@ -202,7 +189,7 @@
     function cambiarEstado(id, estatusActual) {
         Swal.fire({
             title: '¿Cambiar estado?',
-            text: `El producto pasará a estar ${estatusActual === 'Activo' ? 'Inactivo' : 'Activo'}`,
+            text: `La relación pasará a estar ${estatusActual === 'Activo' ? 'Inactiva' : 'Activa'}`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#3085d6',
@@ -211,7 +198,7 @@
             cancelButtonText: 'Cancelar'
         }).then((result) => {
             if (result.isConfirmed) {
-                window.location.href = '<?= BASE_URL ?>index.php?action=productos&method=cambiarEstado&id=' + id;
+                window.location.href = '<?= BASE_URL ?>index.php?action=producto-proveedor&method=cambiarEstado&id=' + id;
             }
         });
     }

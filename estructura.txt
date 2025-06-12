@@ -17,6 +17,7 @@ licoreria/
 │   ├── VentaController.php
 │   ├── ProveedorController.php
 │   ├── CategoriaController.php
+│   ├── ProductoProveedorController.php
 │   └── UsuarioController.php
 ├── helpers/
 │   └── functions.php
@@ -25,6 +26,7 @@ licoreria/
 │   ├── ClienteModel.php
 │   ├── VentaModel.php
 │   ├── ProveedorModel.php
+│   ├── ProductoProveedorModel.php
 │   ├── CategoriaModel.php
 │   ├── UsuarioModel.php
 │   └── Database.php
@@ -50,6 +52,11 @@ licoreria/
 │   │   ├── crear.php
 │   │   └── mostrar.php
 │   ├── proveedores/
+│   │   ├── index.php
+│   │   ├── crear.php
+│   │   ├── editar.php
+│   │   └── mostrar.php
+│   ├── producto_proveedor/
 │   │   ├── index.php
 │   │   ├── crear.php
 │   │   ├── editar.php

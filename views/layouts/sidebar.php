@@ -116,8 +116,10 @@
                 </a>
                 <ul class="sub">
                     <li><a href="<?php echo BASE_URL; ?>index.php?action=productos">Lista de Productos</a></li>
-                    <li><a href="<?php echo BASE_URL; ?>index.php?action=productos&sub=nuevo">Agregar Nuevo</a></li>
-                    <li><a href="<?php echo BASE_URL; ?>index.php?action=categorias">Categorías</a></li>
+                    <?php if ($_SESSION['user_rol'] != 2): ?> <!-- Asumiendo que 2 es el rol de empleado -->
+                        <li><a href="<?php echo BASE_URL; ?>index.php?action=producto-proveedor">Producto-Proveedor</a></li>
+                        <li><a href="<?php echo BASE_URL; ?>index.php?action=categorias">Categorías</a></li>
+                    <?php endif; ?>
                 </ul>
             </li>
 
@@ -129,7 +131,9 @@
                 </a>
                 <ul class="sub">
                     <li><a href="<?php echo BASE_URL; ?>index.php?action=ventas">Nueva Venta</a></li>
-                    <li><a href="<?php echo BASE_URL; ?>index.php?action=ventas&sub=historial">Historial</a></li>
+                    <?php if ($_SESSION['user_rol'] != 2): ?> <!-- Asumiendo que 2 es el rol de empleado -->
+                        <li><a href="<?php echo BASE_URL; ?>index.php?action=ventas&sub=historial">Historial</a></li>
+                    <?php endif; ?>
                 </ul>
             </li>
 
@@ -142,28 +146,32 @@
             </li>
 
             <!-- Menú Reportes -->
-            <li class="sub-menu">
-                <a href="javascript:;">
-                    <i class="fa fa-bar-chart-o"></i>
-                    <span>Reportes</span>
-                </a>
-                <ul class="sub">
-                    <li><a href="<?php echo BASE_URL; ?>index.php?action=reportes&sub=ventas">Ventas</a></li>
-                    <li><a href="<?php echo BASE_URL; ?>index.php?action=reportes&sub=inventario">Inventario</a></li>
-                </ul>
-            </li>
+            <?php if ($_SESSION['user_rol'] != 2): ?> <!-- Asumiendo que 2 es el rol de empleado -->
+                <li class="sub-menu">
+                    <a href="javascript:;">
+                        <i class="fa fa-bar-chart-o"></i>
+                        <span>Reportes</span>
+                    </a>
+                    <ul class="sub">
+                        <li><a href="<?php echo BASE_URL; ?>index.php?action=reportes&sub=ventas">Ventas</a></li>
+                        <li><a href="<?php echo BASE_URL; ?>index.php?action=reportes&sub=inventario">Inventario</a></li>
+                    </ul>
+                </li>
+            <?php endif; ?>
 
             <!-- Menú Configuración -->
-            <li class="sub-menu">
-                <a href="javascript:;">
-                    <i class="fa fa-cogs"></i>
-                    <span>Configuración</span>
-                </a>
-                <ul class="sub">
-                    <li> <a href="<?php echo BASE_URL; ?>index.php?action=usuarios"><i class="fa fa-users"></i><span>Usuarios</span></a></li>
-                    <li><a href="<?php echo BASE_URL; ?>index.php?action=proveedores">Proveedores</a></li>
-                </ul>
-            </li>
+            <?php if ($_SESSION['user_rol'] != 2): ?> <!-- Asumiendo que 2 es el rol de empleado -->
+                <li class="sub-menu">
+                    <a href="javascript:;">
+                        <i class="fa fa-cogs"></i>
+                        <span>Configuración</span>
+                    </a>
+                    <ul class="sub">
+                        <li> <a href="<?php echo BASE_URL; ?>index.php?action=usuarios"><i class="fa fa-users"></i><span>Usuarios</span></a></li>
+                        <li><a href="<?php echo BASE_URL; ?>index.php?action=proveedores">Proveedores</a></li>
+                    </ul>
+                </li>
+            <?php endif; ?>
         </ul>
         <!-- sidebar menu end-->
     </div>

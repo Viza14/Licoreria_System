@@ -138,6 +138,30 @@
         maintainAspectRatio: false
     });
 </script>
+<script>
+    // SweetAlert para el botón de cerrar sesión
+    $(document).ready(function() {
+        $('a.logout').on('click', function(e) {
+            e.preventDefault(); // Prevenir el comportamiento por defecto
+            const logoutUrl = $(this).attr('href');
+            
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: "Estás a punto de cerrar tu sesión",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#f27c1f',
+                cancelButtonColor: '#1d2a58',
+                confirmButtonText: 'Sí, cerrar sesión',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = logoutUrl;
+                }
+            });
+        });
+    });
+</script>
 
 </body>
 </html>
