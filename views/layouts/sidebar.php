@@ -130,7 +130,7 @@
                     <span>Ventas</span>
                 </a>
                 <ul class="sub">
-                    <li><a href="<?php echo BASE_URL; ?>index.php?action=ventas">Nueva Venta</a></li>
+                    <li><a href="<?php echo BASE_URL; ?>index.php?action=ventas" >Nueva Venta</a></li>
                     <?php if ($_SESSION['user_rol'] != 2): ?> <!-- Asumiendo que 2 es el rol de empleado -->
                         <li><a href="<?php echo BASE_URL; ?>index.php?action=ventas&sub=historial">Historial</a></li>
                     <?php endif; ?>

@@ -22,12 +22,14 @@
                             <button class="btn btn-info btn-xs" data-toggle="modal" data-target="#filtrosModal">
                                 <i class="fa fa-filter"></i> Filtros
                             </button>
+                            <?php if ($_SESSION['user_rol'] != 2): ?>
                             <a href="<?php echo BASE_URL; ?>index.php?action=productos&method=crear" class="btn btn-primary btn-xs">
                                 <i class="fa fa-plus"></i> Nuevo Producto
                             </a>
                             <a href="<?= BASE_URL ?>index.php?action=productos&method=registrarEntrada" class="btn btn-info btn-xs">
                                 <i class="fa fa-sign-in"></i> Entrada de Productos
                             </a>
+                            <?php endif; ?>
                         </div>
                     </header>
                     <div class="panel-body">
@@ -69,6 +71,7 @@
                                                     class="btn btn-success btn-xs" title="Ver">
                                                     <i class="fa fa-eye"></i>
                                                 </a>
+                                                <?php if ($_SESSION['user_rol'] != 2): ?>
                                                 <a href="<?= BASE_URL ?>index.php?action=productos&method=editar&id=<?= $producto['id']; ?>"
                                                     class="btn btn-primary btn-xs" title="Editar">
                                                     <i class="fa fa-pencil"></i>
@@ -78,6 +81,7 @@
                                                     title="<?= $producto['id_estatus'] == 1 ? 'Desactivar' : 'Activar'; ?>">
                                                     <i class="fa fa-power-off"></i>
                                                 </button>
+                                                <?php endif; ?>
                                             </div>
                                         </td>
                                     </tr>

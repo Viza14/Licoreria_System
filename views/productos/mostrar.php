@@ -71,12 +71,14 @@
                         <div class="form-group">
                             <div class="col-sm-offset-2 col-sm-10">
                                 <a href="<?= BASE_URL ?>index.php?action=productos" class="btn btn-default"><i class="fa fa-arrow-left"></i> Volver</a>
+                                <?php if ($_SESSION['user_rol'] != 2): ?>
                                 <a href="<?= BASE_URL ?>index.php?action=productos&method=editar&id=<?= $producto['id'] ?>" class="btn btn-primary">
                                     <i class="fa fa-edit"></i> Editar
                                 </a>
                                 <a href="<?= BASE_URL ?>index.php?action=productos&method=cambiarEstado&id=<?= $producto['id'] ?>" class="btn btn-<?= $producto['id_estatus'] == 1 ? 'danger' : 'success' ?>">
                                     <i class="fa fa-power-off"></i> <?= $producto['id_estatus'] == 1 ? 'Desactivar' : 'Activar' ?>
                                 </a>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
