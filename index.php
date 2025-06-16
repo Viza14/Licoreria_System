@@ -8,6 +8,7 @@ require_once ROOT_PATH . 'config/database.php';
 require_once ROOT_PATH . 'models/UsuarioModel.php';
 require_once ROOT_PATH . 'models/ProductoModel.php';
 require_once ROOT_PATH . 'models/ProveedorModel.php';
+require_once ROOT_PATH . 'models/StockLimiteModel.php';
 require_once ROOT_PATH . 'controllers/AuthController.php';
 require_once ROOT_PATH . 'controllers/DashboardController.php';
 require_once ROOT_PATH . 'controllers/UsuarioController.php';
@@ -18,6 +19,9 @@ require_once ROOT_PATH . 'controllers/ProductoController.php';
 require_once ROOT_PATH . 'controllers/MovimientoInventarioController.php';
 require_once ROOT_PATH . 'controllers/CategoriaController.php';
 require_once ROOT_PATH . 'controllers/TipoCategoriaController.php';
+require_once ROOT_PATH . 'controllers/StockLimiteController.php';
+// Cargar helpers
+require_once ROOT_PATH . 'helpers/notifications.php';
 
 // 3. Iniciar sesión con configuración segura
 if (session_status() === PHP_SESSION_NONE) {
@@ -153,6 +157,7 @@ try {
                 $controller->index();
             }
             break;
+
         case 'clientes':
             $controller = new ClienteController();
             $method = $_GET['method'] ?? 'index';
@@ -265,6 +270,26 @@ try {
             } elseif ($method === 'cambiarEstado') {
                 $id = $_GET['id'] ?? 0;
                 $controller->cambiarEstado($id);
+            } else {
+                $controller->index();
+            }
+            break;
+
+        case 'gestion-stock':
+            if (!isset($_SESSION['user_id'])) {
+                header("Location: " . BASE_URL . "index.php?action=login");
+                exit();
+            }
+            $controller = new StockLimiteController();
+            $method = $_GET['method'] ?? 'index';
+            $id = $_GET['id'] ?? null;
+
+            if ($method === 'editar' && $id) {
+                $controller->editar($id);
+            } elseif ($method === 'guardar') {
+                $controller->guardar();
+            } elseif ($method === 'alertas') {
+                $controller->alertas();
             } else {
                 $controller->index();
             }

@@ -50,6 +50,20 @@ class MovimientoInventarioModel
     public function registrarMovimiento($data)
     {
         try {
+            // Validate maximum stock for entries
+            if ($data['tipo_movimiento'] === 'ENTRADA') {
+                $query = "SELECT stock_maximo, cantidad FROM producto WHERE id = :id_producto";
+                $stmt = $this->db->prepare($query);
+                $stmt->bindParam(":id_producto", $data['id_producto']);
+                $stmt->execute();
+                $producto = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($producto && ($producto['cantidad'] + $data['cantidad']) > $producto['stock_maximo']) {
+                    $this->errors[] = "La cantidad excede el stock máximo permitido para este producto";
+                    return false;
+                }
+            }
+
             $query = "INSERT INTO movimientos_inventario (
                 id_producto, 
                 tipo_movimiento, 

@@ -19,6 +19,7 @@ licoreria/
 │   ├── CategoriaController.php
 │   ├── TipoCategoriaController.php
 │   ├── ProductoProveedorController.php
+│   ├── MovimientoInventarioController.php
 │   └── UsuarioController.php
 ├── helpers/
 │   └── functions.php
@@ -31,6 +32,7 @@ licoreria/
 │   ├── CategoriaModel.php
 │   ├── TipoCategoriaModel.php
 │   ├── UsuarioModel.php
+│   ├── MovimientoInventarioModel.php
 │   └── Database.php
 ├── views/
 │   ├── layouts/
@@ -78,6 +80,11 @@ licoreria/
 │   │   ├── crear.php
 │   │   ├── editar.php
 │   │   └── mostrar.php
+│   ├── movimientos_inventario/
+│   │   ├── index.php
+│   │   ├── mostrar.php
+│   │   ├── por_producto.php
+│   │   └── resumen.php
 │   └── dashboard.php
 ├── .htaccess
 └── index.php

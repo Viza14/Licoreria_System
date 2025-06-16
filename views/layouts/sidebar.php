@@ -98,7 +98,7 @@
     <div id="sidebar" class="nav-collapse">
         <!-- sidebar menu start-->
         <ul class="sidebar-menu" id="nav-accordion">
-            <p class="centered"><a href="#"><img src="<?php echo BASE_URL; ?>assets/img/account.svg" class="img-circle" width="80"></a></p>
+            <p class="centered"><img src="<?php echo BASE_URL; ?>assets/img/account.svg" class="img-circle" width="80"></p>
             <h5 class="centered"><?php echo $_SESSION['user_nombre'] ?? 'Administrador'; ?></h5>
 
             <li class="mt">
@@ -167,7 +167,7 @@
                 <ul class="sub">
                     <li><a href="<?= BASE_URL ?>index.php?action=movimientos-inventario">Historial</a></li>
                     <li><a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=resumen">Resumen</a></li>
-<!--                     <li><a href="<?= BASE_URL ?>index.php?action=productos&method=registrarEntrada">Entrada Productos</a></li> -->
+                    <!--                     <li><a href="<?= BASE_URL ?>index.php?action=productos&method=registrarEntrada">Entrada Productos</a></li> -->
                 </ul>
             </li>
 
@@ -181,7 +181,10 @@
                     <ul class="sub">
                         <li> <a href="<?php echo BASE_URL; ?>index.php?action=usuarios"><i class="fa fa-users"></i><span>Usuarios</span></a></li>
                         <li><a href="<?php echo BASE_URL; ?>index.php?action=proveedores">Proveedores</a></li>
+                        <li><a href="<?php echo BASE_URL; ?>index.php?action=gestion-stock"><i class="fa fa-cubes"></i> Gestión de Stock</a></li>
+                        </li>
                     </ul>
+
                 </li>
             <?php endif; ?>
         </ul>
