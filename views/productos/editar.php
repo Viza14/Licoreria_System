@@ -49,9 +49,7 @@
                                     <select class="form-control" id="tipoCategoria" required>
                                         <option value="">Seleccione un tipo</option>
                                         <?php foreach ($tiposCategoria as $tipo): ?>
-                                            <option value="<?= $tipo['id'] ?>" <?= $tipo['id'] == $producto['id_tipo_categoria'] ? 'selected' : ''; ?>>
-                                                <?= $tipo['nombre'] ?>
-                                            </option>
+                                            <option value="<?= $tipo['id'] ?>"><?= $tipo['nombre'] ?></option>
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
