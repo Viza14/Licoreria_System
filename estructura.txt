@@ -47,6 +47,7 @@ licoreria/
 │   │   ├── index.php
 │   │   ├── crear.php
 │   │   ├── editar.php
+│   │   ├── entrada.php
 │   │   └── mostrar.php
 │   ├── clientes/
 │   │   ├── index.php

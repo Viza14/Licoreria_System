@@ -9,6 +9,7 @@
 
     .sidebar-menu {
         padding-top: 20px;
+        color: #3e569e !important; /* Changed from #68dff0 to #3e569e */
     }
 
     .sidebar-menu a {

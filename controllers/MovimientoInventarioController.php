@@ -3,13 +3,16 @@ class MovimientoInventarioController
 {
     private $model;
     private $productoModel;
+    private $proveedorModel;
 
     public function __construct()
     {
         require_once ROOT_PATH . 'models/MovimientoInventarioModel.php';
         require_once ROOT_PATH . 'models/ProductoModel.php';
+        require_once ROOT_PATH . 'models/ProveedorModel.php';
         $this->model = new MovimientoInventarioModel();
         $this->productoModel = new ProductoModel();
+        $this->proveedorModel = new ProveedorModel();
     }
 
     public function index()
@@ -69,6 +72,71 @@ class MovimientoInventarioController
             'productos' => $productos,
             'filtros' => $filtros
         ]);
+    }
+
+    public function editar($id)
+    {
+        $this->checkSession();
+        
+        $movimiento = $this->model->obtenerMovimientoPorId($id);
+        
+        if (!$movimiento) {
+            $_SESSION['error'] = [
+                'title' => 'Error',
+                'text' => 'Movimiento no encontrado',
+                'icon' => 'error'
+            ];
+            $this->redirect('movimientos-inventario');
+        }
+
+        $producto = $this->productoModel->obtenerProductoPorId($movimiento['id_producto']);
+        $proveedores = $this->proveedorModel->obtenerProveedoresActivos();
+        
+        $this->loadView('movimientos_inventario/editar', [
+            'movimiento' => $movimiento,
+            'producto' => $producto,
+            'proveedores' => $proveedores
+        ]);
+    }
+
+    public function actualizar($id)
+    {
+        $this->checkSession();
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $data = [
+                'cantidad' => (int)$_POST['cantidad'],
+                'precio_unitario' => (float)$_POST['precio_unitario'],
+                'observaciones' => $_POST['observaciones'] ?? null,
+                'cedula_proveedor' => $_POST['cedula_proveedor'] ?? null
+            ];
+            
+            if ($data['cantidad'] <= 0) {
+                $_SESSION['error'] = [
+                    'title' => 'Error',
+                    'text' => 'La cantidad debe ser mayor que cero',
+                    'icon' => 'error'
+                ];
+                $this->redirect('movimientos-inventario&method=editar&id='.$id);
+                return;
+            }
+            
+            if ($this->model->actualizarMovimiento($id, $data)) {
+                $_SESSION['mensaje'] = [
+                    'title' => 'Éxito',
+                    'text' => 'Movimiento actualizado correctamente',
+                    'icon' => 'success'
+                ];
+            } else {
+                $_SESSION['error'] = [
+                    'title' => 'Error',
+                    'text' => 'Error al actualizar el movimiento: ' . implode(', ', $this->model->getErrors()),
+                    'icon' => 'error'
+                ];
+            }
+            
+            $this->redirect('movimientos-inventario');
+        }
     }
 
     // Métodos auxiliares

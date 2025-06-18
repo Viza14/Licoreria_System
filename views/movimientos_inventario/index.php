@@ -64,6 +64,10 @@
                                                 class="btn btn-success btn-xs" title="Ver Detalles">
                                                 <i class="fa fa-eye"></i>
                                             </a>
+                                            <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=editar&id=<?= $movimiento['id'] ?>" 
+                                               class="btn btn-primary btn-xs" title="Editar">
+                                                <i class="fa fa-edit"></i>
+                                            </a>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

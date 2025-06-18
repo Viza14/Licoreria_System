@@ -211,4 +211,59 @@ class ProductoModel
             return false;
         }
     }
+
+    public function obtenerEntradaPorId($id)
+    {
+        $query = "SELECT e.*, p.descripcion as producto_descripcion, pr.nombre as proveedor_nombre
+              FROM movimientos_inventario e
+              JOIN producto p ON e.id_producto = p.id
+              JOIN proveedores pr ON e.cedula_proveedor = pr.cedula
+              WHERE e.id = ? AND e.tipo_movimiento = 'ENTRADA'";
+        $stmt = $this->db->prepare($query);
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function actualizarEntradaProducto($id, $cantidad, $precio_compra, $observaciones)
+    {
+        try {
+            $this->db->beginTransaction();
+
+            // 1. Obtener la entrada actual para calcular la diferencia
+            $entrada_actual = $this->obtenerEntradaPorId($id);
+            if (!$entrada_actual) {
+                throw new PDOException("Entrada no encontrada");
+            }
+
+            $diferencia = $cantidad - $entrada_actual['cantidad'];
+
+            // 2. Actualizar el movimiento de inventario
+            $query = "UPDATE movimientos_inventario SET 
+                  cantidad = :cantidad,
+                  precio_unitario = :precio_compra,
+                  observaciones = :observaciones,
+                  fecha_actualizacion = NOW()
+                  WHERE id = :id";
+            $stmt = $this->db->prepare($query);
+            $stmt->bindParam(":cantidad", $cantidad);
+            $stmt->bindParam(":precio_compra", $precio_compra);
+            $stmt->bindParam(":observaciones", $observaciones);
+            $stmt->bindParam(":id", $id);
+            $stmt->execute();
+
+            // 3. Actualizar el stock del producto
+            $query = "UPDATE producto SET cantidad = cantidad + :diferencia WHERE id = :id_producto";
+            $stmt = $this->db->prepare($query);
+            $stmt->bindParam(":diferencia", $diferencia);
+            $stmt->bindParam(":id_producto", $entrada_actual['id_producto']);
+            $stmt->execute();
+
+            $this->db->commit();
+            return true;
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            $this->errors[] = $e->getMessage();
+            return false;
+        }
+    }
 }

@@ -92,6 +92,47 @@ class MovimientoInventarioModel
         }
     }
 
+    public function actualizarMovimiento($id, $data) 
+    {
+        try {
+            $this->db->beginTransaction();
+
+            // Get current movement to compare
+            $movimientoActual = $this->obtenerMovimientoPorId($id);
+            
+            // Update the movement
+            $query = "UPDATE movimientos_inventario SET 
+                     cantidad = :cantidad,
+                     precio_unitario = :precio_unitario,
+                     observaciones = :observaciones,
+                     cedula_proveedor = :cedula_proveedor,
+                     fecha_movimiento = NOW()
+                     WHERE id = :id";
+            
+            $stmt = $this->db->prepare($query);
+            $data['id'] = $id;
+            $stmt->execute($data);
+            
+            // If it's an entry movement, update product stock
+            if ($movimientoActual['tipo_movimiento'] === 'ENTRADA') {
+                $diferencia = $data['cantidad'] - $movimientoActual['cantidad'];
+                
+                $query = "UPDATE producto SET cantidad = cantidad + :diferencia WHERE id = :id_producto";
+                $stmt = $this->db->prepare($query);
+                $stmt->bindParam(":diferencia", $diferencia);
+                $stmt->bindParam(":id_producto", $movimientoActual['id_producto']);
+                $stmt->execute();
+            }
+            
+            $this->db->commit();
+            return true;
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            $this->errors[] = "Error al actualizar movimiento: " . $e->getMessage();
+            return false;
+        }
+    }
+
     public function obtenerMovimientosPorProducto($idProducto)
     {
         $query = "SELECT mi.*, 

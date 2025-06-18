@@ -173,7 +173,6 @@ try {
 
         case 'productos':
             $controller = new ProductoController();
-
             $method = $_GET['method'] ?? 'index';
             $id = $_GET['id'] ?? null;
 
@@ -191,6 +190,8 @@ try {
                 $controller->cambiarEstado($id);
             } elseif ($method === 'registrarEntrada') {
                 $controller->registrarEntrada();
+            } elseif ($method === 'editarEntrada' && $id) {
+                $controller->editarEntrada($id);
             } else {
                 $controller->index();
             }
@@ -211,6 +212,10 @@ try {
                 $controller->porProducto($id);
             } elseif ($method === 'resumen') {
                 $controller->resumen();
+            } elseif ($method === 'editar' && $id) {
+                $controller->editar($id);
+            } elseif ($method === 'actualizar' && $id) {
+                $controller->actualizar($id);
             } else {
                 $controller->index();
             }

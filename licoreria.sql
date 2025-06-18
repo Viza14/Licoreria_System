@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 12-06-2025 a las 08:15:19
+-- Tiempo de generación: 18-06-2025 a las 19:26:20
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.0.30
 
@@ -286,7 +286,8 @@ CREATE TABLE `movimientos_inventario` (
 
 INSERT INTO `movimientos_inventario` (`id`, `id_producto`, `tipo_movimiento`, `cantidad`, `precio_unitario`, `id_referencia`, `tipo_referencia`, `fecha_movimiento`, `id_usuario`, `observaciones`) VALUES
 (1, 2, 'ENTRADA', 50, 500.00, NULL, NULL, '2025-06-11 23:34:42', 1, ''),
-(2, 13, 'ENTRADA', 27, 120.00, NULL, NULL, '2025-06-11 23:55:37', 1, 'este proveedor despacho 25 papas en la noche y se le pago por pago movil');
+(2, 13, 'ENTRADA', 27, 120.00, NULL, NULL, '2025-06-11 23:55:37', 1, 'este proveedor despacho 25 papas en la noche y se le pago por pago movil'),
+(3, 1, 'ENTRADA', 6, 500.50, NULL, NULL, '2025-06-16 17:32:27', 1, '');
 
 -- --------------------------------------------------------
 
@@ -322,10 +323,10 @@ CREATE TABLE `producto` (
 --
 
 INSERT INTO `producto` (`id`, `descripcion`, `cantidad`, `precio`, `id_categoria`, `id_estatus`) VALUES
-(1, 'Coca-Cola 2L', 50, 5.00, 1, 2),
-(2, 'Pepsi 2L', 90, 4.50, 1, 2),
+(1, 'Coca-Cola 2L', 56, 5.00, 1, 1),
+(2, 'Pepsi 2L', 90, 4.50, 1, 1),
 (3, 'Mani Jacks', 30, 5.00, 2, 1),
-(13, 'Papas Jacks', 50, 5.00, 3, 1);
+(13, 'Papas Jacks', 110, 5.00, 3, 1);
 
 --
 -- Disparadores `producto`
@@ -425,6 +426,30 @@ INSERT INTO `simbolos_cedula` (`id`, `nombre`) VALUES
 -- --------------------------------------------------------
 
 --
+-- Estructura de tabla para la tabla `stock_limites`
+--
+
+CREATE TABLE `stock_limites` (
+  `id` int(11) NOT NULL,
+  `id_producto` int(10) NOT NULL,
+  `stock_minimo` int(11) NOT NULL DEFAULT 0,
+  `stock_maximo` int(11) NOT NULL DEFAULT 0,
+  `fecha_actualizacion` datetime NOT NULL DEFAULT current_timestamp(),
+  `id_usuario` int(10) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+--
+-- Volcado de datos para la tabla `stock_limites`
+--
+
+INSERT INTO `stock_limites` (`id`, `id_producto`, `stock_minimo`, `stock_maximo`, `fecha_actualizacion`, `id_usuario`) VALUES
+(1, 13, 30, 100, '2025-06-16 13:34:29', 1),
+(2, 3, 50, 100, '2025-06-16 15:11:38', 1),
+(3, 1, 12, 100, '2025-06-16 15:12:13', 1);
+
+-- --------------------------------------------------------
+
+--
 -- Estructura de tabla para la tabla `tipos_categoria`
 --
 
@@ -471,8 +496,8 @@ CREATE TABLE `usuarios` (
 --
 
 INSERT INTO `usuarios` (`id`, `cedula`, `id_simbolo_cedula`, `nombres`, `apellidos`, `telefono`, `direccion`, `user`, `password`, `id_rol`, `id_estatus`, `ultimo_inicio_sesion`) VALUES
-(1, '31117854', 1, 'Moises', 'Vizamon', '04125050555', 'Naguanagua', 'admin', '$2y$10$.Dv.UCeKDYG3HIiK.4F7Jed5g2/1FZWq8j6zRHErVQNLYxUBhM4NG', 1, 1, '2025-06-11 23:34:21'),
-(2, '30330300', 1, 'Maria', 'Teran', '0414123457', 'Valencia', 'empleado', '$2y$10$InP6m5HokejhvGmvTg9YnuPy14zAy/EB5LKRxv69EndgVdmuf0KMm', 2, 1, '2025-06-09 01:47:29'),
+(1, '31117854', 1, 'Moises', 'Vizamon', '04125050555', 'Naguanagua', 'admin', '$2y$10$.Dv.UCeKDYG3HIiK.4F7Jed5g2/1FZWq8j6zRHErVQNLYxUBhM4NG', 1, 1, '2025-06-16 19:33:29'),
+(2, '30330300', 1, 'Maria', 'Teran', '0414123457', 'Valencia', 'empleado', '$2y$10$InP6m5HokejhvGmvTg9YnuPy14zAy/EB5LKRxv69EndgVdmuf0KMm', 2, 1, '2025-06-12 10:59:18'),
 (4, '16579782', 1, 'Angel', 'Perez', '04125030223', 'Valencia', 'Angel123', '$2y$10$l8ILNvg5AQAUliKoN87M8exnKrXvOecoAqMZR/OJKH3L0oGgHXhjW', 2, 1, NULL),
 (5, '33333333', 1, 'german', 'garcia', '04244351695', 'tocuyito', 'german13', '$2y$10$iBxpB0rpNB6ycNoiRZ3LJeBzsvSzKzZwgXFgfsfmVVXUZdn6osCPu', 2, 1, NULL),
 (6, '444444444', 4, 'cristiano', 'ronaldo', '04245565125', 'no se', '77crz', '$2y$10$C3Hdm7aN1a.049TKuoX3HuV.KaOB8dCqcJlM1rl5.m3S/tW8iz5R2', 1, 1, NULL);
@@ -681,6 +706,14 @@ ALTER TABLE `simbolos_cedula`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indices de la tabla `stock_limites`
+--
+ALTER TABLE `stock_limites`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `id_producto_unico` (`id_producto`),
+  ADD KEY `id_usuario` (`id_usuario`);
+
+--
 -- Indices de la tabla `tipos_categoria`
 --
 ALTER TABLE `tipos_categoria`
@@ -744,7 +777,7 @@ ALTER TABLE `estatus`
 -- AUTO_INCREMENT de la tabla `movimientos_inventario`
 --
 ALTER TABLE `movimientos_inventario`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT de la tabla `perdidas`
@@ -775,6 +808,12 @@ ALTER TABLE `roles`
 --
 ALTER TABLE `simbolos_cedula`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT de la tabla `stock_limites`
+--
+ALTER TABLE `stock_limites`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT de la tabla `tipos_categoria`
@@ -867,6 +906,13 @@ ALTER TABLE `proveedor_producto`
   ADD CONSTRAINT `fk_proveedor_producto_estatus` FOREIGN KEY (`id_estatus`) REFERENCES `estatus` (`id`),
   ADD CONSTRAINT `proveedor_producto_ibfk_1` FOREIGN KEY (`cedula_proveedor`) REFERENCES `proveedores` (`cedula`) ON UPDATE CASCADE,
   ADD CONSTRAINT `proveedor_producto_ibfk_2` FOREIGN KEY (`id_producto`) REFERENCES `producto` (`id`);
+
+--
+-- Filtros para la tabla `stock_limites`
+--
+ALTER TABLE `stock_limites`
+  ADD CONSTRAINT `stock_limites_ibfk_1` FOREIGN KEY (`id_producto`) REFERENCES `producto` (`id`),
+  ADD CONSTRAINT `stock_limites_ibfk_2` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id`);
 
 --
 -- Filtros para la tabla `tipos_categoria`

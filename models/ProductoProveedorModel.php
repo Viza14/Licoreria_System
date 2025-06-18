@@ -128,4 +128,17 @@ class ProductoProveedorModel
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    public function obtenerPrecioPorProveedorProducto($id_producto, $cedula_proveedor) {
+        $query = "SELECT precio_compra FROM proveedor_producto 
+                  WHERE id_producto = :id_producto 
+                  AND cedula_proveedor = :cedula_proveedor
+                  AND id_estatus = 1";
+        $stmt = $this->db->prepare($query);
+        $stmt->bindParam(":id_producto", $id_producto);
+        $stmt->bindParam(":cedula_proveedor", $cedula_proveedor);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_COLUMN);
+    }
 }
+
