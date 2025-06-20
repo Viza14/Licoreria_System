@@ -20,6 +20,9 @@ require_once ROOT_PATH . 'controllers/MovimientoInventarioController.php';
 require_once ROOT_PATH . 'controllers/CategoriaController.php';
 require_once ROOT_PATH . 'controllers/TipoCategoriaController.php';
 require_once ROOT_PATH . 'controllers/StockLimiteController.php';
+require_once ROOT_PATH . 'controllers/ReporteController.php';
+require_once ROOT_PATH . 'models/VentaModel.php';
+require_once ROOT_PATH . 'controllers/VentaController.php';
 // Cargar helpers
 require_once ROOT_PATH . 'helpers/notifications.php';
 
@@ -295,6 +298,40 @@ try {
                 $controller->guardar();
             } elseif ($method === 'alertas') {
                 $controller->alertas();
+            } else {
+                $controller->index();
+            }
+            break;
+        case 'reportes':
+            if (!isset($_SESSION['user_id'])) {
+                header("Location: " . BASE_URL . "index.php?action=login");
+                exit();
+            }
+            $controller = new ReporteController();
+            $method = $_GET['method'] ?? 'index';
+
+            if (method_exists($controller, $method)) {
+                $controller->$method();
+            } else {
+                $controller->index();
+            }
+            break;
+
+        case 'ventas':
+            if (!isset($_SESSION['user_id'])) {
+                header("Location: " . BASE_URL . "index.php?action=login");
+                exit();
+            }
+            $controller = new VentaController();
+            $method = $_GET['method'] ?? 'index';
+
+            if ($method === 'crear') {
+                $controller->crear();
+            } elseif ($method === 'guardar') {
+                $controller->guardar();
+            } elseif ($method === 'mostrar') {
+                $id = $_GET['id'] ?? 0;
+                $controller->mostrar($id);
             } else {
                 $controller->index();
             }

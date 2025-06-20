@@ -266,4 +266,14 @@ class ProductoModel
             return false;
         }
     }
+
+    public function obtenerStockProducto($idProducto)
+    {
+        $query = "SELECT cantidad FROM producto WHERE id = :id";
+        $stmt = $this->db->prepare($query);
+        $stmt->bindParam(":id", $idProducto);
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result ? (int)$result['cantidad'] : 0;
+    }
 }

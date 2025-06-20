@@ -165,4 +165,17 @@ class ClienteModel
         return false;
     }
     }
+
+    public function obtenerClientesActivos()
+{
+    $query = "SELECT c.*, e.nombre as estatus, sc.nombre as nombre_simbolo 
+              FROM clientes c
+              JOIN estatus e ON c.id_estatus = e.id
+              JOIN simbolos_cedula sc ON c.id_simbolo_cedula = sc.id
+              WHERE c.id_estatus = 1
+              ORDER BY c.nombres, c.apellidos";
+    $stmt = $this->db->prepare($query);
+    $stmt->execute();
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 }

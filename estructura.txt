@@ -21,6 +21,7 @@ licoreria/
 │   ├── ProductoProveedorController.php
 │   ├── MovimientoInventarioController.php
 │   ├── StockLimiteController.php
+│   ├── ReporteController.php
 │   └── UsuarioController.php
 ├── helpers/
 │   └── functions.php
@@ -35,6 +36,7 @@ licoreria/
 │   ├── UsuarioModel.php
 │   ├── MovimientoInventarioModel.php
 │   ├── StockLimiteModel.php
+│   ├── ReporteModel.php
 │   └── Database.php
 ├── views/
 │   ├── layouts/
@@ -92,6 +94,13 @@ licoreria/
 │   │   ├── index.php
 │   │   ├── editar.php
 │   │   └── alertas.php
+│   ├── reportes/
+│   │   ├── index.php
+│   │   ├── ventas.php
+│   │   ├── resumen_de_venta.php
+│   │   ├── productos_mas_vendidos.php
+│   │   ├── inventario.php
+│   │   └── detalles_de_ventas.php
 │   └── dashboard.php
 ├── .htaccess
 └── index.php

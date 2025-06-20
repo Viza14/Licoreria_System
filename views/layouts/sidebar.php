@@ -9,7 +9,8 @@
 
     .sidebar-menu {
         padding-top: 20px;
-        color: #3e569e !important; /* Changed from #68dff0 to #3e569e */
+        color: #3e569e !important;
+        /* Changed from #68dff0 to #3e569e */
     }
 
     .sidebar-menu a {
@@ -131,10 +132,8 @@
                     <span>Ventas</span>
                 </a>
                 <ul class="sub">
-                    <li><a href="<?php echo BASE_URL; ?>index.php?action=ventas" >Nueva Venta</a></li>
-                    <?php if ($_SESSION['user_rol'] != 2): ?> <!-- Asumiendo que 2 es el rol de empleado -->
-                        <li><a href="<?php echo BASE_URL; ?>index.php?action=ventas&sub=historial">Historial</a></li>
-                    <?php endif; ?>
+                    <li><a href="<?php echo BASE_URL; ?>index.php?action=ventas&method=crear">Nueva Venta</a></li>
+                    <li><a href="<?php echo BASE_URL; ?>index.php?action=ventas">Historial de Ventas</a></li>
                 </ul>
             </li>
 
@@ -154,8 +153,7 @@
                         <span>Reportes</span>
                     </a>
                     <ul class="sub">
-                        <li><a href="<?php echo BASE_URL; ?>index.php?action=reportes&sub=ventas">Ventas</a></li>
-                        <li><a href="<?php echo BASE_URL; ?>index.php?action=reportes&sub=inventario">Inventario</a></li>
+                        <li><a href="<?= BASE_URL ?>index.php?action=reportes">Ver Reportes</a></li>
                     </ul>
                 </li>
             <?php endif; ?>
@@ -183,13 +181,13 @@
                         <li> <a href="<?php echo BASE_URL; ?>index.php?action=usuarios"><i class="fa fa-users"></i><span>Usuarios</span></a></li>
                         <li><a href="<?php echo BASE_URL; ?>index.php?action=proveedores">Proveedores</a></li>
                         <li><a href="<?php echo BASE_URL; ?>index.php?action=gestion-stock"><i class="fa fa-cubes"></i> Gestión de Stock</a></li>
-                        </li>
-                    </ul>
-
                 </li>
-            <?php endif; ?>
         </ul>
-        <!-- sidebar menu end-->
+
+        </li>
+    <?php endif; ?>
+    </ul>
+    <!-- sidebar menu end-->
     </div>
 </aside>
 <!--sidebar end-->

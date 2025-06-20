@@ -22,6 +22,7 @@
                     </header>
                     <div class="panel-body">
                         <form class="form-horizontal" action="<?= BASE_URL ?>index.php?action=clientes&method=actualizar&cedula=<?= $cliente['cedula']; ?>" method="POST" id="formCliente">
+                            <input type="hidden" id="cedulaOriginal" value="<?= $cliente['cedula'] ?>">
                             <div class="form-group">
                                 <label class="col-sm-2 control-label">Cédula</label>
                                 <div class="col-sm-10">
@@ -44,6 +45,7 @@
                                     </small>
                                 </div>
                             </div>
+                            <!-- Rest of the form fields remain the same -->
                             <div class="form-group">
                                 <label class="col-sm-2 control-label">Nombres</label>
                                 <div class="col-sm-10">
@@ -80,8 +82,6 @@
                             <div class="form-group">
                                 <div class="col-sm-offset-2 col-sm-10">
                                     <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Actualizar</button>
-        
-                
                                     <a href="<?= BASE_URL ?>index.php?action=clientes" class="btn btn-default"><i class="fa fa-times"></i> Cancelar</a>
                                 </div>
                             </div>
@@ -101,24 +101,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const simboloCedula = document.getElementById('simboloCedula');
     const cedulaInput = document.getElementById('cedula');
     const cedulaHelp = document.getElementById('cedulaHelp');
+    const cedulaOriginal = document.getElementById('cedulaOriginal').value;
 
-       function actualizarValidacion() {
-    const simbolo = simboloCedula.options[simboloCedula.selectedIndex].text;
-    
-    if (simbolo === 'V' || simbolo === 'E') {
-        cedulaInput.pattern = '\\d{7,8}';
-        cedulaInput.title = 'La cédula debe tener 7 u 8 dígitos para ' + simbolo + '-';
-        cedulaHelp.textContent = 'Para ' + simbolo + '- ingrese 7 u 8 dígitos';
-        cedulaInput.maxLength = 8;
-    } else if (simbolo === 'J') {
-        cedulaInput.pattern = '\\d{8,9}';
-        cedulaInput.title = 'El RIF debe tener 8 o 9 dígitos para ' + simbolo + '-';
-        cedulaHelp.textContent = 'Para ' + simbolo + '- ingrese 8 o 9 dígitos';
-        cedulaInput.maxLength = 9;
+    function actualizarValidacion() {
+        const simbolo = simboloCedula.options[simboloCedula.selectedIndex].text;
+        
+        if (simbolo === 'V' || simbolo === 'E') {
+            cedulaInput.pattern = '\\d{7,8}';
+            cedulaInput.title = 'La cédula debe tener 7 u 8 dígitos para ' + simbolo + '-';
+            cedulaHelp.textContent = 'Para ' + simbolo + '- ingrese 7 u 8 dígitos';
+            cedulaInput.maxLength = 8;
+        } else if (simbolo === 'J') {
+            cedulaInput.pattern = '\\d{8,9}';
+            cedulaInput.title = 'El RIF debe tener 8 o 9 dígitos para ' + simbolo + '-';
+            cedulaHelp.textContent = 'Para ' + simbolo + '- ingrese 8 o 9 dígitos';
+            cedulaInput.maxLength = 9;
+        }
     }
-
-}
- 
 
     function validarCedula() {
         const simbolo = simboloCedula.options[simboloCedula.selectedIndex].text;
@@ -143,10 +142,8 @@ document.addEventListener('DOMContentLoaded', function() {
     simboloCedula.addEventListener('change', actualizarValidacion);
     
     cedulaInput.addEventListener('input', function() {
-        // Solo permitir números
         this.value = this.value.replace(/[^0-9]/g, '');
         
-        // Limitar longitud según tipo
         const simbolo = simboloCedula.options[simboloCedula.selectedIndex].text;
         if ((simbolo.includes('V-') || simbolo.includes('E-')) && this.value.length > 8) {
             this.value = this.value.slice(0, 8);
@@ -159,47 +156,66 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Validar antes de enviar el formulario
     document.getElementById('formCliente').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
         if (!validarCedula()) {
-            e.preventDefault();
             Swal.fire({
                 title: 'Error',
                 text: cedulaInput.validationMessage,
                 icon: 'error'
             });
+            return;
+        }
+
+        // Check if cedula was modified
+        if (cedulaInput.value !== cedulaOriginal) {
+            Swal.fire({
+                title: '¿Está seguro?',
+                text: 'Si modifica la cédula, este cambio se aplicará a todos los registros existentes del cliente en el sistema.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, modificar',
+                cancelButtonText: 'No, cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    this.submit();
+                }
+            });
+        } else {
+            this.submit();
         }
     });
 
-    // Inicializar
+    // Initialize
     actualizarValidacion();
 });
 
-    // Mostrar mensajes de SweetAlert
-    <?php if (isset($_SESSION['mensaje'])): ?>
-        Swal.fire({
-            title: '<?= $_SESSION['mensaje']['title'] ?>',
-            text: '<?= $_SESSION['mensaje']['text'] ?>',
-            icon: '<?= $_SESSION['mensaje']['icon'] ?>',
-            timer: 3000,
-            timerProgressBar: true
-        });
-        <?php unset($_SESSION['mensaje']); ?>
-    <?php endif; ?>
-
-    <?php if (isset($_SESSION['error'])): ?>
-        Swal.fire({
-            title: '<?= $_SESSION['error']['title'] ?>',
-            text: '<?= $_SESSION['error']['text'] ?>',
-            icon: '<?= $_SESSION['error']['icon'] ?>'
-        });
-        <?php unset($_SESSION['error']); ?>
-    <?php endif; ?>
-
-    // Inicializar validación según símbolo seleccionado
-    document.addEventListener('DOMContentLoaded', function() {
-        const simboloSelect = document.getElementById('simboloCedula');
-        // Disparar el evento change para inicializar la validación
-        const event = new Event('change');
-        simboloSelect.dispatchEvent(event);
+// Show SweetAlert messages
+<?php if (isset($_SESSION['mensaje'])): ?>
+    Swal.fire({
+        title: '<?= $_SESSION['mensaje']['title'] ?>',
+        text: '<?= $_SESSION['mensaje']['text'] ?>',
+        icon: '<?= $_SESSION['mensaje']['icon'] ?>',
+        timer: 3000,
+        timerProgressBar: true
     });
+    <?php unset($_SESSION['mensaje']); ?>
+<?php endif; ?>
+
+<?php if (isset($_SESSION['error'])): ?>
+    Swal.fire({
+        title: '<?= $_SESSION['error']['title'] ?>',
+        text: '<?= $_SESSION['error']['text'] ?>',
+        icon: '<?= $_SESSION['error']['icon'] ?>'
+    });
+    <?php unset($_SESSION['error']); ?>
+<?php endif; ?>
+
+// Initialize validation based on selected symbol
+document.addEventListener('DOMContentLoaded', function() {
+    const simboloSelect = document.getElementById('simboloCedula');
+    const event = new Event('change');
+    simboloSelect.dispatchEvent(event);
+});
 </script>
 <!--main content end-->
