@@ -65,13 +65,19 @@ class VentaModel
         try {
             $this->db->beginTransaction();
 
+            // Get date from form data or use current date/time
+            $fecha = isset($data['fecha']) ? $data['fecha'] : date('Y-m-d H:i:s');
+
             // 1. Registrar la venta principal
-            $query = "INSERT INTO ventas (cedula_cliente, id_usuario, fecha, monto_total) 
-                      VALUES (:cedula_cliente, :id_usuario, NOW(), 0)";
+            $query = "INSERT INTO ventas (cedula_cliente, id_usuario, fecha, monto_total, forma_pago, referencia_pago) 
+                      VALUES (:cedula_cliente, :id_usuario, :fecha, 0, :forma_pago, :referencia_pago)";
             
             $stmt = $this->db->prepare($query);
             $stmt->bindParam(":cedula_cliente", $data['cedula_cliente']);
             $stmt->bindParam(":id_usuario", $data['id_usuario']);
+            $stmt->bindParam(":fecha", $fecha);
+            $stmt->bindParam(":forma_pago", $data['forma_pago']);
+            $stmt->bindParam(":referencia_pago", $data['referencia_pago']);
             $stmt->execute();
             
             $id_venta = $this->db->lastInsertId();
@@ -154,4 +160,83 @@ class VentaModel
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    public function contarVentasHoy() {
+        try {
+            $query = "SELECT COUNT(*) as total FROM ventas WHERE DATE(fecha) = CURDATE()";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return (int)($result['total'] ?? 0);
+        } catch (PDOException $e) {
+            error_log("Error contando ventas hoy: " . $e->getMessage());
+            return 0;
+        }
+    }
+    
+    public function calcularIngresosHoy() {
+        try {
+            $query = "SELECT IFNULL(SUM(monto_total), 0) as ingresos 
+                      FROM ventas 
+                      WHERE DATE(fecha) = CURDATE()";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            // Asegurarse de devolver un float válido
+            $ingresos = (float)$result['ingresos'];
+            return is_finite($ingresos) ? $ingresos : 0;
+        } catch (PDOException $e) {
+            error_log("Error al calcular ingresos hoy: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    public function generarReporteVentas($filtros = [])
+{
+    $sql = "SELECT v.id, v.fecha, 
+                   CONCAT(c.nombres, ' ', c.apellidos) AS cliente,
+                   c.cedula,
+                   CONCAT(u.nombres, ' ', u.apellidos) AS usuario,
+                   v.monto_total,
+                   COUNT(dv.id) AS cantidad_productos,
+                   GROUP_CONCAT(CONCAT(p.descripcion, ' (', dv.cantidad, ')') AS productos
+            FROM ventas v
+            JOIN clientes c ON v.cedula_cliente = c.cedula
+            JOIN usuarios u ON v.id_usuario = u.id
+            JOIN detalles_venta dv ON v.id = dv.id_venta
+            JOIN productos p ON dv.id_producto = p.id
+            WHERE 1=1";
+    
+    $params = [];
+    
+    // Aplicar filtros
+    if (!empty($filtros['fecha_inicio'])) {
+        $sql .= " AND v.fecha >= ?";
+        $params[] = $filtros['fecha_inicio'];
+    }
+    
+    if (!empty($filtros['fecha_fin'])) {
+        $sql .= " AND v.fecha <= ?";
+        $params[] = $filtros['fecha_fin'] . ' 23:59:59';
+    }
+    
+    if (!empty($filtros['id_usuario'])) {
+        $sql .= " AND v.id_usuario = ?";
+        $params[] = $filtros['id_usuario'];
+    }
+    
+    if (!empty($filtros['cedula_cliente'])) {
+        $sql .= " AND v.cedula_cliente = ?";
+        $params[] = $filtros['cedula_cliente'];
+    }
+    
+    $sql .= " GROUP BY v.id ORDER BY v.fecha DESC";
+    
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute($params);
+    
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
 }

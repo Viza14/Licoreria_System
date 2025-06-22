@@ -110,6 +110,30 @@
 
                             <div class="row">
                                 <div class="col-md-12">
+                                    <h4>Forma de Pago</h4>
+                                    <div class="form-group">
+                                        <div class="btn-group btn-group-toggle" data-toggle="buttons">
+                                            <label class="btn btn-outline-primary active">
+                                                <input type="radio" name="forma_pago" value="EFECTIVO" checked> Efectivo
+                                            </label>
+                                            <label class="btn btn-outline-primary">
+                                                <input type="radio" name="forma_pago" value="TARJETA"> Tarjeta
+                                            </label>
+                                            <label class="btn btn-outline-primary">
+                                                <input type="radio" name="forma_pago" value="PAGO_MOVIL"> Pago Móvil
+                                            </label>
+                                        </div>
+                                    </div>
+                                    
+                                    <div id="referencia_pago_container" class="form-group" style="display: none;">
+                                        <label for="referencia_pago">Número de Referencia</label>
+                                        <input type="text" class="form-control" id="referencia_pago" name="referencia_pago" placeholder="Ingrese número de referencia">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-12">
                                     <button type="submit" class="btn btn-success">
                                         <i class="fa fa-save"></i> Registrar Venta
                                     </button>
@@ -135,17 +159,36 @@
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');
             const day = String(now.getDate()).padStart(2, '0');
-            const hours = String(now.getHours()).padStart(2, '0');
+            
+            // 12-hour format
+            let hours = now.getHours();
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12; // '0' should be '12'
+            hours = String(hours).padStart(2, '0');
             const minutes = String(now.getMinutes()).padStart(2, '0');
+            
             return `${year}-${month}-${day}T${hours}:${minutes}`;
         };
 
         $('#fecha').val(setDefaultDateTime());
 
+        // Payment method handler
+        $('input[name="forma_pago"]').change(function() {
+            const paymentMethod = $(this).val();
+            if(paymentMethod === 'TARJETA' || paymentMethod === 'PAGO_MOVIL') {
+                $('#referencia_pago_container').show();
+                $('#referencia_pago').prop('required', true);
+            } else {
+                $('#referencia_pago_container').hide();
+                $('#referencia_pago').prop('required', false);
+            }
+        });
+
         // Date edit switch handler
         $('#editarFecha').change(function() {
             const isChecked = $(this).prop('checked');
-
+            
             if (isChecked) {
                 Swal.fire({
                     title: '¿Desea editar la fecha y hora?',
@@ -159,6 +202,20 @@
                 }).then((result) => {
                     if (result.isConfirmed) {
                         $('#fecha').prop('readonly', false);
+                        // Convert to 12-hour format when editing
+                        const currentValue = $('#fecha').val();
+                        if (currentValue) {
+                            const [datePart, timePart] = currentValue.split('T');
+                            if (timePart) {
+                                const [hours, minutes] = timePart.split(':');
+                                let hourInt = parseInt(hours);
+                                const ampm = hourInt >= 12 ? 'PM' : 'AM';
+                                hourInt = hourInt % 12;
+                                hourInt = hourInt ? hourInt : 12;
+                                const formattedHours = String(hourInt).padStart(2, '0');
+                                $('#fecha').val(`${datePart}T${formattedHours}:${minutes}`);
+                            }
+                        }
                     } else {
                         $(this).prop('checked', false);
                         $('#fecha').prop('readonly', true);
@@ -414,6 +471,12 @@
             if (!$('#cedula_cliente').val()) {
                 e.preventDefault();
                 Swal.fire('Error', 'Debe seleccionar un cliente', 'error');
+            }
+
+            const paymentMethod = $('input[name="forma_pago"]:checked').val();
+            if ((paymentMethod === 'TARJETA' || paymentMethod === 'PAGO_MOVIL') && !$('#referencia_pago').val()) {
+                e.preventDefault();
+                Swal.fire('Error', 'Debe ingresar el número de referencia', 'error');
             }
         });
     });

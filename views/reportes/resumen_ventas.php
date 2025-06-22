@@ -18,24 +18,14 @@
             <div class="col-lg-12">
                 <section class="panel">
                     <header class="panel-heading">
-                        Filtros del Reporte
+                        Listado de Ventas
+                        <div class="pull-right">
+                            <button class="btn btn-info btn-xs" data-toggle="modal" data-target="#filtrosModal">
+                                <i class="fa fa-filter"></i> Filtros
+                            </button>
+                        </div>
                     </header>
                     <div class="panel-body">
-                        <form class="form-inline" method="POST" action="<?= BASE_URL ?>index.php?action=reportes&method=resumenVentas">
-                            <div class="form-group">
-                                <label for="fecha_inicio">Desde:</label>
-                                <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" value="<?= $filtros['fecha_inicio'] ?? '' ?>">
-                            </div>
-                            <div class="form-group">
-                                <label for="fecha_fin">Hasta:</label>
-                                <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" value="<?= $filtros['fecha_fin'] ?? '' ?>">
-                            </div>
-                            <button type="submit" class="btn btn-primary"><i class="fa fa-filter"></i> Filtrar</button>
-                            <a href="<?= BASE_URL ?>index.php?action=reportes&method=resumenVentas" class="btn btn-default">Limpiar</a>
-                        </form>
-
-                        <hr>
-
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="panel panel-default">
@@ -101,72 +91,124 @@
     </section>
 </section>
 
+<!-- Modal de Filtros -->
+<div class="modal fade" id="filtrosModal" tabindex="-1" role="dialog" aria-labelledby="filtrosModalLabel">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="filtrosModalLabel"><i class="fa fa-filter"></i> Filtros Avanzados</h4>
+            </div>
+            <div class="modal-body">
+                <form id="formFiltros" method="POST" action="<?= BASE_URL ?>index.php?action=reportes&method=resumenVentas">
+                    <div class="form-group">
+                        <label>Fecha Inicio:</label>
+                        <input type="date" class="form-control" name="fecha_inicio" value="<?= $filtros['fecha_inicio'] ?? '' ?>">
+                    </div>
+                    <div class="form-group">
+                        <label>Fecha Fin:</label>
+                        <input type="date" class="form-control" name="fecha_fin" value="<?= $filtros['fecha_fin'] ?? '' ?>">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Cerrar</button>
+                        <button type="submit" class="btn btn-primary">Aplicar Filtros</button>
+                        <a href="<?= BASE_URL ?>index.php?action=reportes&method=resumenVentas" class="btn btn-link">Limpiar Filtros</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 $(document).ready(function() {
-    // Data for charts
+    // Data for charts - Reverse arrays to show most recent data on the right
     const meses = <?= json_encode(array_map(function($item) { 
         return date('M Y', strtotime($item['mes'] . '-01')); 
-    }, $reporte)) ?>;
+    }, array_reverse($reporte))) ?>;
     
     const montos = <?= json_encode(array_map(function($item) { 
         return $item['monto_total']; 
-    }, $reporte)) ?>;
+    }, array_reverse($reporte))) ?>;
     
     const ventas = <?= json_encode(array_map(function($item) { 
         return $item['total_ventas']; 
-    }, $reporte)) ?>;
+    }, array_reverse($reporte))) ?>;
     
-    // Sales evolution chart
+    // Sales evolution chart - Trading style
     const ventasCtx = document.getElementById('ventasChart').getContext('2d');
     const ventasChart = new Chart(ventasCtx, {
-        type: 'line',
+        type: 'bar',
         data: {
             labels: meses,
             datasets: [
                 {
                     label: 'Monto Total (Bs)',
                     data: montos,
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    yAxisID: 'y'
-                },
-                {
-                    label: 'Número de Ventas',
-                    data: ventas,
-                    borderColor: 'rgba(153, 102, 255, 1)',
-                    backgroundColor: 'rgba(153, 102, 255, 0.2)',
-                    yAxisID: 'y1',
-                    type: 'bar'
+                    backgroundColor: montos.map((value, index) => {
+                        if (index === 0) return 'rgba(75, 192, 192, 0.6)';
+                        return montos[index] >= montos[index - 1] ? 
+                            'rgba(75, 192, 192, 0.6)' : 'rgba(255, 99, 132, 0.6)';
+                    }),
+                    borderColor: montos.map((value, index) => {
+                        if (index === 0) return 'rgba(75, 192, 192, 1)';
+                        return montos[index] >= montos[index - 1] ? 
+                            'rgba(75, 192, 192, 1)' : 'rgba(255, 99, 132, 1)';
+                    }),
+                    borderWidth: 1
                 }
             ]
         },
         options: {
             responsive: true,
-            interaction: {
-                mode: 'index',
-                intersect: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Evolución Mensual de Ventas',
+                    font: {
+                        size: 16
+                    }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += new Intl.NumberFormat('es-BO', {
+                                    style: 'currency',
+                                    currency: 'BOB'
+                                }).format(context.parsed.y);
+                            }
+                            return label;
+                        }
+                    }
+                }
             },
             scales: {
                 y: {
-                    type: 'linear',
-                    display: true,
-                    position: 'left',
+                    beginAtZero: true,
                     title: {
                         display: true,
-                        text: 'Monto (Bs)'
-                    }
-                },
-                y1: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    title: {
-                        display: true,
-                        text: 'Número de Ventas'
+                        text: 'Monto en Bolivianos (Bs)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return 'Bs ' + value.toLocaleString('es-BO');
+                        }
                     },
                     grid: {
-                        drawOnChartArea: false
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
                     }
                 }
             }
@@ -200,6 +242,22 @@ $(document).ready(function() {
                 title: {
                     display: true,
                     text: 'Distribución por Mes'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            const value = context.parsed;
+                            label += new Intl.NumberFormat('es-BO', {
+                                style: 'currency',
+                                currency: 'BOB'
+                            }).format(value);
+                            return label;
+                        }
+                    }
                 }
             }
         }

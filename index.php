@@ -302,20 +302,27 @@ try {
                 $controller->index();
             }
             break;
-        case 'reportes':
-            if (!isset($_SESSION['user_id'])) {
-                header("Location: " . BASE_URL . "index.php?action=login");
-                exit();
-            }
-            $controller = new ReporteController();
-            $method = $_GET['method'] ?? 'index';
 
-            if (method_exists($controller, $method)) {
-                $controller->$method();
-            } else {
-                $controller->index();
-            }
-            break;
+            case 'reportes':
+                if (!isset($_SESSION['user_id'])) {
+                    header("Location: " . BASE_URL . "index.php?action=login");
+                    exit();
+                }
+                $controller = new ReporteController();
+                $method = $_GET['method'] ?? 'index';
+                
+                // Redirigir reporte de ventas al controlador de ventas
+                if ($method === 'ventas') {
+                    header("Location: " . BASE_URL . "index.php?action=ventas&reporte=1");
+                    exit();
+                }
+                
+                if (method_exists($controller, $method)) {
+                    $controller->$method();
+                } else {
+                    $controller->index();
+                }
+                break;
 
         case 'ventas':
             if (!isset($_SESSION['user_id'])) {

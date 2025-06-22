@@ -3,11 +3,19 @@
         <div class="row">
             <div class="col-lg-12">
                 <h3 class="page-header"><i class="fa fa-exclamation-triangle"></i> Alertas de Stock</h3>
-                <ol class="breadcrumb">
-                    <li><i class="fa fa-home"></i><a href="<?php echo BASE_URL; ?>">Inicio</a></li>
-                    <li><i class="fa fa-cubes"></i> Gestión de Stock</li>
-                    <li><i class="fa fa-exclamation-triangle"></i> Alertas</li>
-                </ol>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item">
+                            <a href="<?php echo BASE_URL; ?>"><i class="fa fa-home"></i> Inicio</a>
+                        </li>
+                        <li class="breadcrumb-item">
+                            <a href="<?php echo BASE_URL; ?>index.php?action=gestion-stock"><i class="fa fa-cubes"></i> Gestión de Stock</a>
+                        </li>
+                        <li class="breadcrumb-item active" aria-current="page">
+                            <i class="fa fa-exclamation-triangle"></i> Alertas
+                        </li>
+                    </ol>
+                </nav>
             </div>
         </div>
 
@@ -93,9 +101,9 @@
             </div>
         </div>
 
-        <div class="row">
+        <div class="row mt-3">
             <div class="col-lg-12">
-                <a href="index.php?action=gestion-stock" class="btn btn-default">
+                <a href="<?php echo BASE_URL; ?>stock/gestion" class="btn btn-default">
                     <i class="fa fa-arrow-left"></i> Volver a Gestión de Stock
                 </a>
             </div>
@@ -111,5 +119,8 @@
 .yellow-bg {
     background-color: #f0ad4e;
     color: white;
+}
+.breadcrumb-item + .breadcrumb-item::before {
+    content: ">";
 }
 </style>

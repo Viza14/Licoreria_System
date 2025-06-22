@@ -110,21 +110,6 @@
                 </a>
             </li>
 
-            <!-- Menú Productos -->
-            <li class="sub-menu">
-                <a href="javascript:;">
-                    <i class="fa fa-glass"></i>
-                    <span>Productos</span>
-                </a>
-                <ul class="sub">
-                    <li><a href="<?php echo BASE_URL; ?>index.php?action=productos">Lista de Productos</a></li>
-                    <?php if ($_SESSION['user_rol'] != 2): ?> <!-- Asumiendo que 2 es el rol de empleado -->
-                        <li><a href="<?php echo BASE_URL; ?>index.php?action=producto-proveedor">Producto-Proveedor</a></li>
-                        <li><a href="<?php echo BASE_URL; ?>index.php?action=categorias">Categorías</a></li>
-                    <?php endif; ?>
-                </ul>
-            </li>
-
             <!-- Menú Ventas -->
             <li class="sub-menu">
                 <a href="javascript:;">
@@ -143,6 +128,21 @@
                     <i class="fa fa-users"></i>
                     <span>Clientes</span>
                 </a>
+            </li>
+
+            <!-- Menú Productos -->
+            <li class="sub-menu">
+                <a href="javascript:;">
+                    <i class="fa fa-glass"></i>
+                    <span>Productos</span>
+                </a>
+                <ul class="sub">
+                    <li><a href="<?php echo BASE_URL; ?>index.php?action=productos">Lista de Productos</a></li>
+                    <?php if ($_SESSION['user_rol'] != 2): ?> <!-- Asumiendo que 2 es el rol de empleado -->
+                        <li><a href="<?php echo BASE_URL; ?>index.php?action=producto-proveedor">Producto-Proveedor</a></li>
+                        <li><a href="<?php echo BASE_URL; ?>index.php?action=categorias">Categorías</a></li>
+                    <?php endif; ?>
+                </ul>
             </li>
 
             <!-- Menú Reportes -->

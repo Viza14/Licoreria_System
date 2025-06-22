@@ -48,7 +48,7 @@
                         <hr>
 
                         <div class="row">
-                            <div class="col-md-8">
+                            <div class="col-md-7">
                                 <table class="table table-striped table-advance table-hover">
                                     <thead>
                                         <tr>
@@ -72,7 +72,7 @@
                                     </tbody>
                                 </table>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-5">
                                 <div class="panel panel-default">
                                     <div class="panel-heading">
                                         <h3 class="panel-title">Distribución de Ventas</h3>
@@ -131,6 +131,12 @@ $(document).ready(function() {
             plugins: {
                 legend: {
                     position: 'right',
+                    labels: {
+                        boxWidth: 12,
+                        font: {
+                            size: 11
+                        }
+                    }
                 },
                 title: {
                     display: true,

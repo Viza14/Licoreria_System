@@ -96,7 +96,6 @@ licoreria/
 │   │   └── alertas.php
 │   ├── reportes/
 │   │   ├── index.php
-│   │   ├── ventas.php
 │   │   ├── resumen_de_venta.php
 │   │   ├── productos_mas_vendidos.php
 │   │   ├── inventario.php

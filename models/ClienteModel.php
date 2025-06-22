@@ -82,8 +82,8 @@ class ClienteModel
     }
     public function actualizarCliente($cedulaOriginal, $data)
     {
-    try {
-        $query = "UPDATE clientes SET 
+        try {
+            $query = "UPDATE clientes SET 
                  cedula = :cedula,
                  id_simbolo_cedula = :id_simbolo_cedula,
                  nombres = :nombres, 
@@ -93,21 +93,21 @@ class ClienteModel
                  id_estatus = :id_estatus
                  WHERE cedula = :cedula_original";
 
-        $stmt = $this->db->prepare($query);
-        $stmt->bindParam(":cedula", $data['cedula']);
-        $stmt->bindParam(":id_simbolo_cedula", $data['id_simbolo_cedula']);
-        $stmt->bindParam(":nombres", $data['nombres']);
-        $stmt->bindParam(":apellidos", $data['apellidos']);
-        $stmt->bindParam(":telefono", $data['telefono']);
-        $stmt->bindParam(":direccion", $data['direccion']);
-        $stmt->bindParam(":id_estatus", $data['id_estatus']);
-        $stmt->bindParam(":cedula_original", $cedulaOriginal);
+            $stmt = $this->db->prepare($query);
+            $stmt->bindParam(":cedula", $data['cedula']);
+            $stmt->bindParam(":id_simbolo_cedula", $data['id_simbolo_cedula']);
+            $stmt->bindParam(":nombres", $data['nombres']);
+            $stmt->bindParam(":apellidos", $data['apellidos']);
+            $stmt->bindParam(":telefono", $data['telefono']);
+            $stmt->bindParam(":direccion", $data['direccion']);
+            $stmt->bindParam(":id_estatus", $data['id_estatus']);
+            $stmt->bindParam(":cedula_original", $cedulaOriginal);
 
-        return $stmt->execute();
-    } catch (PDOException $e) {
-        $this->errors[] = $e->getMessage();
-        return false;
-    }
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            $this->errors[] = $e->getMessage();
+            return false;
+        }
     }
 
     public function cambiarEstado($cedula, $nuevoEstado)
@@ -154,28 +154,37 @@ class ClienteModel
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return $result['total'] ?? 0;
     }
-    public function eliminarCliente($cedula){
-    try {
-        $query = "DELETE FROM clientes WHERE cedula = :cedula";
-        $stmt = $this->db->prepare($query);
-        $stmt->bindParam(":cedula", $cedula);
-        return $stmt->execute();
-    } catch (PDOException $e) {
-        $this->errors[] = "Error al eliminar cliente: " . $e->getMessage();
-        return false;
-    }
+    public function eliminarCliente($cedula)
+    {
+        try {
+            $query = "DELETE FROM clientes WHERE cedula = :cedula";
+            $stmt = $this->db->prepare($query);
+            $stmt->bindParam(":cedula", $cedula);
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            $this->errors[] = "Error al eliminar cliente: " . $e->getMessage();
+            return false;
+        }
     }
 
     public function obtenerClientesActivos()
-{
-    $query = "SELECT c.*, e.nombre as estatus, sc.nombre as nombre_simbolo 
+    {
+        $query = "SELECT c.*, e.nombre as estatus, sc.nombre as nombre_simbolo 
               FROM clientes c
               JOIN estatus e ON c.id_estatus = e.id
               JOIN simbolos_cedula sc ON c.id_simbolo_cedula = sc.id
               WHERE c.id_estatus = 1
               ORDER BY c.nombres, c.apellidos";
-    $stmt = $this->db->prepare($query);
-    $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-}
+        $stmt = $this->db->prepare($query);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function contarClientes() {
+        $query = "SELECT COUNT(*) as total FROM clientes WHERE id_estatus = 1"; // Cambiado a id_estatus
+        $stmt = $this->db->prepare($query);
+        $stmt->execute();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row['total'] ?? 0; // Asegurar que devuelva 0 si es null
+    }
 }

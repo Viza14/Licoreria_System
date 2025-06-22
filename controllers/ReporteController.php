@@ -50,32 +50,6 @@ class ReporteController
         ]);
     }
 
-    public function ventas()
-    {
-        $this->checkSession();
-        
-        $filtros = [];
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $filtros = [
-                'fecha_inicio' => $_POST['fecha_inicio'] ?? null,
-                'fecha_fin' => $_POST['fecha_fin'] ?? null,
-                'id_usuario' => $_POST['id_usuario'] ?? null,
-                'cedula_cliente' => $_POST['cedula_cliente'] ?? null
-            ];
-        }
-        
-        $reporte = $this->model->generarReporteVentas($filtros);
-        $usuarios = $this->usuarioModel->obtenerUsuarioPorId(['estado' => 1]); // Get only active users (estado = 1)
-        $clientes = $this->clienteModel-> obtenerClientePorCedula(['estado' => 1]); // Get only active clients (estado = 1)
-        
-        $this->loadView('reportes/ventas', [
-            'reporte' => $reporte,
-            'usuarios' => $usuarios,
-            'clientes' => $clientes,
-            'filtros' => $filtros
-        ]);
-    }
-
     public function detalleVentas()
     {
         $this->checkSession();

@@ -4,22 +4,56 @@ class VentaController
     private $model;
     private $productoModel;
     private $clienteModel;
+    private $usuarioModel;
     
     public function __construct()
     {
         require_once ROOT_PATH . 'models/VentaModel.php';
         require_once ROOT_PATH . 'models/ProductoModel.php';
         require_once ROOT_PATH . 'models/ClienteModel.php';
+        require_once ROOT_PATH . 'models/UsuarioModel.php';
         $this->model = new VentaModel();
         $this->productoModel = new ProductoModel();
         $this->clienteModel = new ClienteModel();
+        $this->usuarioModel = new UsuarioModel();
     }
 
     public function index()
     {
         $this->checkSession();
-        $ventas = $this->model->obtenerTodasVentas();
-        $this->loadView('ventas/index', ['ventas' => $ventas]);
+        
+        // Handle report filters
+        $filtros = [];
+        $esReporte = isset($_GET['reporte']) && $_GET['reporte'] == '1';
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $filtros = [
+                'fecha_inicio' => $_POST['fecha_inicio'] ?? null,
+                'fecha_fin' => $_POST['fecha_fin'] ?? null,
+                'id_usuario' => $_POST['id_usuario'] ?? null,
+                'cedula_cliente' => $_POST['cedula_cliente'] ?? null
+            ];
+            $_SESSION['ventas_filtros'] = $filtros;
+        } elseif ($esReporte) {
+            $filtros = $_SESSION['ventas_filtros'] ?? [];
+        }
+        
+        // Get sales data based on filters
+        $ventas = empty($filtros) ? 
+            $this->model->obtenerTodasVentas() : 
+            $this->model->generarReporteVentas($filtros);
+        
+        // Additional data for reports
+        $usuarios = $this->usuarioModel->obtenerTodosUsuarios();
+        $clientes = $this->clienteModel->obtenerClientesActivos();
+        
+        $this->loadView('ventas/index', [
+            'ventas' => $ventas,
+            'usuarios' => $usuarios,
+            'clientes' => $clientes,
+            'filtros' => $filtros,
+            'esReporte' => $esReporte
+        ]);
     }
 
     public function crear()
@@ -42,10 +76,13 @@ class VentaController
             $data = [
                 'cedula_cliente' => $_POST['cedula_cliente'],
                 'id_usuario' => $_SESSION['user_id'],
-                'productos' => $_POST['productos']
+                'productos' => $_POST['productos'],
+                'fecha' => $_POST['fecha'],
+                'forma_pago' => $_POST['forma_pago'],
+                'referencia_pago' => $_POST['forma_pago'] != 'EFECTIVO' ? $_POST['referencia_pago'] : null
             ];
 
-            // Validación básica
+            // Basic validation
             if (empty($data['cedula_cliente'])) {
                 $_SESSION['error'] = [
                     'title' => 'Error',
@@ -66,7 +103,27 @@ class VentaController
                 return;
             }
 
-            // Validar stock de productos
+            if (empty($data['forma_pago'])) {
+                $_SESSION['error'] = [
+                    'title' => 'Error',
+                    'text' => 'Debe seleccionar una forma de pago',
+                    'icon' => 'error'
+                ];
+                $this->redirect('ventas&method=crear');
+                return;
+            }
+
+            if ($data['forma_pago'] != 'EFECTIVO' && empty($data['referencia_pago'])) {
+                $_SESSION['error'] = [
+                    'title' => 'Error',
+                    'text' => 'Debe ingresar el número de referencia del pago',
+                    'icon' => 'error'
+                ];
+                $this->redirect('ventas&method=crear');
+                return;
+            }
+
+            // Validate product stock
             foreach ($data['productos'] as $producto) {
                 $stock = $this->productoModel->obtenerStockProducto($producto['id']);
                 if ($stock < $producto['cantidad']) {
@@ -80,7 +137,7 @@ class VentaController
                 }
             }
 
-            // Registrar la venta
+            // Register sale
             if ($this->model->registrarVenta($data)) {
                 $_SESSION['mensaje'] = [
                     'title' => 'Éxito',
@@ -121,7 +178,42 @@ class VentaController
         ]);
     }
 
-    // Métodos auxiliares
+    public function exportar()
+    {
+        $this->checkSession();
+        
+        $filtros = $_SESSION['ventas_filtros'] ?? [];
+        $reporte = $this->model->generarReporteVentas($filtros);
+        
+        // Generate CSV file
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename=reporte_ventas_' . date('Ymd') . '.csv');
+        
+        $output = fopen('php://output', 'w');
+        
+        // Write CSV headers
+        fputcsv($output, [
+            'ID Venta', 
+            'Fecha', 
+            'Cliente', 
+            'Cédula', 
+            'Vendedor', 
+            'Monto Total', 
+            'Cant. Productos', 
+            'Productos',
+            'Forma de Pago',
+            'Referencia'
+        ]);
+        
+        // Write data rows
+        foreach ($reporte as $row) {
+            fputcsv($output, $row);
+        }
+        
+        fclose($output);
+        exit();
+    }
+
     private function checkSession()
     {
         if (!isset($_SESSION['user_id'])) {

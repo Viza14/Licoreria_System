@@ -50,7 +50,6 @@
 
 <!-- js placed at the end of the document so the pages load faster -->
 <script src="<?php echo BASE_URL; ?>assets/js/jquery.js"></script>
-<script src="<?php echo BASE_URL; ?>assets/js/jquery-1.8.3.min.js"></script>
 <script src="<?php echo BASE_URL; ?>assets/js/bootstrap.min.js"></script>
 <script class="include" type="text/javascript" src="<?php echo BASE_URL; ?>assets/js/jquery.dcjqaccordion.2.7.js"></script>
 <script src="<?php echo BASE_URL; ?>assets/js/jquery.scrollTo.min.js"></script>
@@ -64,85 +63,12 @@
 <script src="<?php echo BASE_URL; ?>assets/js/sparkline-chart.js"></script>
 <script src="<?php echo BASE_URL; ?>assets/js/zabuto_calendar.js"></script>
 
-<!-- Contadores animados -->
-<script type="text/javascript">
-    // Contador para Productos
-    $('.count').each(function () {
-        $(this).prop('Counter',0).animate({
-            Counter: $(this).text()
-        }, {
-            duration: 2000,
-            easing: 'swing',
-            step: function (now) {
-                $(this).text(Math.ceil(now));
-            }
-        });
-    });
 
-    // Contador para Clientes
-    $('.count2').each(function () {
-        $(this).prop('Counter',0).animate({
-            Counter: $(this).text()
-        }, {
-            duration: 1500,
-            easing: 'swing',
-            step: function (now) {
-                $(this).text(Math.ceil(now));
-            }
-        });
-    });
-
-    // Contador para Ventas
-    $('.count3').each(function () {
-        $(this).prop('Counter',0).animate({
-            Counter: $(this).text()
-        }, {
-            duration: 1200,
-            easing: 'swing',
-            step: function (now) {
-                $(this).text(Math.ceil(now));
-            }
-        });
-    });
-
-    // Contador para Ingresos
-    $('.count4').each(function () {
-        $(this).prop('Counter',0).animate({
-            Counter: $(this).text()
-        }, {
-            duration: 1000,
-            easing: 'swing',
-            step: function (now) {
-                $(this).text(Math.ceil(now));
-            }
-        });
-    });
-
-    // Gráfico de ventas
-    var salesChartData = {
-        labels: ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul"],
-        datasets: [
-            {
-                fillColor: "rgba(104, 223, 240, 0.5)",
-                strokeColor: "#68dff0",
-                pointColor: "#fff",
-                pointStrokeColor: "#68dff0",
-                data: [65, 59, 90, 81, 56, 55, 40]
-            }
-        ]
-    };
-    
-    var ctx = document.getElementById("sales-chart").getContext("2d");
-    new Chart(ctx).Line(salesChartData, {
-        responsive: true,
-        maintainAspectRatio: false
-    });
-</script>
 <script>
-    // SweetAlert para el botón de cerrar sesión
+    // Logout confirmation with SweetAlert
     $(document).ready(function() {
         $('a.logout').on('click', function(e) {
-            e.preventDefault(); // Prevenir el comportamiento por defecto
+            e.preventDefault();
             const logoutUrl = $(this).attr('href');
             
             Swal.fire({
@@ -161,6 +87,22 @@
             });
         });
     });
+</script>
+
+<!-- Agrega este script al final de tu vista, antes de cerrar el body: -->
+<script>
+$(document).ready(function() {
+    // Animación de las barras
+    $('.custom-bar-chart .value').each(function() {
+        var finalHeight = $(this).data('height');
+        $(this).animate({
+            'height': finalHeight
+        }, 1000);
+    });
+    
+    // Inicializar tooltips
+    $('[data-toggle="tooltip"]').tooltip();
+});
 </script>
 
 </body>

@@ -37,6 +37,22 @@
                                         <th>Vendedor:</th>
                                         <td><?= htmlspecialchars($venta['usuario']) ?></td>
                                     </tr>
+                                    <tr>
+                                        <th>Forma de Pago:</th>
+                                        <td>
+                                            <?= 
+                                            match($venta['forma_pago']) {
+                                                'EFECTIVO' => 'Efectivo',
+                                                'TARJETA' => 'Tarjeta',
+                                                'PAGO_MOVIL' => 'Pago Móvil',
+                                                default => $venta['forma_pago']
+                                            }
+                                            ?>
+                                            <?php if($venta['referencia_pago']): ?>
+                                                (Ref: <?= htmlspecialchars($venta['referencia_pago']) ?>)
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
                                 </table>
                             </div>
                             <div class="col-md-6">
@@ -84,7 +100,7 @@
 
                         <div class="row">
                             <div class="col-md-12">
-                                <a href="<?= BASE_URL ?>index.php?action=ventas" class="btn btn-default">
+                                <a href="<?= BASE_URL ?>index.php?action=reportes" class="btn btn-default">
                                     <i class="fa fa-arrow-left"></i> Volver
                                 </a>
                                 <button class="btn btn-primary" onclick="window.print()">

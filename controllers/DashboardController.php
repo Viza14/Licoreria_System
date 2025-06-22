@@ -1,27 +1,62 @@
 <?php
 class DashboardController {
     private $productoModel;
+    private $clienteModel;
+    private $ventaModel;
+    private $reporteModel;
 
     public function __construct() {
-        // Carga del modelo (versión original)
         require_once ROOT_PATH . 'models/ProductoModel.php';
+        require_once ROOT_PATH . 'models/ClienteModel.php';
+        require_once ROOT_PATH . 'models/VentaModel.php';
+        require_once ROOT_PATH . 'models/ReporteModel.php';
+        
         $this->productoModel = new ProductoModel();
+        $this->clienteModel = new ClienteModel();
+        $this->ventaModel = new VentaModel();
+        $this->reporteModel = new ReporteModel();
     }
 
     public function index() {
-        // Verificar sesión (versión original mejorada)
         if (!isset($_SESSION['user_id'])) {
             $this->redirect('login');
-            return; // Para asegurar que no continúe la ejecución
+            return;
         }
 
         try {
-            // Obtener datos para el dashboard (versión original)
-            $totalProductos = $this->productoModel->contarProductos();
+            // Get today's income as float
+            $ingresosHoy = (float)$this->ventaModel->calcularIngresosHoy();
             
-            // Incluir la vista con datos organizados
+            // Get products by day of week
+            $productosPorDia = $this->reporteModel->obtenerProductosPorDiaSemana();
+            
+            // Prepare data for daily chart
+            $productosPorDiaFormateado = [];
+            $nombresDias = [
+                'Monday' => 'LUN', 
+                'Tuesday' => 'MAR', 
+                'Wednesday' => 'MIE', 
+                'Thursday' => 'JUE', 
+                'Friday' => 'VIE', 
+                'Saturday' => 'SAB', 
+                'Sunday' => 'DOM'
+            ];
+            
+            foreach ($productosPorDia as $dia) {
+                $nombreDia = $nombresDias[$dia['dia_semana']];
+                $productosPorDiaFormateado[$nombreDia] = $dia['total_productos'];
+            }
+            
+            // Prepare data for view
             $data = [
-                'totalProductos' => $totalProductos,
+                'totalProductos' => $this->productoModel->contarProductos() ?? 0,
+                'totalClientes' => $this->clienteModel->contarClientes() ?? 0,
+                'ventasHoy' => $this->ventaModel->contarVentasHoy() ?? 0,
+                'ingresosHoy' => is_numeric($ingresosHoy) ? $ingresosHoy : 0.00,
+                'ventasMensuales' => $this->reporteModel->obtenerVentasMensuales() ?? [],
+                'topProductos' => $this->reporteModel->obtenerProductosMasVendidos() ?? [],
+                'ultimasVentas' => $this->ventaModel->obtenerVentasRecientes() ?? [],
+                'productosPorDia' => $productosPorDiaFormateado,
                 'userNombre' => $_SESSION['user_nombre'] ?? 'Usuario'
             ];
             
@@ -29,11 +64,14 @@ class DashboardController {
             
         } catch (Exception $e) {
             error_log('Error en Dashboard: ' . $e->getMessage());
-            $this->redirect('dashboard');
+            $errorData = [
+                'message' => 'Ocurrió un error al cargar el dashboard.',
+                'userNombre' => $_SESSION['user_nombre'] ?? 'Usuario'
+            ];
+            $this->loadView('error', $errorData);
         }
     }
 
-    // Métodos auxiliares (nuevos pero simples)
     private function redirect($action) {
         header("Location: " . BASE_URL . "index.php?action=$action");
         exit();

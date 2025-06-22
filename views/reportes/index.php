@@ -41,7 +41,7 @@
                                     </div>
                                     <div class="panel-body">
                                         <p>Reporte de ventas realizadas con filtros por fecha, vendedor y cliente.</p>
-                                        <a href="<?= BASE_URL ?>index.php?action=reportes&method=ventas" class="btn btn-success">
+                                        <a href="<?php echo BASE_URL; ?>index.php?action=ventas" class="btn btn-success">
                                             <i class="fa fa-eye"></i> Ver Reporte
                                         </a>
                                     </div>
