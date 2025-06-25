@@ -219,6 +219,10 @@ try {
                 $controller->editar($id);
             } elseif ($method === 'actualizar' && $id) {
                 $controller->actualizar($id);
+            } elseif ($method === 'modificarVenta' && $id) {
+                $controller->modificarVenta($id);
+            } elseif ($method === 'actualizarVenta' && $id) {
+                $controller->actualizarVenta($id);
             } else {
                 $controller->index();
             }

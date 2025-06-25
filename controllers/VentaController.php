@@ -156,6 +156,75 @@ class VentaController
         }
     }
 
+    public function editar($id)
+    {
+        $this->checkSession();
+        
+        $venta = $this->model->obtenerVentaPorId($id);
+        if (!$venta) {
+            $_SESSION['error'] = [
+                'title' => 'Error',
+                'text' => 'Venta no encontrada',
+                'icon' => 'error'
+            ];
+            $this->redirect('ventas');
+        }
+
+        $detalles = $this->model->obtenerDetallesVenta($id);
+        $productos = $this->productoModel->obtenerProductosActivos();
+        $clientes = $this->clienteModel->obtenerClientesActivos();
+
+        $this->loadView('ventas/editar', [
+            'venta' => $venta,
+            'detalles' => $detalles,
+            'productos' => $productos,
+            'clientes' => $clientes
+        ]);
+    }
+
+    public function actualizar($id)
+    {
+        $this->checkSession();
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $data = [
+                'cedula_cliente' => $_POST['cedula_cliente'],
+                'id_usuario' => $_SESSION['user_id'],
+                'fecha' => $_POST['fecha'],
+                'forma_pago' => $_POST['forma_pago'],
+                'referencia_pago' => $_POST['forma_pago'] != 'EFECTIVO' ? $_POST['referencia_pago'] : null,
+                'productos' => $_POST['productos']
+            ];
+
+            // Basic validation
+            if (empty($data['cedula_cliente']) || empty($data['productos'])) {
+                $_SESSION['error'] = [
+                    'title' => 'Error',
+                    'text' => 'Datos incompletos',
+                    'icon' => 'error'
+                ];
+                $this->redirect('ventas&method=editar&id=' . $id);
+                return;
+            }
+
+            if ($this->model->actualizarVenta($id, $data)) {
+                $_SESSION['mensaje'] = [
+                    'title' => 'Éxito',
+                    'text' => 'Venta actualizada correctamente. Se ha creado un registro de ajuste.',
+                    'icon' => 'success'
+                ];
+                $this->redirect('ventas');
+            } else {
+                $_SESSION['error'] = [
+                    'title' => 'Error',
+                    'text' => 'Error al actualizar: ' . implode(', ', $this->model->getErrors()),
+                    'icon' => 'error'
+                ];
+                $this->redirect('ventas&method=editar&id=' . $id);
+            }
+        }
+    }
+
     public function mostrar($id)
     {
         $this->checkSession();

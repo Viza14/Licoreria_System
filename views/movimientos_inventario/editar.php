@@ -28,7 +28,12 @@
                             <?php unset($_SESSION['error']); ?>
                         <?php endif; ?>
 
+                        <div class="alert alert-info">
+                            <strong>Nota:</strong> Al editar este movimiento, el registro actual se marcará como histórico y se creará un nuevo registro de tipo "AJUSTE" con los cambios realizados.
+                        </div>
+
                         <form class="form-horizontal" method="POST" action="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=actualizar&id=<?= $movimiento['id'] ?>">
+                            <input type="hidden" name="precio_unitario" id="hidden_precio_unitario" value="<?= $movimiento['precio_unitario'] ?>">
                             <div class="form-group">
                                 <label class="col-sm-2 control-label">Producto</label>
                                 <div class="col-sm-10">
@@ -67,9 +72,9 @@
                                     <div class="input-group">
                                         <span class="input-group-addon">Bs</span>
                                         <input type="number" step="0.01" class="form-control" id="precio_compra"
-                                               name="precio_unitario" readonly>
+                                               value="<?= $movimiento['precio_unitario'] ?>" readonly>
                                     </div>
-                                    <small class="text-muted">Precio establecido en la relación con el proveedor</small>
+                                    <small class="text-muted">Precio establecido en la relación producto-proveedor</small>
                                 </div>
                             </div>
                             <div class="form-group">
@@ -101,27 +106,30 @@
 <script>
 // Precios pre-cargados desde PHP
 const preciosRelaciones = <?= $precios ?>;
+const precioActual = <?= $movimiento['precio_unitario'] ?>;
 
 document.addEventListener('DOMContentLoaded', function() {
     const proveedorSelect = document.querySelector('[name="cedula_proveedor"]');
     const precioInput = document.getElementById('precio_compra');
+    const hiddenPrecioInput = document.getElementById('hidden_precio_unitario');
+    
+    // Set current price on load
+    precioInput.value = precioActual;
+    hiddenPrecioInput.value = precioActual;
 
     function actualizarPrecio() {
         const proveedorId = proveedorSelect.value;
-        const productoId = <?= $producto['id'] ?>; // Get product ID from PHP
+        const productoId = <?= $producto['id'] ?>;
 
         if (proveedorId && 
             preciosRelaciones[productoId] && 
             preciosRelaciones[productoId][proveedorId]) {
-            precioInput.value = preciosRelaciones[productoId][proveedorId];
-        } else {
-            precioInput.value = '';
+            const nuevoPrecio = preciosRelaciones[productoId][proveedorId];
+            precioInput.value = nuevoPrecio;
+            hiddenPrecioInput.value = nuevoPrecio;
         }
     }
 
     proveedorSelect.addEventListener('change', actualizarPrecio);
-    
-    // Initialize price when page loads
-    actualizarPrecio();
 });
 </script>

@@ -63,6 +63,9 @@ class ProductoProveedorModel
                 return false;
             }
 
+            // Agregar estatus por defecto
+            $data['id_estatus'] = 1;
+
             $query = "INSERT INTO proveedor_producto (cedula_proveedor, id_producto, precio_compra, id_estatus)
                       VALUES (:cedula_proveedor, :id_producto, :precio_compra, :id_estatus)";
             $stmt = $this->db->prepare($query);
@@ -141,4 +144,3 @@ class ProductoProveedorModel
         return $stmt->fetch(PDO::FETCH_COLUMN);
     }
 }
-

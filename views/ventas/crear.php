@@ -17,15 +17,15 @@
         <div class="row">
             <div class="col-lg-12">
                 <section class="panel">
-                    <header class="panel-heading">
-                        Formulario de Venta
+                    <header class="panel-heading" style="font-size: 1.3em; background: #f5f5f5; border-bottom: 2px solid #e0e0e0;">
+                        <i class="fa fa-shopping-cart"></i> Formulario de Venta
                     </header>
                     <div class="panel-body">
                         <form id="formVenta" method="POST" action="<?= BASE_URL ?>index.php?action=ventas&method=guardar">
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label for="buscar_cliente">Cliente *</label>
+                                        <h4 style="margin-top: 0px; color: #337ab7;"><i class="fa fa-user"></i> Cliente *</h4>
                                         <div class="input-group">
                                             <input type="text" class="form-control" id="buscar_cliente" placeholder="Buscar cliente..." autocomplete="off">
                                             <input type="hidden" id="cedula_cliente" name="cedula_cliente" required>
@@ -73,7 +73,7 @@
                                 <div class="col-md-2">
                                     <div class="form-group">
                                         <label>&nbsp;</label>
-                                        <button type="button" class="btn btn-primary form-control" id="agregarProducto">
+                                        <button type="button" class="btn btn-primary form-control" id="agregarProducto" style="font-weight: bold;">
                                             <i class="fa fa-plus"></i> Agregar
                                         </button>
                                     </div>
@@ -82,7 +82,7 @@
 
                             <div class="row">
                                 <div class="col-md-12">
-                                    <h4>Productos</h4>
+                                    <h4 style="margin-top: 30px; color: #337ab7;"><i class="fa fa-list"></i> Productos</h4>
                                     <div class="table-responsive">
                                         <table class="table table-bordered" id="tablaProductos">
                                             <thead>
@@ -110,7 +110,7 @@
 
                             <div class="row">
                                 <div class="col-md-12">
-                                    <h4>Forma de Pago</h4>
+                                    <h4 style="margin-top: 30px; color: #337ab7;"><i class="fa fa-credit-card"></i> Forma de Pago</h4>
                                     <div class="form-group">
                                         <div class="btn-group btn-group-toggle" data-toggle="buttons">
                                             <label class="btn btn-outline-primary active">
@@ -124,7 +124,7 @@
                                             </label>
                                         </div>
                                     </div>
-                                    
+
                                     <div id="referencia_pago_container" class="form-group" style="display: none;">
                                         <label for="referencia_pago">Número de Referencia</label>
                                         <input type="text" class="form-control" id="referencia_pago" name="referencia_pago" placeholder="Ingrese número de referencia">
@@ -134,10 +134,10 @@
 
                             <div class="row">
                                 <div class="col-md-12">
-                                    <button type="submit" class="btn btn-success">
+                                    <button type="submit" class="btn btn-success" style="font-size: 1.1em; padding: 8px 24px;">
                                         <i class="fa fa-save"></i> Registrar Venta
                                     </button>
-                                    <a href="<?= BASE_URL ?>index.php?action=ventas" class="btn btn-default">
+                                    <a href="<?= BASE_URL ?>index.php?action=ventas" class="btn btn-default" style="margin-left: 10px;">
                                         <i class="fa fa-times"></i> Cancelar
                                     </a>
                                 </div>
@@ -159,7 +159,7 @@
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');
             const day = String(now.getDate()).padStart(2, '0');
-            
+
             // 12-hour format
             let hours = now.getHours();
             const ampm = hours >= 12 ? 'PM' : 'AM';
@@ -167,7 +167,7 @@
             hours = hours ? hours : 12; // '0' should be '12'
             hours = String(hours).padStart(2, '0');
             const minutes = String(now.getMinutes()).padStart(2, '0');
-            
+
             return `${year}-${month}-${day}T${hours}:${minutes}`;
         };
 
@@ -176,7 +176,7 @@
         // Payment method handler
         $('input[name="forma_pago"]').change(function() {
             const paymentMethod = $(this).val();
-            if(paymentMethod === 'TARJETA' || paymentMethod === 'PAGO_MOVIL') {
+            if (paymentMethod === 'TARJETA' || paymentMethod === 'PAGO_MOVIL') {
                 $('#referencia_pago_container').show();
                 $('#referencia_pago').prop('required', true);
             } else {
@@ -188,7 +188,7 @@
         // Date edit switch handler
         $('#editarFecha').change(function() {
             const isChecked = $(this).prop('checked');
-            
+
             if (isChecked) {
                 Swal.fire({
                     title: '¿Desea editar la fecha y hora?',
@@ -439,8 +439,11 @@
                     <td>${producto.precio.toFixed(2).replace('.', ',')} Bs</td>
                     <td>${producto.subtotal.toFixed(2).replace('.', ',')} Bs</td>
                     <td>
+                        <button type="button" class="btn btn-info btn-xs editar-cantidad" data-index="${index}" style="margin-right: 5px;">
+                            <i class="fa fa-edit"></i>
+                        </button>
                         <button type="button" class="btn btn-danger btn-xs eliminar-producto" data-index="${index}">
-                            <i class="fa fa-trash"></i>
+                            <i class="fa fa-trash-o"></i>
                         </button>
                     </td>
                     <input type="hidden" name="productos[${index}][id]" value="${producto.id}">
@@ -452,12 +455,60 @@
                 tbody.append(row);
             });
 
+            // Add events to edit buttons
+            $('.editar-cantidad').click(function() {
+                const index = $(this).data('index');
+                const producto = productosAgregados[index];
+                
+                Swal.fire({
+                    title: 'Editar Cantidad',
+                    html: `
+                        <div class="form-group">
+                            <label>Producto: ${producto.descripcion}</label>
+                            <input type="number" id="nueva-cantidad" class="form-control" value="${producto.cantidad}" min="1">
+                        </div>
+                    `,
+                    showCancelButton: true,
+                    confirmButtonText: 'Guardar',
+                    cancelButtonText: 'Cancelar',
+                    preConfirm: () => {
+                        const nuevaCantidad = parseInt($('#nueva-cantidad').val());
+                        if (nuevaCantidad < 1) {
+                            Swal.showValidationMessage('La cantidad debe ser mayor a 0');
+                            return false;
+                        }
+                        return nuevaCantidad;
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const nuevaCantidad = result.value;
+                        productosAgregados[index].cantidad = nuevaCantidad;
+                        productosAgregados[index].subtotal = nuevaCantidad * producto.precio;
+                        renderizarTablaProductos();
+                        actualizarTotal();
+                    }
+                });
+            });
+
             // Add events to delete buttons
             $('.eliminar-producto').click(function() {
                 const index = $(this).data('index');
-                productosAgregados.splice(index, 1);
-                renderizarTablaProductos();
-                actualizarTotal();
+                Swal.fire({
+                    title: '¿Está seguro?',
+                    text: "Se eliminará el producto de la venta",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Sí, eliminar',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        productosAgregados.splice(index, 1);
+                        renderizarTablaProductos();
+                        actualizarTotal();
+                    }
+                });
             });
         }
 
