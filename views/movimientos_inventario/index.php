@@ -19,6 +19,9 @@
                     <header class="panel-heading">
                         Historial de Movimientos
                         <div class="pull-right">
+                            <button class="btn btn-info btn-xs" data-toggle="modal" data-target="#filtrosModal">
+                                <i class="fa fa-filter"></i> Filtros
+                            </button>
                             <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=resumen" class="btn btn-info btn-xs">
                                 <i class="fa fa-pie-chart"></i> Resumen
                             </a>
@@ -30,6 +33,17 @@
                                 <span class="input-group-addon"><i class="fa fa-search"></i></span>
                                 <input type="text" id="busqueda" class="form-control" placeholder="Buscar por producto, usuario...">
                             </div>
+                        </div>
+                        
+                        <div id="filtros-activos" class="alert alert-info" style="display: none; margin-bottom: 10px;">
+                            <i class="fa fa-filter"></i> Filtros activos: <span id="texto-filtros-activos"></span>
+                            <div class="pull-right">
+                                <strong>Resultados encontrados: <span id="contador-resultados">0</span></strong>
+                            </div>
+                        </div>
+
+                        <div id="sin-resultados" class="alert alert-warning text-center" style="display: none;">
+                            <i class="fa fa-exclamation-circle"></i> No se encontraron movimientos que coincidan con los criterios de búsqueda
                         </div>
                         
                         <div class="alert alert-info" style="padding: 8px;">
@@ -55,12 +69,10 @@
                             <tbody>
                                 <?php foreach ($movimientos as $movimiento): ?>
                                     <tr class="<?php
-                                        if ($movimiento['id_estatus'] == 2) {
+                                        if ($movimiento['id_estatus'] == 2 || ($movimiento['tiene_ajuste'] > 0 && ($movimiento['tipo_movimiento'] == 'SALIDA' || $movimiento['tipo_movimiento'] == 'ENTRADA'))) {
                                             echo 'inactive-movement';
                                         } elseif ($movimiento['tipo_movimiento'] == 'AJUSTE') {
                                             echo 'adjustment-movement';
-                                        } elseif ($movimiento['tiene_ajuste'] > 0) {
-                                            echo 'related-to-adjustment';
                                         } else {
                                             echo '';
                                         }
@@ -82,32 +94,43 @@
                                         <td><?= $movimiento['usuario']; ?></td>
                                         <td><?= $movimiento['referencia'] ?? 'N/A'; ?></td>
                                         <td>
+                                            <?php if ($movimiento['id_estatus'] == 1 && $movimiento['tiene_ajuste'] == 0): ?>
                                             <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=mostrar&id=<?= $movimiento['id']; ?>"
                                                 class="btn btn-success btn-xs" title="Ver Detalles">
                                                 <i class="fa fa-eye"></i>
                                             </a>
+                                            <?php endif; ?>
                                             <?php if ($movimiento['id_estatus'] == 1 && $movimiento['tiene_ajuste'] == 0): ?>
-                                                <?php if ($movimiento['tipo_movimiento'] == 'SALIDA' && $movimiento['tipo_referencia'] == 'VENTA'): ?>
+                                                <?php if (($movimiento['tipo_movimiento'] == 'SALIDA' && $movimiento['tipo_referencia'] == 'VENTA') || 
+                                                          ($movimiento['tipo_movimiento'] == 'AJUSTE' && $movimiento['tipo_referencia'] == 'VENTA')): ?>
                                                     <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=modificarVenta&id=<?= $movimiento['id_referencia'] ?>" 
                                                        class="btn btn-primary btn-xs" title="Modificar Venta">
                                                         <i class="fa fa-edit"></i>
                                                     </a>
-                                                <?php elseif ($movimiento['tipo_movimiento'] == 'ENTRADA'): ?>
+                                                <?php elseif ($movimiento['tipo_movimiento'] == 'ENTRADA' || 
+                                                            ($movimiento['tipo_movimiento'] == 'AJUSTE' && $movimiento['tipo_referencia'] != 'VENTA')): ?>
                                                     <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=editar&id=<?= $movimiento['id'] ?>" 
                                                        class="btn btn-primary btn-xs" title="Editar Entrada">
                                                         <i class="fa fa-edit"></i>
                                                     </a>
-                                                <?php else: ?>
-                                                    <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=editar&id=<?= $movimiento['id'] ?>" 
-                                                       class="btn btn-primary btn-xs" title="Editar">
-                                                        <i class="fa fa-edit"></i>
-                                                    </a>
                                                 <?php endif; ?>
                                             <?php elseif ($movimiento['tiene_ajuste'] > 0): ?>
-                                                <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=mostrar&id=<?= $movimiento['id_ajuste_relacionado'] ?>" 
-                                                   class="btn btn-info btn-xs" title="Ver Ajuste">
-                                                    <i class="fa fa-exchange"></i>
-                                                </a>
+                                                <?php if ($movimiento['tipo_movimiento'] == 'SALIDA' && $movimiento['tipo_referencia'] == 'VENTA'): ?>
+                                                    <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=mostrar&id=<?= $movimiento['id'] ?>" 
+                                                       class="btn btn-info btn-xs" title="Ver Detalle de Venta">
+                                                        <i class="fa fa-eye"></i>
+                                                    </a>
+                                                <?php elseif ($movimiento['tipo_movimiento'] == 'ENTRADA'): ?>
+                                                    <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=mostrar&id=<?= $movimiento['id'] ?>" 
+                                                       class="btn btn-info btn-xs" title="Ver Detalle de Entrada">
+                                                        <i class="fa fa-eye"></i>
+                                                    </a>
+                                                <?php else: ?>
+                                                    <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=mostrar&id=<?= $movimiento['id_ajuste_relacionado'] ?>" 
+                                                       class="btn btn-info btn-xs" title="Ver Ajuste">
+                                                        <i class="fa fa-exchange"></i>
+                                                    </a>
+                                                <?php endif; ?>
                                             <?php endif; ?>
                                         </td>
                                     </tr>
@@ -172,8 +195,71 @@
     }
 </style>
 
+<!-- Modal de Filtros -->
+<div class="modal fade" id="filtrosModal" tabindex="-1" role="dialog" aria-labelledby="filtrosModalLabel">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="filtrosModalLabel"><i class="fa fa-filter"></i> Filtros Avanzados</h4>
+            </div>
+            <div class="modal-body">
+                <form id="formFiltros">
+                    <div class="form-group">
+                        <label>Fecha Desde:</label>
+                        <input type="date" class="form-control" id="filtroFechaDesde">
+                    </div>
+                    <div class="form-group">
+                        <label>Fecha Hasta:</label>
+                        <input type="date" class="form-control" id="filtroFechaHasta">
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo de Movimiento:</label>
+                        <select class="form-control" id="filtroTipo">
+                            <option value="">Todos los tipos</option>
+                            <option value="ENTRADA">Entrada</option>
+                            <option value="SALIDA">Salida</option>
+                            <option value="AJUSTE">Ajuste</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Estatus:</label>
+                        <select class="form-control" id="filtroEstatus">
+                            <option value="">Todos los estatus</option>
+                            <option value="1">Activo</option>
+                            <option value="2">Inactivo</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-primary" id="aplicarFiltros">Aplicar Filtros</button>
+                <button type="button" class="btn btn-link" id="limpiarFiltros">Limpiar Filtros</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     $(document).ready(function() {
+        // Función para actualizar el contador y mensajes
+        function actualizarContador(resultados, mostrarFiltros = true) {
+            $('#contador-resultados').text(resultados);
+            
+            if (resultados === 0) {
+                $('#sin-resultados').show();
+            } else {
+                $('#sin-resultados').hide();
+            }
+
+            if (mostrarFiltros || resultados !== $('#tablaMovimientos tbody tr').length) {
+                $('#filtros-activos').show();
+            } else {
+                $('#filtros-activos').hide();
+            }
+        }
+
         // Búsqueda en tiempo real
         $('#busqueda').on('input', function() {
             const searchValue = $(this).val().trim().toLowerCase();
@@ -195,6 +281,13 @@
                     $(this).hide();
                 }
             });
+
+            // Actualizar texto de filtros para búsqueda
+            if (searchValue) {
+                $('#texto-filtros-activos').text(`Búsqueda: ${searchValue}`);
+            }
+            
+            actualizarContador(resultados, searchValue.length > 0);
         });
         
         // Inicializar tooltips para movimientos relacionados
@@ -235,6 +328,83 @@
             });
         <?php unset($_SESSION['error']);
         endif; ?>
+
+        // Filtros avanzados
+        $('#aplicarFiltros').click(function() {
+            const fechaDesde = $('#filtroFechaDesde').val();
+            const fechaHasta = $('#filtroFechaHasta').val();
+            const tipo = $('#filtroTipo').val();
+            const estatus = $('#filtroEstatus').val();
+            let resultados = 0;
+
+            $('#tablaMovimientos tbody tr').each(function() {
+                const fecha = $(this).find('td:eq(0)').text();
+                // Obtener solo el texto del primer label (ENTRADA, SALIDA o AJUSTE)
+                const tipoMovimiento = $(this).find('td:eq(2) .label').first().clone()
+                    .children().remove().end()
+                    .text().trim();
+                const estatusMovimiento = $(this).hasClass('inactive-movement') ? '2' : '1';
+
+                // Convertir fecha del formato dd/mm/yyyy HH:mm a yyyy-mm-dd para comparación
+                const fechaPartes = fecha.split(' ')[0].split('/');
+                const fechaComparar = `${fechaPartes[2]}-${fechaPartes[1].padStart(2, '0')}-${fechaPartes[0].padStart(2, '0')}`;
+
+                console.log('Comparando:', {
+                    fecha: fechaComparar,
+                    fechaDesde: fechaDesde,
+                    fechaHasta: fechaHasta,
+                    tipoMovimiento: tipoMovimiento,
+                    tipo: tipo,
+                    estatusMovimiento: estatusMovimiento,
+                    estatus: estatus
+                });
+
+                const matchFechaDesde = !fechaDesde || fechaComparar >= fechaDesde;
+                const matchFechaHasta = !fechaHasta || fechaComparar <= fechaHasta;
+                const matchTipo = !tipo || tipoMovimiento.toUpperCase().trim() === tipo.toUpperCase().trim();
+                const matchEstatus = !estatus || estatusMovimiento === estatus;
+
+                console.log('Resultados:', {
+                    matchFechaDesde,
+                    matchFechaHasta,
+                    matchTipo,
+                    matchEstatus
+                });
+
+                if (matchFechaDesde && matchFechaHasta && matchTipo && matchEstatus) {
+                    $(this).show();
+                    resultados++;
+                } else {
+                    $(this).hide();
+                }
+            });
+
+            // Actualizar indicador de filtros activos y contador
+            const filtrosTexto = [];
+            if (fechaDesde) filtrosTexto.push(`Desde: ${fechaDesde}`);
+            if (fechaHasta) filtrosTexto.push(`Hasta: ${fechaHasta}`);
+            if (tipo) filtrosTexto.push(`Tipo: ${tipo}`);
+            if (estatus) filtrosTexto.push(`Estatus: ${estatus === '1' ? 'Activo' : 'Inactivo'}`);
+
+            if (filtrosTexto.length > 0) {
+                $('#texto-filtros-activos').text(filtrosTexto.join(' | '));
+            }
+            
+            actualizarContador(resultados, filtrosTexto.length > 0);
+
+            $('#filtrosModal').modal('hide');
+        });
+
+        // Limpiar filtros
+        $('#limpiarFiltros').click(function() {
+            $('#formFiltros')[0].reset();
+            $('#busqueda').val('');
+            $('#tablaMovimientos tbody tr').show();
+            $('#texto-filtros-activos').text('');
+            actualizarContador($('#tablaMovimientos tbody tr').length, false);
+        });
+
+
     });
 </script>
 <!--main content end-->

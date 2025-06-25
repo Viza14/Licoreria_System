@@ -39,7 +39,12 @@ class MovimientoInventarioController
             $this->redirect('movimientos-inventario');
         }
         
-        $this->loadView('movimientos_inventario/mostrar', ['movimiento' => $movimiento]);
+        // Determinar qué vista cargar basado en el tipo de movimiento
+        if ($movimiento['tipo_movimiento'] == 'SALIDA' && $movimiento['tipo_referencia'] == 'VENTA') {
+            $this->loadView('movimientos_inventario/mostrar_venta', ['movimiento' => $movimiento]);
+        } else {
+            $this->loadView('movimientos_inventario/mostrar', ['movimiento' => $movimiento]);
+        }
     }
 
     public function porProducto($idProducto)

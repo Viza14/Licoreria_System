@@ -48,10 +48,23 @@ class MovimientoInventarioModel
 
     public function obtenerMovimientoPorId($id)
     {
-        $query = "SELECT mi.*, p.descripcion as producto, e.nombre as estado
+        $query = "SELECT mi.*, p.descripcion as producto, e.nombre as estado,
+                  CONCAT(u.nombres, ' ', u.apellidos) as usuario,
+                  -- Obtener información del movimiento original si es un ajuste
+                  mo.tipo_movimiento as tipo_movimiento_original,
+                  mo.cantidad as cantidad_original,
+                  mo.precio_unitario as precio_unitario_original,
+                  mo.fecha_movimiento as fecha_movimiento_original,
+                  -- Obtener información de la venta relacionada si existe
+                  v.monto_total as monto_venta,
+                  CONCAT(c.nombres, ' ', c.apellidos) as cliente_venta
                   FROM movimientos_inventario mi
                   JOIN producto p ON mi.id_producto = p.id
                   JOIN estatus e ON mi.id_estatus = e.id
+                  JOIN usuarios u ON mi.id_usuario = u.id
+                  LEFT JOIN movimientos_inventario mo ON mi.id_movimiento_original = mo.id
+                  LEFT JOIN ventas v ON (mi.tipo_referencia = 'VENTA' AND mi.id_referencia = v.id)
+                  LEFT JOIN clientes c ON v.cedula_cliente = c.cedula
                   WHERE mi.id = :id";
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(":id", $id);
@@ -292,11 +305,12 @@ class MovimientoInventarioModel
         try {
             $this->db->beginTransaction();
 
-            // 1. Obtener venta actual
+            // 1. Obtener venta actual y sus detalles
             $venta_actual = $this->obtenerVentaParaModificacion($id_venta);
             if (!$venta_actual) {
                 throw new PDOException("Venta no encontrada o ya ha sido modificada");
             }
+            $detalles_actuales = $this->obtenerDetallesVentaParaModificacion($id_venta);
 
             // 2. Marcar venta original como histórica
             $query = "UPDATE ventas SET id_estatus = 2 WHERE id = :id";
@@ -326,7 +340,7 @@ class MovimientoInventarioModel
             $nuevo_id_venta = $this->db->lastInsertId();
 
             // 4. Procesar productos y movimientos de inventario
-            foreach ($data['productos'] as $producto) {
+            foreach ($data['productos'] as $id_detalle => $producto) {
                 // Registrar detalle de venta
                 $query = "INSERT INTO detalle_venta (id_venta, id_producto, cantidad, monto) 
                           VALUES (:id_venta, :id_producto, :cantidad, :monto)";
@@ -338,32 +352,60 @@ class MovimientoInventarioModel
                 $stmt->bindParam(":monto", $producto['subtotal']);
                 $stmt->execute();
 
-                // Registrar movimiento de ajuste
-                $query = "INSERT INTO movimientos_inventario (
-                    id_producto, tipo_movimiento, cantidad, precio_unitario, 
-                    id_referencia, tipo_referencia, id_usuario, id_movimiento_original
-                ) VALUES (
-                    :id_producto, 'AJUSTE', :cantidad, :precio_unitario, 
-                    :id_referencia, 'VENTA', :id_usuario, :id_movimiento_original
-                )";
-                
+                // Buscar el movimiento original de salida para este producto
+                $query = "SELECT id FROM movimientos_inventario 
+                          WHERE tipo_movimiento = 'SALIDA' 
+                          AND tipo_referencia = 'VENTA' 
+                          AND id_referencia = :id_venta 
+                          AND id_producto = :id_producto 
+                          AND id_estatus = 1";
                 $stmt = $this->db->prepare($query);
+                $stmt->bindParam(":id_venta", $id_venta);
                 $stmt->bindParam(":id_producto", $producto['id_producto']);
-                $stmt->bindParam(":cantidad", $producto['cantidad']);
-                $stmt->bindParam(":precio_unitario", $producto['precio_unitario']);
-                $stmt->bindParam(":id_referencia", $nuevo_id_venta);
-                $stmt->bindParam(":id_usuario", $data['id_usuario']);
-                $stmt->bindParam(":id_movimiento_original", $id_venta);
                 $stmt->execute();
+                $movimiento_original = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                // Ajustar stock
-                $diferencia = $this->calcularDiferenciaStock($id_venta, $producto['id_producto'], $producto['cantidad']);
-                
-                $query = "UPDATE producto SET cantidad = cantidad + :diferencia WHERE id = :id_producto";
-                $stmt = $this->db->prepare($query);
-                $stmt->bindParam(":diferencia", $diferencia);
-                $stmt->bindParam(":id_producto", $producto['id_producto']);
-                $stmt->execute();
+                if ($movimiento_original) {
+                    // Marcar el movimiento original como histórico
+                    $query = "UPDATE movimientos_inventario SET id_estatus = 2 
+                              WHERE id = :id";
+                    $stmt = $this->db->prepare($query);
+                    $stmt->bindParam(":id", $movimiento_original['id']);
+                    $stmt->execute();
+
+                    // Registrar nuevo movimiento de salida (ajuste de venta)
+                    $query = "INSERT INTO movimientos_inventario (
+                        id_producto, tipo_movimiento, cantidad, precio_unitario, 
+                        id_referencia, tipo_referencia, id_usuario, id_movimiento_original,
+                        observaciones, id_estatus
+                    ) VALUES (
+                        :id_producto, 'SALIDA', :cantidad, :precio_unitario, 
+                        :id_referencia, 'VENTA', :id_usuario, :id_movimiento_original,
+                        :observaciones, 1
+                    )";
+                    
+                    $observaciones = "Modificación de venta #{$id_venta} - Nueva venta #{$nuevo_id_venta}";
+                    
+                    $stmt = $this->db->prepare($query);
+                    $stmt->bindParam(":id_producto", $producto['id_producto']);
+                    $stmt->bindParam(":cantidad", $producto['cantidad']);
+                    $stmt->bindParam(":precio_unitario", $producto['precio_unitario']);
+                    $stmt->bindParam(":id_referencia", $nuevo_id_venta);
+                    $stmt->bindParam(":id_usuario", $data['id_usuario']);
+                    $stmt->bindParam(":id_movimiento_original", $movimiento_original['id']);
+                    $stmt->bindParam(":observaciones", $observaciones);
+                    $stmt->execute();
+
+                    // Ajustar stock
+                    $diferencia = $this->calcularDiferenciaStock($id_venta, $producto['id_producto'], $producto['cantidad']);
+                    
+                    $query = "UPDATE producto SET cantidad = cantidad + :diferencia 
+                              WHERE id = :id_producto";
+                    $stmt = $this->db->prepare($query);
+                    $stmt->bindParam(":diferencia", $diferencia);
+                    $stmt->bindParam(":id_producto", $producto['id_producto']);
+                    $stmt->execute();
+                }
             }
 
             $this->db->commit();
@@ -389,6 +431,9 @@ class MovimientoInventarioModel
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         $cantidad_original = $result ? $result['cantidad'] : 0;
         
-        return $cantidad_original - $nueva_cantidad; // Positivo si se redujo la cantidad, negativo si aumentó
+        // Para salidas de inventario:
+        // Si la nueva cantidad es mayor que la original, debemos RESTAR más al stock (diferencia negativa)
+        // Si la nueva cantidad es menor que la original, debemos RESTAR menos al stock (diferencia positiva)
+        return $cantidad_original - $nueva_cantidad; // Mantiene la lógica correcta para SALIDAS
     }
 }

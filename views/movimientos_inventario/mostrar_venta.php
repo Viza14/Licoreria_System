@@ -4,11 +4,11 @@
         <!--breadcrumbs start-->
         <div class="row">
             <div class="col-lg-12">
-                <h3 class="page-header"><i class="fa fa-eye"></i> Detalle de Movimiento</h3>
+                <h3 class="page-header"><i class="fa fa-eye"></i> Detalle de Movimiento de Venta</h3>
                 <ol class="breadcrumb">
                     <li><i class="fa fa-home"></i><a href="<?php echo BASE_URL; ?>">Inicio</a></li>
                     <li><i class="fa fa-exchange"></i><a href="<?= BASE_URL ?>index.php?action=movimientos-inventario">Movimientos</a></li>
-                    <li><i class="fa fa-eye"></i> Detalle</li>
+                    <li><i class="fa fa-eye"></i> Detalle de Venta</li>
                 </ol>
             </div>
         </div>
@@ -18,7 +18,7 @@
             <div class="col-lg-12">
                 <section class="panel">
                     <header class="panel-heading">
-                        Información del Movimiento
+                        Información del Movimiento de Venta
                         <div class="pull-right">
                             <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario" class="btn btn-default btn-xs">
                                 <i class="fa fa-arrow-left"></i> Volver
@@ -39,9 +39,10 @@
                                         <label class="col-sm-4 control-label">Tipo:</label>
                                         <div class="col-sm-8">
                                             <p class="form-control-static">
-                                                <span class="label label-<?= $movimiento['tipo_movimiento'] == 'ENTRADA' ? 'success' : ($movimiento['tipo_movimiento'] == 'SALIDA' ? 'danger' : 'warning'); ?>">
-                                                    <?= $movimiento['tipo_movimiento']; ?>
-                                                </span>
+                                                <span class="label label-danger">SALIDA</span>
+                                                <?php if ($movimiento['id_estatus'] == 2): ?>
+                                                    <span class="label label-default">Inactivo</span>
+                                                <?php endif; ?>
                                             </p>
                                         </div>
                                     </div>
@@ -68,15 +69,9 @@
                                         </div>
                                     </div>
                                     <div class="form-group">
-                                        <label class="col-sm-4 control-label">Referencia:</label>
+                                        <label class="col-sm-4 control-label">Venta:</label>
                                         <div class="col-sm-8">
-                                            <p class="form-control-static">
-                                                <?php if ($movimiento['tipo_referencia'] && $movimiento['id_referencia']): ?>
-                                                    <?= $movimiento['tipo_referencia'] ?> #<?= $movimiento['id_referencia'] ?>
-                                                <?php else: ?>
-                                                    N/A
-                                                <?php endif; ?>
-                                            </p>
+                                            <p class="form-control-static">#<?= $movimiento['id_referencia'] ?></p>
                                         </div>
                                     </div>
                                 </div>
@@ -84,14 +79,35 @@
                         </div>
                         <div class="row">
                             <div class="col-md-12">
-                                <div class="form-group">
-                                    <label class="control-label">Usuario:</label>
-                                    <p class="form-control-static"><?= $movimiento['usuario'] ?></p>
+                                <hr>
+                                <h4>Detalles de la Venta</h4>
+                                <div class="form-horizontal">
+                                    <div class="form-group">
+                                        <label class="col-sm-3 control-label">Cliente:</label>
+                                        <div class="col-sm-9">
+                                            <p class="form-control-static"><?= $movimiento['cliente_venta'] ?></p>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-sm-3 control-label">Monto Total:</label>
+                                        <div class="col-sm-9">
+                                            <p class="form-control-static"><?= number_format($movimiento['monto_venta'], 2, ',', '.') ?> Bs</p>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-sm-3 control-label">Usuario:</label>
+                                        <div class="col-sm-9">
+                                            <p class="form-control-static"><?= $movimiento['usuario'] ?></p>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-sm-3 control-label">Observaciones:</label>
+                                        <div class="col-sm-9">
+                                            <p class="form-control-static"><?= $movimiento['observaciones'] ?? 'Ninguna' ?></p>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="form-group">
-                                    <label class="control-label">Observaciones:</label>
-                                    <p class="form-control-static"><?= $movimiento['observaciones'] ?? 'Ninguna' ?></p>
-                                </div>
+
                                 <?php if ($movimiento['tipo_movimiento'] === 'AJUSTE' && $movimiento['tipo_movimiento_original']): ?>
                                     <hr>
                                     <h4>Detalles del Ajuste</h4>
@@ -105,17 +121,6 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                <tr>
-                                                    <td>Tipo de Movimiento</td>
-                                                    <td>
-                                                        <span class="label label-<?= $movimiento['tipo_movimiento_original'] == 'ENTRADA' ? 'success' : 'danger' ?>">
-                                                            <?= $movimiento['tipo_movimiento_original'] ?>
-                                                        </span>
-                                                    </td>
-                                                    <td>
-                                                        <span class="label label-warning">AJUSTE</span>
-                                                    </td>
-                                                </tr>
                                                 <tr>
                                                     <td>Cantidad</td>
                                                     <td><?= $movimiento['cantidad_original'] ?></td>
@@ -133,25 +138,6 @@
                                                 </tr>
                                             </tbody>
                                         </table>
-                                    </div>
-                                <?php endif; ?>
-                                
-                                <?php if ($movimiento['tipo_referencia'] === 'VENTA' && $movimiento['cliente_venta']): ?>
-                                    <hr>
-                                    <h4>Detalles de la Venta</h4>
-                                    <div class="form-horizontal">
-                                        <div class="form-group">
-                                            <label class="col-sm-3 control-label">Cliente:</label>
-                                            <div class="col-sm-9">
-                                                <p class="form-control-static"><?= $movimiento['cliente_venta'] ?></p>
-                                            </div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label class="col-sm-3 control-label">Monto Total:</label>
-                                            <div class="col-sm-9">
-                                                <p class="form-control-static"><?= number_format($movimiento['monto_venta'], 2, ',', '.') ?> Bs</p>
-                                            </div>
-                                        </div>
                                     </div>
                                 <?php endif; ?>
                             </div>
