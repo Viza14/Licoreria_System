@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 25-06-2025 a las 02:26:37
--- Versión del servidor: 10.4.32-MariaDB
--- Versión de PHP: 8.0.30
+-- Tiempo de generación: 26-06-2025 a las 05:11:31
+-- Versión del servidor: 10.4.28-MariaDB
+-- Versión de PHP: 8.2.4
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -246,23 +246,9 @@ CREATE TABLE `detalle_venta` (
 --
 
 INSERT INTO `detalle_venta` (`id`, `id_venta`, `id_producto`, `cantidad`, `precio_unitario`, `monto`) VALUES
-(1, 1, 1, 4, 0.00, 20.00),
-(2, 1, 3, 2, 0.00, 10.00),
-(3, 1, 13, 4, 0.00, 20.00),
-(4, 1, 2, 1, 0.00, 4.50),
-(5, 2, 1, 2, 0.00, 10.00),
-(6, 3, 1, 4, 0.00, 20.00),
-(7, 3, 2, 2, 0.00, 9.00),
-(8, 4, 1, 6, 0.00, 30.00),
-(9, 4, 3, 3, 0.00, 15.00),
-(10, 6, 1, 4, 0.00, 20.00),
-(11, 6, 3, 2, 0.00, 10.00),
-(12, 6, 13, 4, 0.00, 20.00),
-(13, 6, 2, 1, 0.00, 4.50),
-(14, 8, 1, 2, 5.00, 10.00),
-(15, 8, 2, 2, 4.50, 9.00),
-(16, 9, 1, 2, 0.00, 10.00),
-(17, 9, 2, 2, 0.00, 9.00);
+(18, 10, 1, 3, 5.00, 15.00),
+(19, 11, 1, 4, 0.00, 20.00),
+(20, 12, 1, 4, 0.00, 20.00);
 
 -- --------------------------------------------------------
 
@@ -312,28 +298,30 @@ CREATE TABLE `movimientos_inventario` (
 --
 
 INSERT INTO `movimientos_inventario` (`id`, `id_producto`, `tipo_movimiento`, `cantidad`, `precio_unitario`, `id_referencia`, `tipo_referencia`, `fecha_movimiento`, `id_usuario`, `observaciones`, `id_estatus`, `id_movimiento_original`, `fecha_actualizacion`) VALUES
-(1, 2, 'ENTRADA', 50, 500.00, NULL, NULL, '2025-06-11 23:34:42', 1, '', 1, NULL, NULL),
-(2, 13, 'ENTRADA', 27, 120.00, NULL, NULL, '2025-06-11 23:55:37', 1, 'este proveedor despacho 25 papas en la noche y se le pago por pago movil', 1, NULL, NULL),
-(3, 1, 'ENTRADA', 6, 500.50, NULL, NULL, '2025-06-16 17:32:27', 1, '', 1, NULL, NULL),
-(4, 1, 'SALIDA', 4, 5.00, 1, 'VENTA', '2025-06-21 20:45:31', 1, NULL, 1, NULL, NULL),
-(5, 3, 'SALIDA', 2, 5.00, 1, 'VENTA', '2025-06-21 20:45:31', 1, NULL, 1, NULL, NULL),
-(6, 13, 'SALIDA', 4, 5.00, 1, 'VENTA', '2025-06-21 20:45:31', 1, NULL, 1, NULL, NULL),
-(7, 2, 'SALIDA', 1, 4.50, 1, 'VENTA', '2025-06-21 20:45:31', 1, NULL, 1, NULL, NULL),
-(8, 1, 'SALIDA', 2, 5.00, 2, 'VENTA', '2025-06-22 00:11:04', 1, NULL, 1, NULL, NULL),
-(9, 1, 'SALIDA', 4, 5.00, 3, 'VENTA', '2025-06-22 11:53:41', 1, NULL, 1, NULL, NULL),
-(10, 2, 'SALIDA', 2, 4.50, 3, 'VENTA', '2025-06-22 11:53:41', 1, NULL, 1, NULL, NULL),
-(11, 1, 'SALIDA', 6, 5.00, 4, 'VENTA', '2025-06-22 11:55:43', 1, NULL, 1, NULL, NULL),
-(12, 3, 'SALIDA', 3, 5.00, 4, 'VENTA', '2025-06-22 11:55:43', 1, NULL, 1, NULL, NULL),
-(13, 2, 'ENTRADA', 14, 140.00, NULL, NULL, '2025-06-24 01:02:01', 1, '', 2, NULL, '2025-06-24 01:20:29'),
-(14, 2, 'AJUSTE', 13, 140.00, NULL, NULL, '2025-06-24 01:20:29', 1, '', 1, 13, NULL),
-(15, 1, 'AJUSTE', 4, 5.00, 6, 'VENTA', '2025-06-24 18:24:14', 1, NULL, 1, 1, NULL),
-(16, 3, 'AJUSTE', 2, 5.00, 6, 'VENTA', '2025-06-24 18:24:14', 1, NULL, 1, 1, NULL),
-(17, 13, 'AJUSTE', 4, 5.00, 6, 'VENTA', '2025-06-24 18:24:14', 1, NULL, 1, 1, NULL),
-(18, 2, 'AJUSTE', 1, 4.50, 6, 'VENTA', '2025-06-24 18:24:14', 1, NULL, 1, 1, NULL),
-(19, 1, 'SALIDA', 2, 5.00, 8, 'VENTA', '2025-06-24 19:03:18', 1, NULL, 1, NULL, NULL),
-(20, 2, 'SALIDA', 2, 4.50, 8, 'VENTA', '2025-06-24 19:03:18', 1, NULL, 1, NULL, NULL),
-(21, 1, 'AJUSTE', 2, 5.00, 9, 'VENTA', '2025-06-24 19:04:38', 1, NULL, 1, 8, NULL),
-(22, 2, 'AJUSTE', 2, 4.50, 9, 'VENTA', '2025-06-24 19:04:38', 1, NULL, 1, 8, NULL);
+(23, 1, 'SALIDA', 3, 5.00, 10, 'VENTA', '2025-06-25 22:50:14', 1, NULL, 2, NULL, NULL),
+(24, 1, 'SALIDA', 4, 5.00, 11, 'VENTA', '2025-06-25 22:59:28', 1, 'Modificación de venta #10 - Nueva venta #11', 2, 23, NULL),
+(25, 1, 'SALIDA', 4, 5.00, 12, 'VENTA', '2025-06-25 23:00:15', 1, 'Modificación de venta #11 - Nueva venta #12', 1, 24, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `movimientos_inventario_historico`
+--
+
+CREATE TABLE `movimientos_inventario_historico` (
+  `id` int(11) NOT NULL,
+  `id_movimiento_original` int(11) NOT NULL,
+  `id_producto` int(10) NOT NULL,
+  `tipo_movimiento` enum('ENTRADA','SALIDA','ENTRADA-AJUSTADA','SALIDA-AJUSTADA','AJUSTE') NOT NULL,
+  `cantidad` int(11) NOT NULL,
+  `precio_unitario` decimal(10,2) DEFAULT NULL,
+  `id_referencia` int(11) DEFAULT NULL,
+  `tipo_referencia` varchar(50) DEFAULT NULL,
+  `fecha_movimiento` datetime NOT NULL,
+  `id_usuario` int(10) NOT NULL,
+  `observaciones` varchar(255) DEFAULT NULL,
+  `fecha_historico` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 -- --------------------------------------------------------
 
@@ -369,7 +357,7 @@ CREATE TABLE `producto` (
 --
 
 INSERT INTO `producto` (`id`, `descripcion`, `cantidad`, `precio`, `id_categoria`, `id_estatus`) VALUES
-(1, 'Coca-Cola 2L', 38, 5.00, 1, 1),
+(1, 'Coca-Cola 2L', 34, 5.00, 1, 1),
 (2, 'Pepsi 2L', 98, 4.50, 1, 1),
 (3, 'Mani Jacks', 25, 5.00, 2, 1),
 (13, 'Papas Jacks', 106, 5.00, 3, 1);
@@ -543,7 +531,7 @@ CREATE TABLE `usuarios` (
 --
 
 INSERT INTO `usuarios` (`id`, `cedula`, `id_simbolo_cedula`, `nombres`, `apellidos`, `telefono`, `direccion`, `user`, `password`, `id_rol`, `id_estatus`, `ultimo_inicio_sesion`) VALUES
-(1, '31117854', 1, 'Moises', 'Vizamon', '04125050555', 'Naguanagua', 'admin', '$2y$10$.Dv.UCeKDYG3HIiK.4F7Jed5g2/1FZWq8j6zRHErVQNLYxUBhM4NG', 1, 1, '2025-06-24 18:17:31'),
+(1, '31117854', 1, 'Moises', 'Vizamon', '04125050555', 'Naguanagua', 'admin', '$2y$10$.Dv.UCeKDYG3HIiK.4F7Jed5g2/1FZWq8j6zRHErVQNLYxUBhM4NG', 1, 1, '2025-06-25 22:49:44'),
 (2, '30330300', 1, 'Maria', 'Teran', '0414123457', 'Valencia', 'empleado', '$2y$10$InP6m5HokejhvGmvTg9YnuPy14zAy/EB5LKRxv69EndgVdmuf0KMm', 2, 1, '2025-06-12 10:59:18'),
 (4, '16579782', 1, 'Angel', 'Perez', '04125030223', 'Valencia', 'Angel123', '$2y$10$l8ILNvg5AQAUliKoN87M8exnKrXvOecoAqMZR/OJKH3L0oGgHXhjW', 2, 1, NULL),
 (5, '33333333', 1, 'german', 'garcia', '04244351695', 'tocuyito', 'german13', '$2y$10$iBxpB0rpNB6ycNoiRZ3LJeBzsvSzKzZwgXFgfsfmVVXUZdn6osCPu', 2, 1, NULL),
@@ -585,13 +573,9 @@ CREATE TABLE `ventas` (
 --
 
 INSERT INTO `ventas` (`id`, `cedula_cliente`, `id_usuario`, `fecha`, `monto_total`, `forma_pago`, `referencia_pago`, `id_venta_original`, `id_estatus`) VALUES
-(1, '31117834', 1, '2025-06-21 00:00:00', 54.50, 'EFECTIVO', NULL, NULL, 2),
-(2, 'V-32670780', 1, '2025-06-22 12:10:00', 10.00, 'EFECTIVO', NULL, NULL, 1),
-(3, 'V-8609665', 1, '2025-05-22 10:10:00', 29.00, 'PAGO_MOVIL', '1965', NULL, 1),
-(4, 'V-32670780', 1, '2025-02-01 15:00:00', 45.00, 'TARJETA', '6589', NULL, 1),
-(6, '31117834', 1, '2025-06-21 00:00:00', 54.50, 'PAGO_MOVIL', '1006', 1, 1),
-(8, '30330301', 1, '2025-06-24 06:57:00', 19.00, 'PAGO_MOVIL', '4897', NULL, 2),
-(9, '30330301', 1, '2025-06-24 19:00:00', 19.00, 'PAGO_MOVIL', '4897', 8, 1);
+(10, 'V-32670780', 1, '2025-06-25 10:49:00', 15.00, 'EFECTIVO', NULL, NULL, 2),
+(11, 'V-32670780', 1, '2025-06-25 10:49:00', 20.00, 'EFECTIVO', NULL, 10, 2),
+(12, 'V-32670780', 1, '2025-06-25 10:49:00', 20.00, 'TARJETA', '6565', 11, 1);
 
 -- --------------------------------------------------------
 
@@ -727,6 +711,15 @@ ALTER TABLE `movimientos_inventario`
   ADD KEY `fk_movimientos_original` (`id_movimiento_original`);
 
 --
+-- Indices de la tabla `movimientos_inventario_historico`
+--
+ALTER TABLE `movimientos_inventario_historico`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `id_movimiento_original` (`id_movimiento_original`),
+  ADD KEY `id_producto` (`id_producto`),
+  ADD KEY `id_usuario` (`id_usuario`);
+
+--
 -- Indices de la tabla `perdidas`
 --
 ALTER TABLE `perdidas`
@@ -833,7 +826,7 @@ ALTER TABLE `detalle_compra`
 -- AUTO_INCREMENT de la tabla `detalle_venta`
 --
 ALTER TABLE `detalle_venta`
-  MODIFY `id` int(255) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` int(255) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT de la tabla `estatus`
@@ -845,7 +838,13 @@ ALTER TABLE `estatus`
 -- AUTO_INCREMENT de la tabla `movimientos_inventario`
 --
 ALTER TABLE `movimientos_inventario`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
+
+--
+-- AUTO_INCREMENT de la tabla `movimientos_inventario_historico`
+--
+ALTER TABLE `movimientos_inventario_historico`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT de la tabla `perdidas`
@@ -899,7 +898,7 @@ ALTER TABLE `usuarios`
 -- AUTO_INCREMENT de la tabla `ventas`
 --
 ALTER TABLE `ventas`
-  MODIFY `id` int(255) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(255) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- Restricciones para tablas volcadas

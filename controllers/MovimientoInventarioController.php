@@ -126,10 +126,24 @@ class MovimientoInventarioController
         $this->checkSession();
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Verificar si el movimiento ya tiene ajustes
+            $movimiento = $this->model->obtenerMovimientoPorId($id);
+            if ($movimiento['tiene_ajuste'] > 0) {
+                $_SESSION['error'] = [
+                    'title' => 'Error',
+                    'text' => 'Este movimiento ya ha sido ajustado anteriormente',
+                    'icon' => 'error'
+                ];
+                $this->redirect('movimientos-inventario');
+                return;
+            }
+
             $data = [
                 'cantidad' => (int)$_POST['cantidad'],
                 'precio_unitario' => (float)$_POST['precio_unitario'],
-                'observaciones' => $_POST['observaciones'] ?? null
+                'observaciones' => $_POST['observaciones'] ?? null,
+                'tipo_movimiento_original' => $movimiento['tipo_movimiento'],
+                'id_movimiento_original' => $id
             ];
             
             if ($this->model->actualizarMovimiento($id, $data)) {
