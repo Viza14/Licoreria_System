@@ -24,8 +24,6 @@ class MovimientoInventarioModel
                   e.nombre as estado,
                   (SELECT COUNT(*) FROM movimientos_inventario WHERE id_movimiento_original = mi.id) as tiene_ajuste,
                   CASE 
-                    WHEN mi.tipo_movimiento = 'ENTRADA-AJUSTADA' THEN CONCAT('Entrada ajustada #', mi.id, ' (Original #', mi.id_movimiento_original, ')')
-                    WHEN mi.tipo_movimiento = 'SALIDA-AJUSTADA' THEN CONCAT('Salida ajustada #', mi.id, ' (Original #', mi.id_movimiento_original, ')')
                     WHEN mi.tipo_referencia = 'VENTA' THEN CONCAT('Venta #', mi.id_referencia)
                     WHEN mi.tipo_referencia = 'COMPRA' THEN CONCAT('Compra #', mi.id_referencia)
                     ELSE mi.observaciones
@@ -35,6 +33,7 @@ class MovimientoInventarioModel
                   JOIN usuarios u ON mi.id_usuario = u.id
                   JOIN estatus e ON mi.id_estatus = e.id
                   ORDER BY mi.fecha_movimiento DESC";
+        
         $stmt = $this->db->prepare($query);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -118,75 +117,34 @@ class MovimientoInventarioModel
         try {
             $this->db->beginTransaction();
 
-            // Get current movement to compare
+            // 1. Get current movement
             $movimientoActual = $this->obtenerMovimientoPorId($id);
             
             if (!$movimientoActual) {
                 throw new PDOException("Movimiento no encontrado");
             }
 
-            // Mover el registro actual a la tabla histórica
-            $query = "INSERT INTO movimientos_inventario_historico (
-                id_movimiento_original, id_producto, tipo_movimiento, cantidad,
-                precio_unitario, id_referencia, tipo_referencia, fecha_movimiento,
-                id_usuario, observaciones
-            ) SELECT 
-                id, id_producto, tipo_movimiento, cantidad,
-                precio_unitario, id_referencia, tipo_referencia, fecha_movimiento,
-                id_usuario, observaciones
-            FROM movimientos_inventario WHERE id = :id";
+            // 2. Update existing record directly
+            $query = "UPDATE movimientos_inventario SET 
+                    cantidad = :cantidad,
+                    precio_unitario = :precio_unitario,
+                    observaciones = :observaciones,
+                    fecha_actualizacion = NOW()
+                    WHERE id = :id";
             
             $stmt = $this->db->prepare($query);
-            $stmt->bindParam(":id", $id);
-            $stmt->execute();
-
-            // Eliminar el registro original
-            $query = "DELETE FROM movimientos_inventario WHERE id = :id";
-            $stmt = $this->db->prepare($query);
-            $stmt->bindParam(":id", $id);
-            $stmt->execute();
             
-            // Crear nuevo movimiento ajustado
-            $tipo_ajustado = $movimientoActual['tipo_movimiento'] == 'ENTRADA' ? 'ENTRADA-AJUSTADA' : 'SALIDA-AJUSTADA';
-            
-            $query = "INSERT INTO movimientos_inventario (
-                id_producto, 
-                tipo_movimiento, 
-                cantidad, 
-                precio_unitario, 
-                id_referencia, 
-                tipo_referencia, 
-                id_usuario, 
-                observaciones,
-                id_movimiento_original
-            ) VALUES (
-                :id_producto, 
-                :tipo_movimiento, 
-                :cantidad, 
-                :precio_unitario, 
-                :id_referencia, 
-                :tipo_referencia, 
-                :id_usuario, 
-                :observaciones,
-                :id_movimiento_original
-            )";
-            
-            $stmt = $this->db->prepare($query);
+            // Ensure all required parameters are defined
             $params = [
-                ':id_producto' => $movimientoActual['id_producto'],
-                ':tipo_movimiento' => $tipo_ajustado,
                 ':cantidad' => $data['cantidad'],
                 ':precio_unitario' => $data['precio_unitario'],
-                ':id_referencia' => $movimientoActual['id_referencia'],
-                ':tipo_referencia' => $movimientoActual['tipo_referencia'],
-                ':id_usuario' => $_SESSION['user_id'],
-                ':observaciones' => "Ajuste del movimiento #{$id} - " . ($data['observaciones'] ?? ''),
-                ':id_movimiento_original' => $id
+                ':observaciones' => $data['observaciones'] ?? $movimientoActual['observaciones'],
+                ':id' => $id
             ];
             
             $stmt->execute($params);
-            
-            // Actualizar stock
+
+            // 3. Update product stock
             if ($movimientoActual['tipo_movimiento'] === 'ENTRADA') {
                 $diferencia = $data['cantidad'] - $movimientoActual['cantidad'];
             } else {
@@ -206,6 +164,22 @@ class MovimientoInventarioModel
             $this->errors[] = "Error al actualizar movimiento: " . $e->getMessage();
             return false;
         }
+    }
+
+    private function registrarEnHistorico($movimiento)
+    {
+        $query = "INSERT INTO movimientos_inventario_historico (
+            id_movimiento_original, id_producto, tipo_movimiento, cantidad,
+            precio_unitario, id_referencia, tipo_referencia, fecha_movimiento,
+            id_usuario, observaciones
+        ) VALUES (
+            :id, :id_producto, :tipo_movimiento, :cantidad,
+            :precio_unitario, :id_referencia, :tipo_referencia, :fecha_movimiento,
+            :id_usuario, :observaciones
+        )";
+        
+        $stmt = $this->db->prepare($query);
+        $stmt->execute($movimiento);
     }
 
     public function obtenerMovimientosPorProducto($idProducto)

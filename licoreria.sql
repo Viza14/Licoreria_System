@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 26-06-2025 a las 05:11:31
+-- Tiempo de generación: 26-06-2025 a las 21:22:54
 -- Versión del servidor: 10.4.28-MariaDB
 -- Versión de PHP: 8.2.4
 
@@ -248,7 +248,10 @@ CREATE TABLE `detalle_venta` (
 INSERT INTO `detalle_venta` (`id`, `id_venta`, `id_producto`, `cantidad`, `precio_unitario`, `monto`) VALUES
 (18, 10, 1, 3, 5.00, 15.00),
 (19, 11, 1, 4, 0.00, 20.00),
-(20, 12, 1, 4, 0.00, 20.00);
+(20, 12, 1, 4, 0.00, 20.00),
+(21, 13, 1, 4, 0.00, 20.00),
+(22, 14, 1, 4, 0.00, 20.00),
+(23, 14, 3, 1, 0.00, 5.00);
 
 -- --------------------------------------------------------
 
@@ -300,7 +303,11 @@ CREATE TABLE `movimientos_inventario` (
 INSERT INTO `movimientos_inventario` (`id`, `id_producto`, `tipo_movimiento`, `cantidad`, `precio_unitario`, `id_referencia`, `tipo_referencia`, `fecha_movimiento`, `id_usuario`, `observaciones`, `id_estatus`, `id_movimiento_original`, `fecha_actualizacion`) VALUES
 (23, 1, 'SALIDA', 3, 5.00, 10, 'VENTA', '2025-06-25 22:50:14', 1, NULL, 2, NULL, NULL),
 (24, 1, 'SALIDA', 4, 5.00, 11, 'VENTA', '2025-06-25 22:59:28', 1, 'Modificación de venta #10 - Nueva venta #11', 2, 23, NULL),
-(25, 1, 'SALIDA', 4, 5.00, 12, 'VENTA', '2025-06-25 23:00:15', 1, 'Modificación de venta #11 - Nueva venta #12', 1, 24, NULL);
+(25, 1, 'SALIDA', 4, 5.00, 12, 'VENTA', '2025-06-25 23:00:15', 1, 'Modificación de venta #11 - Nueva venta #12', 2, 24, NULL),
+(26, 1, 'SALIDA', 4, 5.00, 13, 'VENTA', '2025-06-26 14:46:51', 1, 'Modificación de venta #12 - Nueva venta #13', 2, 25, NULL),
+(27, 1, 'ENTRADA', 20, 500.50, NULL, NULL, '2025-06-26 14:47:16', 1, '', 2, NULL, NULL),
+(29, 1, 'ENTRADA', 15, 500.50, NULL, NULL, '2025-06-26 15:01:36', 1, 'Ajuste del movimiento #27 - ', 1, 27, '2025-06-26 15:21:11'),
+(30, 1, 'SALIDA', 4, 5.00, 14, 'VENTA', '2025-06-26 15:21:37', 1, 'Modificación de venta #13 - Nueva venta #14', 1, 26, NULL);
 
 -- --------------------------------------------------------
 
@@ -357,7 +364,7 @@ CREATE TABLE `producto` (
 --
 
 INSERT INTO `producto` (`id`, `descripcion`, `cantidad`, `precio`, `id_categoria`, `id_estatus`) VALUES
-(1, 'Coca-Cola 2L', 34, 5.00, 1, 1),
+(1, 'Coca-Cola 2L', 49, 5.00, 1, 1),
 (2, 'Pepsi 2L', 98, 4.50, 1, 1),
 (3, 'Mani Jacks', 25, 5.00, 2, 1),
 (13, 'Papas Jacks', 106, 5.00, 3, 1);
@@ -531,7 +538,7 @@ CREATE TABLE `usuarios` (
 --
 
 INSERT INTO `usuarios` (`id`, `cedula`, `id_simbolo_cedula`, `nombres`, `apellidos`, `telefono`, `direccion`, `user`, `password`, `id_rol`, `id_estatus`, `ultimo_inicio_sesion`) VALUES
-(1, '31117854', 1, 'Moises', 'Vizamon', '04125050555', 'Naguanagua', 'admin', '$2y$10$.Dv.UCeKDYG3HIiK.4F7Jed5g2/1FZWq8j6zRHErVQNLYxUBhM4NG', 1, 1, '2025-06-25 22:49:44'),
+(1, '31117854', 1, 'Moises', 'Vizamon', '04125050555', 'Naguanagua', 'admin', '$2y$10$.Dv.UCeKDYG3HIiK.4F7Jed5g2/1FZWq8j6zRHErVQNLYxUBhM4NG', 1, 1, '2025-06-26 14:46:42'),
 (2, '30330300', 1, 'Maria', 'Teran', '0414123457', 'Valencia', 'empleado', '$2y$10$InP6m5HokejhvGmvTg9YnuPy14zAy/EB5LKRxv69EndgVdmuf0KMm', 2, 1, '2025-06-12 10:59:18'),
 (4, '16579782', 1, 'Angel', 'Perez', '04125030223', 'Valencia', 'Angel123', '$2y$10$l8ILNvg5AQAUliKoN87M8exnKrXvOecoAqMZR/OJKH3L0oGgHXhjW', 2, 1, NULL),
 (5, '33333333', 1, 'german', 'garcia', '04244351695', 'tocuyito', 'german13', '$2y$10$iBxpB0rpNB6ycNoiRZ3LJeBzsvSzKzZwgXFgfsfmVVXUZdn6osCPu', 2, 1, NULL),
@@ -575,7 +582,9 @@ CREATE TABLE `ventas` (
 INSERT INTO `ventas` (`id`, `cedula_cliente`, `id_usuario`, `fecha`, `monto_total`, `forma_pago`, `referencia_pago`, `id_venta_original`, `id_estatus`) VALUES
 (10, 'V-32670780', 1, '2025-06-25 10:49:00', 15.00, 'EFECTIVO', NULL, NULL, 2),
 (11, 'V-32670780', 1, '2025-06-25 10:49:00', 20.00, 'EFECTIVO', NULL, 10, 2),
-(12, 'V-32670780', 1, '2025-06-25 10:49:00', 20.00, 'TARJETA', '6565', 11, 1);
+(12, 'V-32670780', 1, '2025-06-25 10:49:00', 20.00, 'TARJETA', '6565', 11, 2),
+(13, 'V-32670780', 1, '2025-06-25 10:49:00', 20.00, 'TARJETA', '6566', 12, 2),
+(14, 'V-32670780', 1, '2025-06-25 10:49:00', 25.00, 'TARJETA', '6566', 13, 1);
 
 -- --------------------------------------------------------
 
@@ -826,7 +835,7 @@ ALTER TABLE `detalle_compra`
 -- AUTO_INCREMENT de la tabla `detalle_venta`
 --
 ALTER TABLE `detalle_venta`
-  MODIFY `id` int(255) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `id` int(255) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT de la tabla `estatus`
@@ -838,13 +847,13 @@ ALTER TABLE `estatus`
 -- AUTO_INCREMENT de la tabla `movimientos_inventario`
 --
 ALTER TABLE `movimientos_inventario`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
 
 --
 -- AUTO_INCREMENT de la tabla `movimientos_inventario_historico`
 --
 ALTER TABLE `movimientos_inventario_historico`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT de la tabla `perdidas`
@@ -898,7 +907,7 @@ ALTER TABLE `usuarios`
 -- AUTO_INCREMENT de la tabla `ventas`
 --
 ALTER TABLE `ventas`
-  MODIFY `id` int(255) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int(255) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- Restricciones para tablas volcadas
@@ -944,7 +953,7 @@ ALTER TABLE `detalle_venta`
 --
 ALTER TABLE `movimientos_inventario`
   ADD CONSTRAINT `fk_movimientos_estatus` FOREIGN KEY (`id_estatus`) REFERENCES `estatus` (`id`),
-  ADD CONSTRAINT `fk_movimientos_original` FOREIGN KEY (`id_movimiento_original`) REFERENCES `movimientos_inventario` (`id`),
+  ADD CONSTRAINT `fk_movimientos_original` FOREIGN KEY (`id_movimiento_original`) REFERENCES `movimientos_inventario` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `movimientos_inventario_ibfk_1` FOREIGN KEY (`id_producto`) REFERENCES `producto` (`id`),
   ADD CONSTRAINT `movimientos_inventario_ibfk_2` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id`);
 

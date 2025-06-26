@@ -68,10 +68,17 @@
                             </thead>
                             <tbody>
                                 <?php foreach ($movimientos as $movimiento): ?>
+                                    <?php 
+                                    // Determine if has adjustment
+                                    $tiene_ajuste = isset($movimiento['tiene_ajuste']) ? $movimiento['tiene_ajuste'] : 0;
+                                    $es_ajuste = $movimiento['tipo_movimiento'] == 'AJUSTE';
+                                    $es_inactivo = $movimiento['id_estatus'] == 2;
+                                    ?>
+                                    
                                     <tr class="<?php
-                                        if ($movimiento['id_estatus'] == 2 || ($movimiento['tiene_ajuste'] > 0 && ($movimiento['tipo_movimiento'] == 'SALIDA' || $movimiento['tipo_movimiento'] == 'ENTRADA'))) {
+                                        if ($es_inactivo || ($tiene_ajuste > 0 && ($movimiento['tipo_movimiento'] == 'SALIDA' || $movimiento['tipo_movimiento'] == 'ENTRADA'))) {
                                             echo 'inactive-movement';
-                                        } elseif ($movimiento['tipo_movimiento'] == 'AJUSTE') {
+                                        } elseif ($es_ajuste) {
                                             echo 'adjustment-movement';
                                         } else {
                                             echo '';
@@ -83,9 +90,9 @@
                                             <span class="label label-<?= $movimiento['tipo_movimiento'] == 'ENTRADA' ? 'success' : ($movimiento['tipo_movimiento'] == 'SALIDA' ? 'danger' : 'warning'); ?>">
                                                 <?= $movimiento['tipo_movimiento']; ?>
                                             </span>
-                                            <?php if ($movimiento['id_estatus'] == 2): ?>
+                                            <?php if ($es_inactivo): ?>
                                                 <span class="label label-default">Inactivo</span>
-                                            <?php elseif ($movimiento['tiene_ajuste'] > 0): ?>
+                                            <?php elseif ($tiene_ajuste > 0): ?>
                                                 <span class="label label-info">Ajustado</span>
                                             <?php endif; ?>
                                         </td>
@@ -94,13 +101,12 @@
                                         <td><?= $movimiento['usuario']; ?></td>
                                         <td><?= $movimiento['referencia'] ?? 'N/A'; ?></td>
                                         <td>
-                                            <?php if ($movimiento['id_estatus'] == 1 && $movimiento['tiene_ajuste'] == 0): ?>
-                                            <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=mostrar&id=<?= $movimiento['id']; ?>"
-                                                class="btn btn-success btn-xs" title="Ver Detalles">
-                                                <i class="fa fa-eye"></i>
-                                            </a>
-                                            <?php endif; ?>
-                                            <?php if ($movimiento['id_estatus'] == 1 && $movimiento['tiene_ajuste'] == 0): ?>
+                                            <?php if (!$es_inactivo && $tiene_ajuste == 0): ?>
+                                                <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=mostrar&id=<?= $movimiento['id']; ?>"
+                                                    class="btn btn-success btn-xs" title="Ver Detalles">
+                                                    <i class="fa fa-eye"></i>
+                                                </a>
+                                                
                                                 <?php if (($movimiento['tipo_movimiento'] == 'SALIDA' && $movimiento['tipo_referencia'] == 'VENTA') || 
                                                           ($movimiento['tipo_movimiento'] == 'AJUSTE' && $movimiento['tipo_referencia'] == 'VENTA')): ?>
                                                     <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=modificarVenta&id=<?= $movimiento['id_referencia'] ?>" 
@@ -114,23 +120,11 @@
                                                         <i class="fa fa-edit"></i>
                                                     </a>
                                                 <?php endif; ?>
-                                            <?php elseif ($movimiento['tiene_ajuste'] > 0): ?>
-                                                <?php if ($movimiento['tipo_movimiento'] == 'SALIDA' && $movimiento['tipo_referencia'] == 'VENTA'): ?>
-                                                    <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=mostrar&id=<?= $movimiento['id'] ?>" 
-                                                       class="btn btn-info btn-xs" title="Ver Detalle de Venta">
-                                                        <i class="fa fa-eye"></i>
-                                                    </a>
-                                                <?php elseif ($movimiento['tipo_movimiento'] == 'ENTRADA'): ?>
-                                                    <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=mostrar&id=<?= $movimiento['id'] ?>" 
-                                                       class="btn btn-info btn-xs" title="Ver Detalle de Entrada">
-                                                        <i class="fa fa-eye"></i>
-                                                    </a>
-                                                <?php else: ?>
-                                                    <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=mostrar&id=<?= $movimiento['id_ajuste_relacionado'] ?>" 
-                                                       class="btn btn-info btn-xs" title="Ver Ajuste">
-                                                        <i class="fa fa-exchange"></i>
-                                                    </a>
-                                                <?php endif; ?>
+                                            <?php elseif ($tiene_ajuste > 0): ?>
+                                                <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=mostrar&id=<?= $movimiento['id'] ?>" 
+                                                   class="btn btn-info btn-xs" title="Ver Detalle">
+                                                    <i class="fa fa-eye"></i>
+                                                </a>
                                             <?php endif; ?>
                                         </td>
                                     </tr>
@@ -403,8 +397,6 @@
             $('#texto-filtros-activos').text('');
             actualizarContador($('#tablaMovimientos tbody tr').length, false);
         });
-
-
     });
 </script>
 <!--main content end-->
