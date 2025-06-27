@@ -33,7 +33,6 @@
                         </div>
 
                         <form class="form-horizontal" method="POST" action="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=actualizar&id=<?= $movimiento['id'] ?>">
-                            <input type="hidden" name="precio_unitario" id="hidden_precio_unitario" value="<?= $movimiento['precio_unitario'] ?>">
                             <div class="form-group">
                                 <label class="col-sm-2 control-label">Producto</label>
                                 <div class="col-sm-10">
@@ -71,8 +70,8 @@
                                 <div class="col-sm-10">
                                     <div class="input-group">
                                         <span class="input-group-addon">Bs</span>
-                                        <input type="number" step="0.01" class="form-control" id="precio_compra"
-                                               value="<?= $movimiento['precio_unitario'] ?>" readonly>
+                                        <input type="number" step="0.01" class="form-control" name="precio_unitario"
+                                               value="<?= $movimiento['precio_unitario'] ?>" required>
                                     </div>
                                     <small class="text-muted">Precio establecido en la relación producto-proveedor</small>
                                 </div>

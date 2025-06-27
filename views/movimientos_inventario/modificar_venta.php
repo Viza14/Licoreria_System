@@ -32,15 +32,22 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label for="cedula_cliente">Cliente</label>
-                                        <select class="form-control" id="cedula_cliente" name="cedula_cliente" required>
-                                            <?php foreach ($clientes as $cliente): ?>
-                                                <option value="<?= $cliente['cedula'] ?>" 
-                                                    <?= $cliente['cedula'] == $venta['cedula_cliente'] ? 'selected' : '' ?>>
-                                                    <?= $cliente['nombres'] . ' ' . $cliente['apellidos'] ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </select>
+                                        <label for="buscar_cliente">Cliente *</label>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="buscar_cliente" 
+                                                   placeholder="Buscar cliente..." autocomplete="off"
+                                                   value="<?php 
+                                                        foreach($clientes as $cliente) {
+                                                            if($cliente['cedula'] == $venta['cedula_cliente']) {
+                                                                echo $cliente['nombres'] . ' ' . $cliente['apellidos'];
+                                                                break;
+                                                            }
+                                                        }
+                                                   ?>">
+                                            <input type="hidden" id="cedula_cliente" name="cedula_cliente" 
+                                                   value="<?= $venta['cedula_cliente'] ?>" required>
+                                        </div>
+                                        <div id="resultados_busqueda" class="list-group" style="position: absolute; z-index: 1000; width: 95%;"></div>
                                     </div>
                                 </div>
                             </div>
@@ -74,12 +81,6 @@
                             <div class="row">
                                 <div class="col-lg-12">
                                     <div class="panel">
-                                        <div class="panel-heading">
-                                            <h4>Productos</h4>
-                                            <button type="button" class="btn btn-primary btn-xs" id="add-product">
-                                                <i class="fa fa-plus"></i> Agregar Producto
-                                            </button>
-                                        </div>
                                         <div class="panel-body">
                                             <div class="table-responsive">
                                                 <table class="table table-striped table-hover" id="productos-table">
@@ -160,6 +161,63 @@
 
 <script>
 $(document).ready(function() {
+    // Client search functionality
+    const clientes = <?php echo json_encode($clientes); ?>;
+    
+    $('#buscar_cliente').on('input', function() {
+        const busqueda = $(this).val().toLowerCase();
+        const resultados = $('#resultados_busqueda');
+        resultados.empty();
+
+        if (busqueda.length < 2) {
+            resultados.hide();
+            return;
+        }
+
+        const clientesFiltrados = clientes.filter(cliente =>
+            cliente.nombres.toLowerCase().includes(busqueda) ||
+            cliente.apellidos.toLowerCase().includes(busqueda) ||
+            cliente.cedula.includes(busqueda)
+        );
+
+        if (clientesFiltrados.length > 0) {
+            clientesFiltrados.forEach(cliente => {
+                resultados.append(`
+                    <a href="#" class="list-group-item cliente-item" 
+                       data-cedula="${cliente.cedula}"
+                       data-nombre="${cliente.nombres} ${cliente.apellidos}">
+                        ${cliente.nombres} ${cliente.apellidos} - ${cliente.cedula}
+                    </a>
+                `);
+            });
+            resultados.show();
+        } else {
+            resultados.append(`
+                <div class="list-group-item">
+                    No se encontraron clientes
+                </div>
+            `);
+            resultados.show();
+        }
+    });
+
+    $(document).on('click', '.cliente-item', function(e) {
+        e.preventDefault();
+        const cedula = $(this).data('cedula');
+        const nombre = $(this).data('nombre');
+
+        $('#buscar_cliente').val(nombre);
+        $('#cedula_cliente').val(cedula);
+        $('#resultados_busqueda').hide();
+    });
+
+    // Hide results when clicking outside
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('#buscar_cliente, #resultados_busqueda').length) {
+            $('#resultados_busqueda').hide();
+        }
+    });
+
     // Payment method handler
     $('input[name="forma_pago"]').change(function() {
         if ($(this).val() === 'EFECTIVO') {
@@ -201,37 +259,6 @@ $(document).ready(function() {
         });
         $('#total-venta').text(total.toFixed(2));
     }
-
-    // Add new product row
-    $('#add-product').click(function() {
-        var newRow = `
-            <tr>
-                <td>
-                    <select class="form-control producto-select" name="productos[new_${Date.now()}][id]" required>
-                        <option value="">Seleccionar...</option>
-                        <?php foreach ($productos as $producto): ?>
-                            <option value="<?= $producto['id'] ?>" data-precio="<?= $producto['precio'] ?>">
-                                <?= $producto['descripcion'] ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </td>
-                <td>
-                    <input type="number" class="form-control cantidad" name="productos[new_${Date.now()}][cantidad]" value="1" min="1" required>
-                </td>
-                <td>
-                    <input type="number" class="form-control precio" name="productos[new_${Date.now()}][precio]" value="0" step="0.01" required>
-                </td>
-                <td class="subtotal">0.00</td>
-                <td>
-                    <button type="button" class="btn btn-danger btn-xs remove-product">
-                        <i class="fa fa-trash-o"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
-        $('#productos-table tbody').append(newRow);
-    });
 
     // Remove product row
     $(document).on('click', '.remove-product', function() {

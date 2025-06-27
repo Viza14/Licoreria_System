@@ -124,32 +124,42 @@ class MovimientoInventarioModel
                 throw new PDOException("Movimiento no encontrado");
             }
 
-            // 2. Update existing record directly
-            $query = "UPDATE movimientos_inventario SET 
-                    cantidad = :cantidad,
-                    precio_unitario = :precio_unitario,
-                    observaciones = :observaciones,
-                    fecha_actualizacion = NOW()
-                    WHERE id = :id";
-            
+            // 2. Marcar el movimiento original como inactivo
+            $query = "UPDATE movimientos_inventario SET id_estatus = 2 WHERE id = :id";
             $stmt = $this->db->prepare($query);
+            $stmt->bindParam(":id", $id);
+            $stmt->execute();
+
+            // 3. Crear nuevo movimiento como ajuste
+            $query = "INSERT INTO movimientos_inventario (
+                id_producto, tipo_movimiento, cantidad, precio_unitario,
+                id_referencia, tipo_referencia, id_usuario, observaciones,
+                id_estatus, id_movimiento_original
+            ) VALUES (
+                :id_producto, :tipo_movimiento, :cantidad, :precio_unitario,
+                :id_referencia, :tipo_referencia, :id_usuario, :observaciones,
+                1, :id_movimiento_original
+            )";
+
+            $observaciones = $data['observaciones'] ?? 'Ajuste de entrada #' . $id;
             
-            // Ensure all required parameters are defined
             $params = [
+                ':id_producto' => $movimientoActual['id_producto'],
+                ':tipo_movimiento' => 'ENTRADA',
                 ':cantidad' => $data['cantidad'],
                 ':precio_unitario' => $data['precio_unitario'],
-                ':observaciones' => $data['observaciones'] ?? $movimientoActual['observaciones'],
-                ':id' => $id
+                ':id_referencia' => $movimientoActual['id_referencia'],
+                ':tipo_referencia' => $movimientoActual['tipo_referencia'],
+                ':id_usuario' => $movimientoActual['id_usuario'],
+                ':observaciones' => $observaciones,
+                ':id_movimiento_original' => $id
             ];
             
+            $stmt = $this->db->prepare($query);
             $stmt->execute($params);
 
-            // 3. Update product stock
-            if ($movimientoActual['tipo_movimiento'] === 'ENTRADA') {
-                $diferencia = $data['cantidad'] - $movimientoActual['cantidad'];
-            } else {
-                $diferencia = $movimientoActual['cantidad'] - $data['cantidad'];
-            }
+            // 4. Actualizar stock del producto
+            $diferencia = $data['cantidad'] - $movimientoActual['cantidad'];
             
             $query = "UPDATE producto SET cantidad = cantidad + :diferencia WHERE id = :id_producto";
             $stmt = $this->db->prepare($query);

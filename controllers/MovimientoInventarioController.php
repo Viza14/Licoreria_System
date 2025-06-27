@@ -128,6 +128,26 @@ class MovimientoInventarioController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $movimiento = $this->model->obtenerMovimientoPorId($id);
             
+            if (!$movimiento) {
+                $_SESSION['error'] = [
+                    'title' => 'Error',
+                    'text' => 'Movimiento no encontrado',
+                    'icon' => 'error'
+                ];
+                $this->redirect('movimientos-inventario');
+                return;
+            }
+
+            if ($movimiento['tipo_movimiento'] !== 'ENTRADA') {
+                $_SESSION['error'] = [
+                    'title' => 'Error',
+                    'text' => 'Solo se pueden editar movimientos de entrada',
+                    'icon' => 'error'
+                ];
+                $this->redirect('movimientos-inventario');
+                return;
+            }
+            
             $data = [
                 'cantidad' => (int)$_POST['cantidad'],
                 'precio_unitario' => (float)$_POST['precio_unitario'],
@@ -137,7 +157,7 @@ class MovimientoInventarioController
             if ($this->model->actualizarMovimiento($id, $data)) {
                 $_SESSION['mensaje'] = [
                     'title' => 'Éxito',
-                    'text' => 'Movimiento actualizado correctamente',
+                    'text' => 'Movimiento actualizado correctamente. Se ha creado un nuevo registro de ajuste.',
                     'icon' => 'success'
                 ];
             } else {

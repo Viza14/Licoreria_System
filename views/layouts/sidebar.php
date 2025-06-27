@@ -106,7 +106,7 @@
             <li class="mt">
                 <a class="active" href="<?php echo BASE_URL; ?>index.php?action=dashboard">
                     <i class="fa fa-dashboard"></i>
-                    <span>Dashboard</span>
+                    <span>Inicio</span>
                 </a>
             </li>
 
@@ -158,6 +158,7 @@
                 </li>
             <?php endif; ?>
 
+
             <li class="sub-menu">
                 <a href="javascript:;">
                     <i class="fa fa-exchange"></i>
@@ -165,8 +166,9 @@
                 </a>
                 <ul class="sub">
                     <li><a href="<?= BASE_URL ?>index.php?action=movimientos-inventario">Historial</a></li>
-                    <li><a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=resumen">Resumen</a></li>
-                    <!--                     <li><a href="<?= BASE_URL ?>index.php?action=productos&method=registrarEntrada">Entrada Productos</a></li> -->
+                    <?php if ($_SESSION['user_rol'] != 2): ?> <!-- Asumiendo que 2 es el rol de empleado -->
+                        <li><a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=resumen">Resumen</a></li>
+                    <?php endif; ?>
                 </ul>
             </li>
 
