@@ -1,6 +1,7 @@
 <?php
 class AuthController
 {
+    private $adminRolId = 1; // Asumiendo que 1 es el ID del rol de administrador
     private $usuarioModel;
 
     public function __construct()
@@ -63,6 +64,26 @@ class AuthController
         // Destruir la sesión
         session_destroy();
         header("Location: " . BASE_URL);
+        exit();
+    }
+
+    public function verificarAdmin()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Método no permitido']);
+            exit();
+        }
+
+        $usuario = $_POST['usuario'] ?? '';
+        $password = $_POST['password'] ?? '';
+
+        $usuarioData = $this->usuarioModel->login($usuario, $password);
+
+        if ($usuarioData && $usuarioData['id_rol'] == $this->adminRolId) {
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Credenciales inválidas o usuario no es administrador']);
+        }
         exit();
     }
 }

@@ -299,7 +299,6 @@ class ReporteModel
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // En ReporteModel.php
     public function obtenerVentasSemanales()
     {
         try {
@@ -325,36 +324,58 @@ class ReporteModel
 
     public function obtenerProductosPorDiaSemana() {
         try {
-            $query = "SELECT 
-                        DAYNAME(fecha) as dia_semana,
-                        DAYOFWEEK(fecha) as dia_numero,
-                        SUM((SELECT SUM(cantidad) FROM detalle_venta WHERE id_venta = v.id)) as total_productos
-                      FROM ventas v
-                      WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 2 WEEK)
-                      GROUP BY DAYOFWEEK(fecha), DAYNAME(fecha)
-                      ORDER BY dia_numero";
+            // Get current week's Monday
+            $hoy = new DateTime();
+            $inicioSemana = clone $hoy;
+            $inicioSemana->modify('monday this week');
             
-            $stmt = $this->db->prepare($query);
-            $stmt->execute();
-            
-            $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // Inicializar array con todos los días
-            $diasCompletos = [
-                ['dia_semana' => 'Monday',    'dia_numero' => 2, 'total_productos' => 0],
-                ['dia_semana' => 'Tuesday',   'dia_numero' => 3, 'total_productos' => 0],
-                ['dia_semana' => 'Wednesday', 'dia_numero' => 4, 'total_productos' => 0],
-                ['dia_semana' => 'Thursday',  'dia_numero' => 5, 'total_productos' => 0],
-                ['dia_semana' => 'Friday',    'dia_numero' => 6, 'total_productos' => 0],
-                ['dia_semana' => 'Saturday',  'dia_numero' => 7, 'total_productos' => 0],
-                ['dia_semana' => 'Sunday',    'dia_numero' => 1, 'total_productos' => 0]
+            // Spanish day abbreviations array
+            $diasSemana = [
+                'Monday' => 'LUN',
+                'Tuesday' => 'MAR', 
+                'Wednesday' => 'MIE', 
+                'Thursday' => 'JUE', 
+                'Friday' => 'VIE', 
+                'Saturday' => 'SAB', 
+                'Sunday' => 'DOM'
             ];
             
-            // Combinar con resultados de la consulta
+            // Query to get products sold by day for current week
+            $query = "SELECT 
+                        DATE(fecha) as fecha,
+                        DAYNAME(fecha) as dia_semana,
+                        SUM((SELECT SUM(cantidad) FROM detalle_venta WHERE id_venta = v.id)) as total_productos
+                      FROM ventas v
+                      WHERE fecha >= :inicio_semana
+                      GROUP BY DATE(fecha), DAYNAME(fecha)
+                      ORDER BY fecha";
+            
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([':inicio_semana' => $inicioSemana->format('Y-m-d')]);
+            $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Initialize array with current week days
+            $diasCompletos = [];
+            $fechaActual = clone $inicioSemana;
+            
+            // Fill array with all week days
+            for ($i = 0; $i < 7; $i++) {
+                $nombreDiaIngles = $fechaActual->format('l');
+                $nombreDiaCorto = $diasSemana[$nombreDiaIngles];
+                $diasCompletos[$nombreDiaCorto . '-' . $fechaActual->format('d')] = 0;
+                $fechaActual->modify('+1 day');
+            }
+            
+            // Merge query results with initialized array
             foreach ($resultados as $resultado) {
-                $indice = $resultado['dia_numero'] - 1;
-                if ($resultado['dia_numero'] == 1) $indice = 6; // Domingo es día 1 pero último en el array
-                $diasCompletos[$indice]['total_productos'] = $resultado['total_productos'];
+                $fecha = new DateTime($resultado['fecha']);
+                $nombreDiaIngles = $resultado['dia_semana'];
+                $nombreDiaCorto = $diasSemana[$nombreDiaIngles];
+                $clave = $nombreDiaCorto . '-' . $fecha->format('d');
+                
+                if (array_key_exists($clave, $diasCompletos)) {
+                    $diasCompletos[$clave] = (int)$resultado['total_productos'];
+                }
             }
             
             return $diasCompletos;

@@ -36,22 +36,23 @@
                             </div>
                         </div>
 
-                        <table id="tablaVentas" class="table table-striped table-advance table-hover">
+                        <div class="table-responsive">
+                            <table id="tablaVentas" class="table table-striped table-advance table-hover">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
-                                    <th>Fecha</th>
-                                    <th>Cliente</th>
-                                    <th>Total</th>
-                                    <th>Vendedor</th>
-                                    <th>Acciones</th>
+                                    <th><i class="fa fa-hashtag"></i> ID</th>
+                                    <th><i class="fa fa-calendar"></i> Fecha</th>
+                                    <th><i class="fa fa-user"></i> Cliente</th>
+                                    <th><i class="fa fa-money-bill"></i> Total</th>
+                                    <th><i class="fa fa-user-tie"></i> Vendedor</th>
+                                    <th><i class="fa fa-cogs"></i> Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($ventas as $venta): ?>
                                     <tr>
                                         <td><?= $venta['id']; ?></td>
-                                        <td><?= date('d/m/Y H:i', strtotime($venta['fecha'])); ?></td>
+                                        <td><?= date('d/m/Y h:i A', strtotime($venta['fecha'])); ?></td>
                                         <td><?= htmlspecialchars($venta['cliente']); ?></td>
                                         <td><?= number_format($venta['monto_total'], 2, ',', '.'); ?> Bs</td>
                                         <td><?= htmlspecialchars($venta['usuario']); ?></td>
@@ -67,6 +68,7 @@
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
+                    </div>
                     </div>
                 </section>
             </div>

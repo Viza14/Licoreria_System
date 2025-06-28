@@ -48,6 +48,7 @@ class MovimientoInventarioModel
                   mo.cantidad as cantidad_original,
                   mo.precio_unitario as precio_unitario_original,
                   mo.fecha_movimiento as fecha_movimiento_original,
+                  mo.observaciones as observaciones_original,
                   -- Obtener información de la venta relacionada si existe
                   v.monto_total as monto_venta,
                   CONCAT(c.nombres, ' ', c.apellidos) as cliente_venta
@@ -112,6 +113,14 @@ class MovimientoInventarioModel
         }
     }
 
+    private function obtenerSiguienteNumeroEntrada() {
+        $query = "SELECT MAX(id) as ultimo_id FROM movimientos_inventario WHERE tipo_movimiento = 'ENTRADA'";
+        $stmt = $this->db->prepare($query);
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return ($result['ultimo_id'] ?? 0) + 1;
+    }
+
     public function actualizarMovimiento($id, $data) 
     {
         try {
@@ -141,7 +150,18 @@ class MovimientoInventarioModel
                 1, :id_movimiento_original
             )";
 
-            $observaciones = $data['observaciones'] ?? 'Ajuste de entrada #' . $id;
+            // Extraer el número de entrada original si existe
+            $numeroEntrada = null;
+            if (preg_match('/Entrada #(\d+)/', $movimientoActual['observaciones'], $matches)) {
+                $numeroEntrada = $matches[1];
+            }
+            
+            // Si no se encuentra un número de entrada en el movimiento original, obtener el siguiente
+            if (!$numeroEntrada) {
+                $numeroEntrada = $this->obtenerSiguienteNumeroEntrada();
+            }
+            
+            $observaciones = "Entrada #" . $numeroEntrada . ($data['observaciones'] ? " - " . $data['observaciones'] : "");
             
             $params = [
                 ':id_producto' => $movimientoActual['id_producto'],

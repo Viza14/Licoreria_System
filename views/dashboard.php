@@ -61,19 +61,23 @@ include 'views/layouts/sidebar.php';
                 </section>
             </div>
 
-            <!-- Widget Ingresos -->
-            <div class="col-lg-3 col-sm-6">
-                <section class="panel">
-                    <div class="symbol blue">
-                        <i class="fa fa-money"></i>
-                    </div>
-                    <div class="value">
-                        <h1>Bs. <?php echo number_format($data['ingresosHoy'], 2, ',', '.'); ?></h1>
-                        <p>Ingresos Hoy</p>
-                        <a href="<?php echo BASE_URL; ?>index.php?action=reportes" class="btn btn-info btn-sm">Ver reporte</a>
-                    </div>
-                </section>
-            </div>
+            <?php if ($_SESSION['user_rol'] != 2): ?> <!-- Asumiendo que 2 es el rol de empleado -->
+
+                <!-- Widget Ingresos -->
+                <div class="col-lg-3 col-sm-6">
+                    <section class="panel">
+                        <div class="symbol blue">
+                            <i class="fa fa-money"></i>
+                        </div>
+                        <div class="value">
+                            <h1>Bs. <?php echo number_format($data['ingresosHoy'], 2, ',', '.'); ?></h1>
+                            <p>Ingresos Hoy</p>
+                            <a href="<?php echo BASE_URL; ?>index.php?action=reportes" class="btn btn-info btn-sm">Ver reporte</a>
+                        </div>
+                    </section>
+                </div>
+            <?php endif; ?>
+
         </div>
 
         <!-- Gráficos y estadísticas -->
@@ -83,32 +87,29 @@ include 'views/layouts/sidebar.php';
                 <section class="panel">
                     <header class="panel-heading">
                         Productos Vendidos por Día de la Semana
+                        <span class="pull-right"><?php echo $mesActual; ?></span>
                     </header>
                     <div class="panel-body">
                         <div class="custom-bar-chart">
                             <ul class="y-axis">
-                                <?php 
+                                <?php
                                 // Calcular el máximo para la escala del eje Y
                                 $maxProductos = !empty($data['productosPorDia']) ? max($data['productosPorDia']) : 10;
                                 $steps = 5;
                                 $stepSize = $maxProductos / $steps;
-                                
-                                for ($i = $steps; $i >= 0; $i--): 
+
+                                for ($i = $steps; $i >= 0; $i--):
                                     $value = $i * $stepSize;
                                 ?>
                                     <li><span><?php echo number_format($value, 0); ?></span></li>
                                 <?php endfor; ?>
                             </ul>
                             <?php
-                            // Días de la semana en orden
-                            $diasSemana = ['LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB', 'DOM'];
-                            
-                            foreach ($diasSemana as $dia): 
-                                $cantidad = $data['productosPorDia'][$dia] ?? 0;
-                                
+                            // Días de la semana en orden con números
+                            foreach ($data['productosPorDia'] as $dia => $cantidad):
                                 // Calcular altura en porcentaje (mínimo 1% para que sea visible)
                                 $height = ($maxProductos > 0) ? max(($cantidad / $maxProductos) * 100, 1) : 1;
-                                
+
                                 // Determinar color según la cantidad
                                 if ($cantidad >= ($maxProductos * 0.8)) {
                                     $color = 'bg-success';
@@ -124,7 +125,7 @@ include 'views/layouts/sidebar.php';
                                         data-original-title="<?php echo $cantidad; ?> productos"
                                         data-toggle="tooltip"
                                         data-placement="top"
-                                        style="height: 0%;" 
+                                        style="height: 0%;"
                                         data-height="<?php echo $height; ?>%">
                                         <?php echo $cantidad; ?>
                                     </div>
@@ -178,7 +179,14 @@ include 'views/layouts/sidebar.php';
                                     <tr>
                                         <td><?php echo $venta['id'] ?? 'N/A'; ?></td>
                                         <td><?php echo $venta['cliente'] ?? 'N/A'; ?></td>
-                                        <td><?php echo $venta['fecha'] ?? 'N/A'; ?></td>
+                                        <td><?php 
+                                            if(isset($venta['fecha'])) {
+                                                $fecha = new DateTime($venta['fecha']);
+                                                echo $fecha->format('d/m/y h:i ') . $fecha->format('A');
+                                            } else {
+                                                echo 'N/A';
+                                            }
+                                        ?></td>
                                         <td>Bs. <?php echo isset($venta['monto_total']) ? number_format($venta['monto_total'], 2, ',', '.') : '0,00'; ?></td>
                                         <td>
                                             <a href="<?php echo BASE_URL; ?>index.php?action=ventas&method=mostrar&id=<?php echo $venta['id']; ?>" class="btn btn-success btn-xs"><i class="fa fa-eye"></i></a>

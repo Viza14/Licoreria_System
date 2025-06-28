@@ -27,7 +27,7 @@
                                 <table class="table table-bordered">
                                     <tr>
                                         <th>Fecha y Hora:</th>
-                                        <td><?= date('d/m/Y H:i', strtotime($venta['fecha'])) ?></td>
+                                        <td><?= date('d/m/Y h:i A', strtotime($venta['fecha'])) ?></td>
                                     </tr>
                                     <tr>
                                         <th>Cliente:</th>

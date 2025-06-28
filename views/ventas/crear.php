@@ -159,13 +159,7 @@
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');
             const day = String(now.getDate()).padStart(2, '0');
-
-            // 12-hour format
-            let hours = now.getHours();
-            const ampm = hours >= 12 ? 'PM' : 'AM';
-            hours = hours % 12;
-            hours = hours ? hours : 12; // '0' should be '12'
-            hours = String(hours).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0'); // Mantener formato 24h
             const minutes = String(now.getMinutes()).padStart(2, '0');
 
             return `${year}-${month}-${day}T${hours}:${minutes}`;
@@ -202,20 +196,7 @@
                 }).then((result) => {
                     if (result.isConfirmed) {
                         $('#fecha').prop('readonly', false);
-                        // Convert to 12-hour format when editing
-                        const currentValue = $('#fecha').val();
-                        if (currentValue) {
-                            const [datePart, timePart] = currentValue.split('T');
-                            if (timePart) {
-                                const [hours, minutes] = timePart.split(':');
-                                let hourInt = parseInt(hours);
-                                const ampm = hourInt >= 12 ? 'PM' : 'AM';
-                                hourInt = hourInt % 12;
-                                hourInt = hourInt ? hourInt : 12;
-                                const formattedHours = String(hourInt).padStart(2, '0');
-                                $('#fecha').val(`${datePart}T${formattedHours}:${minutes}`);
-                            }
-                        }
+                        $('#fecha').prop('readonly', false);
                     } else {
                         $(this).prop('checked', false);
                         $('#fecha').prop('readonly', true);

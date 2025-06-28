@@ -67,6 +67,14 @@ try {
             $controller->logout();
             break;
 
+        case 'auth':
+            $controller = new AuthController();
+            $method = $_GET['method'] ?? '';
+            if ($method === 'verificarAdmin') {
+                $controller->verificarAdmin();
+            }
+            break;
+
         case 'dashboard':
             if (!isset($_SESSION['user_id']) || !isset($_SESSION['last_activity'])) {
                 header("Location: " . BASE_URL . "index.php?action=login");

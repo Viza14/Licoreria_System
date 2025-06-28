@@ -92,9 +92,9 @@
                                     <label class="control-label">Observaciones:</label>
                                     <p class="form-control-static"><?= $movimiento['observaciones'] ?? 'Ninguna' ?></p>
                                 </div>
-                                <?php if ($movimiento['tipo_movimiento'] === 'AJUSTE' && $movimiento['tipo_movimiento_original']): ?>
+                                <?php if (($movimiento['tipo_movimiento'] === 'AJUSTE' && $movimiento['tipo_movimiento_original']) || $movimiento['id_estatus'] == 2): ?>
                                     <hr>
-                                    <h4>Detalles del Ajuste</h4>
+                                    <h4>Comparación de Cambios</h4>
                                     <div class="table-responsive">
                                         <table class="table table-bordered">
                                             <thead>
@@ -102,6 +102,7 @@
                                                     <th>Campo</th>
                                                     <th>Valor Original</th>
                                                     <th>Valor Ajustado</th>
+                                                    <th>¿Cambió?</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -115,23 +116,42 @@
                                                     <td>
                                                         <span class="label label-warning">AJUSTE</span>
                                                     </td>
+                                                    <td class="text-center"><i class="fa fa-check text-success"></i></td>
                                                 </tr>
                                                 <tr>
                                                     <td>Cantidad</td>
                                                     <td><?= $movimiento['cantidad_original'] ?></td>
                                                     <td><?= $movimiento['cantidad'] ?></td>
+                                                    <td class="text-center">
+                                                        <?= $movimiento['cantidad'] != $movimiento['cantidad_original'] ? '<i class="fa fa-check text-success"></i>' : '<i class="fa fa-minus text-muted"></i>' ?>
+                                                    </td>
                                                 </tr>
                                                 <tr>
                                                     <td>Precio Unitario</td>
                                                     <td><?= number_format($movimiento['precio_unitario_original'], 2, ',', '.') ?> Bs</td>
                                                     <td><?= number_format($movimiento['precio_unitario'], 2, ',', '.') ?> Bs</td>
+                                                    <td class="text-center">
+                                                        <?= $movimiento['precio_unitario'] != $movimiento['precio_unitario_original'] ? '<i class="fa fa-check text-success"></i>' : '<i class="fa fa-minus text-muted"></i>' ?>
+                                                    </td>
                                                 </tr>
                                                 <tr>
                                                     <td>Fecha</td>
                                                     <td><?= date('d/m/Y H:i', strtotime($movimiento['fecha_movimiento_original'])) ?></td>
                                                     <td><?= date('d/m/Y H:i', strtotime($movimiento['fecha_movimiento'])) ?></td>
+                                                    <td class="text-center">
+                                                        <?= $movimiento['fecha_movimiento'] != $movimiento['fecha_movimiento_original'] ? '<i class="fa fa-check text-success"></i>' : '<i class="fa fa-minus text-muted"></i>' ?>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Observaciones</td>
+                                                    <td><?= $movimiento['observaciones_original'] ?? 'Ninguna' ?></td>
+                                                    <td><?= $movimiento['observaciones'] ?? 'Ninguna' ?></td>
+                                                    <td class="text-center">
+                                                        <?= $movimiento['observaciones'] != $movimiento['observaciones_original'] ? '<i class="fa fa-check text-success"></i>' : '<i class="fa fa-minus text-muted"></i>' ?>
+                                                    </td>
                                                 </tr>
                                             </tbody>
+
                                         </table>
                                     </div>
                                 <?php endif; ?>

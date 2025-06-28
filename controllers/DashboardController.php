@@ -27,25 +27,26 @@ class DashboardController {
             // Get today's income as float
             $ingresosHoy = (float)$this->ventaModel->calcularIngresosHoy();
             
-            // Get products by day of week
+            // Get products by day of week (already formatted from model)
             $productosPorDia = $this->reporteModel->obtenerProductosPorDiaSemana();
             
-            // Prepare data for daily chart
-            $productosPorDiaFormateado = [];
-            $nombresDias = [
-                'Monday' => 'LUN', 
-                'Tuesday' => 'MAR', 
-                'Wednesday' => 'MIE', 
-                'Thursday' => 'JUE', 
-                'Friday' => 'VIE', 
-                'Saturday' => 'SAB', 
-                'Sunday' => 'DOM'
+            // Get current month name
+            $mesActual = date('F');
+            $nombresMeses = [
+                'January' => 'ENERO',
+                'February' => 'FEBRERO',
+                'March' => 'MARZO',
+                'April' => 'ABRIL',
+                'May' => 'MAYO',
+                'June' => 'JUNIO',
+                'July' => 'JULIO',
+                'August' => 'AGOSTO',
+                'September' => 'SEPTIEMBRE',
+                'October' => 'OCTUBRE',
+                'November' => 'NOVIEMBRE',
+                'December' => 'DICIEMBRE'
             ];
-            
-            foreach ($productosPorDia as $dia) {
-                $nombreDia = $nombresDias[$dia['dia_semana']];
-                $productosPorDiaFormateado[$nombreDia] = $dia['total_productos'];
-            }
+            $mesActualEsp = $nombresMeses[$mesActual];
             
             // Prepare data for view
             $data = [
@@ -56,7 +57,8 @@ class DashboardController {
                 'ventasMensuales' => $this->reporteModel->obtenerVentasMensuales() ?? [],
                 'topProductos' => $this->reporteModel->obtenerProductosMasVendidos() ?? [],
                 'ultimasVentas' => $this->ventaModel->obtenerVentasRecientes() ?? [],
-                'productosPorDia' => $productosPorDiaFormateado,
+                'productosPorDia' => $productosPorDia,
+                'mesActual' => $mesActualEsp,
                 'userNombre' => $_SESSION['user_nombre'] ?? 'Usuario'
             ];
             

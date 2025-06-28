@@ -167,6 +167,15 @@ class ProductoModel
         }
     }
 
+    private function obtenerSiguienteNumeroEntrada()
+    {
+        $query = "SELECT MAX(id) as ultimo_id FROM movimientos_inventario WHERE tipo_movimiento = 'ENTRADA'";
+        $stmt = $this->db->prepare($query);
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return ($result['ultimo_id'] ?? 0) + 1;
+    }
+
     public function registrarEntradaProducto($id_producto, $cantidad, $precio_compra, $cedula_proveedor, $id_usuario, $observaciones = null)
     {
         try {
@@ -183,6 +192,12 @@ class ProductoModel
                 throw new PDOException("No se puede registrar entrada para un producto inactivo");
             }
 
+            // Obtener el siguiente número de entrada
+            $numeroEntrada = $this->obtenerSiguienteNumeroEntrada();
+            
+            // Agregar el número de entrada a las observaciones
+            $observacionesCompletas = "Entrada #" . $numeroEntrada . ($observaciones ? " - " . $observaciones : "");
+
             // 2. Registrar la entrada en movimientos_inventario
             $query = "INSERT INTO movimientos_inventario 
                  (id_producto, tipo_movimiento, cantidad, precio_unitario, id_usuario, observaciones) 
@@ -193,7 +208,7 @@ class ProductoModel
             $stmt->bindParam(":cantidad", $cantidad);
             $stmt->bindParam(":precio_compra", $precio_compra);
             $stmt->bindParam(":id_usuario", $id_usuario);
-            $stmt->bindParam(":observaciones", $observaciones);
+            $stmt->bindParam(":observaciones", $observacionesCompletas);
             $stmt->execute();
 
             // 3. Actualizar el stock del producto
@@ -237,7 +252,17 @@ class ProductoModel
 
             $diferencia = $cantidad - $entrada_actual['cantidad'];
 
-            // 2. Actualizar el movimiento de inventario
+            // 2. Mantener el número de entrada en las observaciones
+            $observacionesActuales = $entrada_actual['observaciones'];
+            $matches = [];
+            if (preg_match('/^Entrada #(\d+)(?:\s*-\s*(.*))?$/', $observacionesActuales, $matches)) {
+                $numeroEntrada = $matches[1];
+                $observacionesCompletas = "Entrada #" . $numeroEntrada . ($observaciones ? " - " . $observaciones : "");
+            } else {
+                $observacionesCompletas = $observaciones;
+            }
+
+            // Actualizar el movimiento de inventario
             $query = "UPDATE movimientos_inventario SET 
                   cantidad = :cantidad,
                   precio_unitario = :precio_compra,
@@ -247,7 +272,7 @@ class ProductoModel
             $stmt = $this->db->prepare($query);
             $stmt->bindParam(":cantidad", $cantidad);
             $stmt->bindParam(":precio_compra", $precio_compra);
-            $stmt->bindParam(":observaciones", $observaciones);
+            $stmt->bindParam(":observaciones", $observacionesCompletas);
             $stmt->bindParam(":id", $id);
             $stmt->execute();
 

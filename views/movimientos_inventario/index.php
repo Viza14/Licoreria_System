@@ -48,7 +48,8 @@
                             <i class="fa fa-exclamation-circle"></i> No se encontraron movimientos que coincidan con los criterios de búsqueda
                         </div>
 
-                        <table id="tablaMovimientos" class="table table-striped table-advance table-hover">
+                        <div class="table-responsive">
+                            <table id="tablaMovimientos" class="table table-striped table-advance table-hover">
                             <thead>
                                 <tr>
                                     <th><i class="fa fa-calendar"></i> Fecha</th>
@@ -79,25 +80,24 @@
                                                     echo '';
                                                 }
                                                 ?>">
-                                        <td><i class="fa fa-clock"></i> <?= date('d/m/Y H:i', strtotime($movimiento['fecha_movimiento'])); ?></td>
+                                        <td><?= date('d/m/Y h:i A', strtotime($movimiento['fecha_movimiento'])); ?></td>
                                         <td><?= htmlspecialchars($movimiento['producto']); ?></td>
                                         <td>
                                             <span class="label label-<?= $movimiento['tipo_movimiento'] == 'ENTRADA' ? 'success' : ($movimiento['tipo_movimiento'] == 'SALIDA' ? 'danger' : 'warning'); ?>">
-                                                <i class="fa fa-<?= $movimiento['tipo_movimiento'] == 'ENTRADA' ? 'arrow-down' : ($movimiento['tipo_movimiento'] == 'SALIDA' ? 'arrow-up' : 'sync'); ?>"></i>
                                                 <?= $movimiento['tipo_movimiento']; ?>
                                             </span>
                                             <?php if ($es_inactivo): ?>
-                                                <span class="label label-default"><i class="fa fa-ban"></i> Inactivo</span>
+                                                <span class="label label-default">Inactivo</span>
                                             <?php elseif ($tiene_ajuste > 0): ?>
-                                                <span class="label label-info"><i class="fa fa-sync"></i> Ajustado</span>
+                                                <span class="label label-info">Ajustado</span>
                                             <?php endif; ?>
                                         </td>
-                                        <td><i class="fa fa-hashtag"></i> <?= $movimiento['cantidad']; ?></td>
+                                        <td><?= $movimiento['cantidad']; ?></td>
                                         <td class="<?= $movimiento['tipo_movimiento'] == 'ENTRADA' ? 'text-success' : ($movimiento['tipo_movimiento'] == 'SALIDA' ? 'text-danger' : ''); ?>">
-                                            <i class="fa fa-money-bill"></i> <?= number_format($movimiento['precio_unitario'], 2, ',', '.'); ?> Bs
+                                            <?= number_format($movimiento['precio_unitario'], 2, ',', '.'); ?> Bs
                                         </td>
-                                        <td><i class="fa fa-user"></i> <?= $movimiento['usuario']; ?></td>
-                                        <td><i class="fa fa-file-alt"></i> <?= $movimiento['referencia'] ?? 'N/A'; ?></td>
+                                        <td><?= $movimiento['usuario']; ?></td>
+                                        <td><?= $movimiento['referencia'] ?? 'N/A'; ?></td>
                                         <td>
                                             <?php if (!$es_inactivo && $tiene_ajuste == 0): ?>
                                                 <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=mostrar&id=<?= $movimiento['id']; ?>"
@@ -108,20 +108,29 @@
                                                 <?php if (($movimiento['tipo_movimiento'] == 'SALIDA' && $movimiento['tipo_referencia'] == 'VENTA') ||
                                                     ($movimiento['tipo_movimiento'] == 'AJUSTE' && $movimiento['tipo_referencia'] == 'VENTA')
                                                 ): ?>
-                                                    <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=modificarVenta&id=<?= $movimiento['id_referencia'] ?>"
-                                                        class="btn btn-primary btn-xs" title="Modificar Venta">
-                                                        <i class="fa fa-edit"></i>
-                                                    </a>
+                                                    <?php if ($_SESSION['user_rol'] == 2): ?>
+                                                        <button class="btn btn-primary btn-xs" title="Modificar Venta" 
+                                                            onclick="solicitarAutorizacion('<?= $movimiento['id_referencia'] ?>', 'venta')">
+                                                            <i class="fa fa-edit"></i>
+                                                        </button>
+                                                    <?php else: ?>
+                                                        <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=modificarVenta&id=<?= $movimiento['id_referencia'] ?>"
+                                                            class="btn btn-primary btn-xs" title="Modificar Venta">
+                                                            <i class="fa fa-edit"></i>
+                                                        </a>
+                                                    <?php endif; ?>
                                                 <?php elseif (
                                                     $movimiento['tipo_movimiento'] == 'ENTRADA' ||
                                                     ($movimiento['tipo_movimiento'] == 'AJUSTE' && $movimiento['tipo_referencia'] != 'VENTA')
                                                 ): ?>
-                                                    <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=editar&id=<?= $movimiento['id'] ?>"
-                                                        class="btn btn-primary btn-xs" title="Editar Entrada">
-                                                        <i class="fa fa-edit"></i>
-                                                    </a>
+                                                    <?php if ($_SESSION['user_rol'] != 2): ?>
+                                                        <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=editar&id=<?= $movimiento['id'] ?>"
+                                                            class="btn btn-primary btn-xs" title="Editar Entrada">
+                                                            <i class="fa fa-edit"></i>
+                                                        </a>
+                                                    <?php endif; ?>
                                                 <?php endif; ?>
-                                            <?php elseif ($tiene_ajuste > 0): ?>
+                                            <?php elseif ($tiene_ajuste > 0 || $es_inactivo): ?>
                                                 <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=mostrar&id=<?= $movimiento['id'] ?>"
                                                     class="btn btn-info btn-xs" title="Ver Detalle">
                                                     <i class="fa fa-eye"></i>
@@ -133,6 +142,7 @@
                             </tbody>
                         </table>
                     </div>
+                    </div>
                 </section>
             </div>
         </div>
@@ -140,4 +150,254 @@
 </section>
 
 [Rest of the code remains unchanged...]
+<!-- Modal de Autorización -->
+<div class="modal fade" id="autorizacionModal" tabindex="-1" role="dialog" aria-labelledby="autorizacionModalLabel">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="autorizacionModalLabel"><i class="fa fa-lock"></i> Autorización Requerida</h4>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fa fa-info-circle"></i> Se requiere autorización de un administrador para continuar.
+                </div>
+                <form id="formAutorizacion">
+                    <input type="hidden" id="idReferencia" name="idReferencia">
+                    <input type="hidden" id="tipoOperacion" name="tipoOperacion">
+                    <div class="form-group">
+                        <label for="usuario">Usuario Administrador</label>
+                        <input type="text" class="form-control" id="usuario" name="usuario" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Contraseña</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="verificarAutorizacion()">Verificar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Función para búsqueda en tiempo real
+document.getElementById('busqueda').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const tabla = document.getElementById('tablaMovimientos');
+    const filas = tabla.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    let contadorResultados = 0;
+
+    for (let fila of filas) {
+        const producto = fila.cells[1].textContent.toLowerCase();
+        const tipo = fila.cells[2].textContent.toLowerCase();
+        const usuario = fila.cells[5].textContent.toLowerCase();
+        const referencia = fila.cells[6].textContent.toLowerCase();
+
+        if (producto.includes(searchTerm) || 
+            tipo.includes(searchTerm) || 
+            usuario.includes(searchTerm) || 
+            referencia.includes(searchTerm)) {
+            fila.style.display = '';
+            contadorResultados++;
+        } else {
+            fila.style.display = 'none';
+        }
+    }
+
+    // Actualizar contador y mostrar/ocultar mensajes
+    document.getElementById('contador-resultados').textContent = contadorResultados;
+    document.getElementById('filtros-activos').style.display = searchTerm ? 'block' : 'none';
+    document.getElementById('texto-filtros-activos').textContent = searchTerm ? `Término: "${searchTerm}"` : '';
+    document.getElementById('sin-resultados').style.display = (contadorResultados === 0 && searchTerm) ? 'block' : 'none';
+});
+
+function solicitarAutorizacion(id, tipo) {
+    document.getElementById('idReferencia').value = id;
+    document.getElementById('tipoOperacion').value = tipo;
+    $('#autorizacionModal').modal('show');
+}
+
+function verificarAutorizacion() {
+    const formData = new FormData(document.getElementById('formAutorizacion'));
+    
+    fetch('<?= BASE_URL ?>index.php?action=auth&method=verificarAdmin', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const id = document.getElementById('idReferencia').value;
+            const tipo = document.getElementById('tipoOperacion').value;
+            
+            if (tipo === 'venta') {
+                window.location.href = `<?= BASE_URL ?>index.php?action=movimientos-inventario&method=modificarVenta&id=${id}`;
+            }
+            $('#autorizacionModal').modal('hide');
+        } else {
+            alert('Credenciales incorrectas. Por favor, intente nuevamente.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Ocurrió un error al verificar las credenciales.');
+    });
+}
+</script>
+
+<!-- Modal de Filtros -->
+<div class="modal fade" id="filtrosModal" tabindex="-1" role="dialog" aria-labelledby="filtrosModalLabel">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="filtrosModalLabel"><i class="fa fa-filter"></i> Filtros de Búsqueda</h4>
+            </div>
+            <div class="modal-body">
+                <form id="formFiltros">
+                    <div class="form-group">
+                        <label>Tipo de Movimiento</label>
+                        <div class="checkbox">
+                            <label>
+                                <input type="checkbox" name="tipo_movimiento[]" value="ENTRADA"> Entradas
+                            </label>
+                        </div>
+                        <div class="checkbox">
+                            <label>
+                                <input type="checkbox" name="tipo_movimiento[]" value="SALIDA"> Salidas
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Estado</label>
+                        <div class="checkbox">
+                            <label>
+                                <input type="checkbox" name="estado[]" value="activo"> Activos
+                            </label>
+                        </div>
+                        <div class="checkbox">
+                            <label>
+                                <input type="checkbox" name="estado[]" value="inactivo"> Inactivos
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Rango de Fechas</label>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <input type="date" class="form-control" name="fecha_inicio" placeholder="Fecha Inicio">
+                            </div>
+                            <div class="col-md-6">
+                                <input type="date" class="form-control" name="fecha_fin" placeholder="Fecha Fin">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" onclick="limpiarFiltros()">Limpiar Filtros</button>
+                <button type="button" class="btn btn-primary" onclick="aplicarFiltros()">Aplicar Filtros</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function aplicarFiltros() {
+    const formData = new FormData(document.getElementById('formFiltros'));
+    const filtros = {};
+    let filtrosActivos = [];
+
+    // Recopilar tipos de movimiento seleccionados
+    const tiposMovimiento = formData.getAll('tipo_movimiento[]');
+    if (tiposMovimiento.length > 0) {
+        filtros.tipos = tiposMovimiento;
+        filtrosActivos.push(`Tipos: ${tiposMovimiento.join(', ')}`);
+    }
+
+    // Recopilar estados seleccionados
+    const estados = formData.getAll('estado[]');
+    if (estados.length > 0) {
+        filtros.estados = estados;
+        filtrosActivos.push(`Estados: ${estados.join(', ')}`);
+    }
+
+    // Recopilar fechas
+    const fechaInicio = formData.get('fecha_inicio');
+    const fechaFin = formData.get('fecha_fin');
+    if (fechaInicio || fechaFin) {
+        filtros.fechaInicio = fechaInicio;
+        filtros.fechaFin = fechaFin;
+        filtrosActivos.push(`Fechas: ${fechaInicio || 'Inicio'} - ${fechaFin || 'Fin'}`);
+    }
+
+    // Aplicar filtros a la tabla
+    const tabla = document.getElementById('tablaMovimientos');
+    const filas = tabla.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    let contadorResultados = 0;
+
+    for (let fila of filas) {
+        let mostrarFila = true;
+
+        // Filtrar por tipo de movimiento
+        if (filtros.tipos && filtros.tipos.length > 0) {
+            const tipoMovimiento = fila.cells[2].textContent.trim();
+            if (!filtros.tipos.some(tipo => tipoMovimiento.includes(tipo))) {
+                mostrarFila = false;
+            }
+        }
+
+        // Filtrar por estado
+        if (mostrarFila && filtros.estados && filtros.estados.length > 0) {
+            const esInactivo = fila.classList.contains('inactive-movement');
+            const esAjustado = fila.classList.contains('adjustment-movement');
+            const estado = esInactivo ? 'inactivo' : (esAjustado ? 'ajustado' : 'activo');
+            if (!filtros.estados.includes(estado)) {
+                mostrarFila = false;
+            }
+        }
+
+        // Filtrar por fecha
+        if (mostrarFila && (fechaInicio || fechaFin)) {
+            const fecha = new Date(fila.cells[0].textContent.trim());
+            if (fechaInicio && new Date(fechaInicio) > fecha) {
+                mostrarFila = false;
+            }
+            if (fechaFin && new Date(fechaFin) < fecha) {
+                mostrarFila = false;
+            }
+        }
+
+        fila.style.display = mostrarFila ? '' : 'none';
+        if (mostrarFila) contadorResultados++;
+    }
+
+    // Actualizar mensajes y contador
+    document.getElementById('contador-resultados').textContent = contadorResultados;
+    document.getElementById('filtros-activos').style.display = filtrosActivos.length > 0 ? 'block' : 'none';
+    document.getElementById('texto-filtros-activos').textContent = filtrosActivos.join(' | ');
+    document.getElementById('sin-resultados').style.display = contadorResultados === 0 ? 'block' : 'none';
+
+    $('#filtrosModal').modal('hide');
+}
+
+function limpiarFiltros() {
+    document.getElementById('formFiltros').reset();
+    const tabla = document.getElementById('tablaMovimientos');
+    const filas = tabla.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    
+    for (let fila of filas) {
+        fila.style.display = '';
+    }
+
+    document.getElementById('filtros-activos').style.display = 'none';
+    document.getElementById('sin-resultados').style.display = 'none';
+    document.getElementById('contador-resultados').textContent = filas.length;
+}
+</script>
+
 <!--main content end-->
