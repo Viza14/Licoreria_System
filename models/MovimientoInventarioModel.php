@@ -16,8 +16,66 @@ class MovimientoInventarioModel
         return $this->errors;
     }
 
-    public function obtenerTodosMovimientos()
+    public function obtenerTodosMovimientos($pagina = 1, $porPagina = 10, $filtros = [])
     {
+        // Calculate offset
+        $offset = ($pagina - 1) * $porPagina;
+
+        // Base query for both count and data
+        $baseQuery = "FROM movimientos_inventario mi
+                      JOIN producto p ON mi.id_producto = p.id
+                      JOIN usuarios u ON mi.id_usuario = u.id
+                      JOIN estatus e ON mi.id_estatus = e.id";
+
+        // Build WHERE clause based on filters
+        $whereConditions = [];
+        $params = [];
+
+        if (!empty($filtros['tipos'])) {
+            $whereConditions[] = "mi.tipo_movimiento IN (" . implode(',', array_fill(0, count($filtros['tipos']), '?')) . ")";
+            foreach ($filtros['tipos'] as $tipo) {
+                $params[] = $tipo;
+            }
+        }
+
+        if (!empty($filtros['estados'])) {
+            $estadosConditions = [];
+            foreach ($filtros['estados'] as $estado) {
+                if ($estado === 'inactivo') {
+                    $estadosConditions[] = "mi.id_estatus = 2";
+                } elseif ($estado === 'ajustado') {
+                    $estadosConditions[] = "EXISTS (SELECT 1 FROM movimientos_inventario WHERE id_movimiento_original = mi.id)";
+                } elseif ($estado === 'activo') {
+                    $estadosConditions[] = "mi.id_estatus = 1 AND NOT EXISTS (SELECT 1 FROM movimientos_inventario WHERE id_movimiento_original = mi.id)";
+                }
+            }
+            if (!empty($estadosConditions)) {
+                $whereConditions[] = "(" . implode(' OR ', $estadosConditions) . ")";
+            }
+        }
+
+        if (!empty($filtros['fecha_inicio'])) {
+            $whereConditions[] = "mi.fecha_movimiento >= ?";
+            $params[] = $filtros['fecha_inicio'];
+        }
+
+        if (!empty($filtros['fecha_fin'])) {
+            $whereConditions[] = "mi.fecha_movimiento <= ?";
+            $params[] = $filtros['fecha_fin'];
+        }
+
+        $whereClause = !empty($whereConditions) ? " WHERE " . implode(' AND ', $whereConditions) : "";
+
+        // Get total records for pagination
+        $queryTotal = "SELECT COUNT(*) as total " . $baseQuery . $whereClause;
+        $stmtTotal = $this->db->prepare($queryTotal);
+        foreach ($params as $i => $param) {
+            $stmtTotal->bindValue($i + 1, $param);
+        }
+        $stmtTotal->execute();
+        $total = $stmtTotal->fetch(PDO::FETCH_ASSOC)['total'];
+
+        // Get paginated records
         $query = "SELECT mi.*, 
                   p.descripcion as producto,
                   CONCAT(u.nombres, ' ', u.apellidos) as usuario,
@@ -28,15 +86,25 @@ class MovimientoInventarioModel
                     WHEN mi.tipo_referencia = 'COMPRA' THEN CONCAT('Compra #', mi.id_referencia)
                     ELSE mi.observaciones
                   END as referencia
-                  FROM movimientos_inventario mi
-                  JOIN producto p ON mi.id_producto = p.id
-                  JOIN usuarios u ON mi.id_usuario = u.id
-                  JOIN estatus e ON mi.id_estatus = e.id
-                  ORDER BY mi.fecha_movimiento DESC";
+                  " . $baseQuery . $whereClause . "
+                  ORDER BY mi.fecha_movimiento DESC
+                  LIMIT ? OFFSET ?";
         
         $stmt = $this->db->prepare($query);
+        foreach ($params as $i => $param) {
+            $stmt->bindValue($i + 1, $param);
+        }
+        $stmt->bindValue(count($params) + 1, $porPagina, PDO::PARAM_INT);
+        $stmt->bindValue(count($params) + 2, $offset, PDO::PARAM_INT);
         $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return [
+            'data' => $stmt->fetchAll(PDO::FETCH_ASSOC),
+            'total' => $total,
+            'pagina_actual' => $pagina,
+            'por_pagina' => $porPagina,
+            'total_paginas' => ceil($total / $porPagina)
+        ];
     }
 
     public function obtenerMovimientoPorId($id)

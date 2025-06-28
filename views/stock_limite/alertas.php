@@ -103,7 +103,7 @@
 
         <div class="row mt-3">
             <div class="col-lg-12">
-                <a href="<?php echo BASE_URL; ?>stock/gestion" class="btn btn-default">
+                <a href="<?php echo BASE_URL; ?>index.php?action=gestion-stock" class="btn btn-default">
                     <i class="fa fa-arrow-left"></i> Volver a Gestión de Stock
                 </a>
             </div>

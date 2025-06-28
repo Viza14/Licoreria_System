@@ -142,6 +142,76 @@
                             </tbody>
                         </table>
                     </div>
+                    <!-- Pagination Start -->
+                    <?php if ($total_paginas > 1): ?>
+                    <div class="text-center">
+                        <ul class="pagination pagination-sm">
+                            <?php
+                            function buildPaginationUrl($page) {
+                                global $filtros_activos;
+                                $url = BASE_URL . "index.php?action=movimientos-inventario&pagina=" . $page;
+                                
+                                if (!empty($filtros_activos)) {
+                                    if (!empty($filtros_activos['tipos'])) {
+                                        $url .= "&tipos=" . implode(',', $filtros_activos['tipos']);
+                                    }
+                                    if (!empty($filtros_activos['estados'])) {
+                                        $url .= "&estados=" . implode(',', $filtros_activos['estados']);
+                                    }
+                                    if (!empty($filtros_activos['fecha_inicio'])) {
+                                        $url .= "&fecha_inicio=" . $filtros_activos['fecha_inicio'];
+                                    }
+                                    if (!empty($filtros_activos['fecha_fin'])) {
+                                        $url .= "&fecha_fin=" . $filtros_activos['fecha_fin'];
+                                    }
+                                }
+                                return $url;
+                            }
+                            ?>
+                            
+                            <?php if ($pagina_actual > 1): ?>
+                                <li>
+                                    <a href="<?= buildPaginationUrl(1) ?>">
+                                        <i class="fa fa-angle-double-left"></i>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="<?= buildPaginationUrl($pagina_actual - 1) ?>">
+                                        <i class="fa fa-angle-left"></i>
+                                    </a>
+                                </li>
+                            <?php endif; ?>
+
+                            <?php
+                            $inicio = max(1, $pagina_actual - 2);
+                            $fin = min($total_paginas, $pagina_actual + 2);
+
+                            for ($i = $inicio; $i <= $fin; $i++): ?>
+                                <li class="<?= $i == $pagina_actual ? 'active' : '' ?>">
+                                    <a href="<?= buildPaginationUrl($i) ?>"><?= $i ?></a>
+                                </li>
+                            <?php endfor; ?>
+
+                            <?php if ($pagina_actual < $total_paginas): ?>
+                                <li>
+                                    <a href="<?= buildPaginationUrl($pagina_actual + 1) ?>">
+                                        <i class="fa fa-angle-right"></i>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="<?= buildPaginationUrl($total_paginas) ?>">
+                                        <i class="fa fa-angle-double-right"></i>
+                                    </a>
+                                </li>
+                            <?php endif; ?>
+                        </ul>
+                        <div class="text-muted">
+                            Mostrando <?= count($movimientos) ?> de <?= $total ?> registros | 
+                            Página <?= $pagina_actual ?> de <?= $total_paginas ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                    <!-- Pagination End -->
                     </div>
                 </section>
             </div>
@@ -149,7 +219,7 @@
     </section>
 </section>
 
-[Rest of the code remains unchanged...]
+
 <!-- Modal de Autorización -->
 <div class="modal fade" id="autorizacionModal" tabindex="-1" role="dialog" aria-labelledby="autorizacionModalLabel">
     <div class="modal-dialog" role="document">
@@ -184,35 +254,50 @@
 </div>
 
 <script>
-// Función para búsqueda en tiempo real
+// Función para búsqueda en tiempo real con paginación
+let searchTimeout;
 document.getElementById('busqueda').addEventListener('input', function(e) {
     const searchTerm = e.target.value.toLowerCase();
-    const tabla = document.getElementById('tablaMovimientos');
-    const filas = tabla.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
-    let contadorResultados = 0;
+    
+    // Clear previous timeout
+    clearTimeout(searchTimeout);
+    
+    // Set new timeout to prevent multiple rapid requests
+    searchTimeout = setTimeout(function() {
+        const tabla = document.getElementById('tablaMovimientos');
+        const filas = tabla.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+        let contadorResultados = 0;
 
-    for (let fila of filas) {
-        const producto = fila.cells[1].textContent.toLowerCase();
-        const tipo = fila.cells[2].textContent.toLowerCase();
-        const usuario = fila.cells[5].textContent.toLowerCase();
-        const referencia = fila.cells[6].textContent.toLowerCase();
+        for (let fila of filas) {
+            const producto = fila.cells[1].textContent.toLowerCase();
+            const tipo = fila.cells[2].textContent.toLowerCase();
+            const usuario = fila.cells[5].textContent.toLowerCase();
+            const referencia = fila.cells[6].textContent.toLowerCase();
 
-        if (producto.includes(searchTerm) || 
-            tipo.includes(searchTerm) || 
-            usuario.includes(searchTerm) || 
-            referencia.includes(searchTerm)) {
-            fila.style.display = '';
-            contadorResultados++;
-        } else {
-            fila.style.display = 'none';
+            if (producto.includes(searchTerm) || 
+                tipo.includes(searchTerm) || 
+                usuario.includes(searchTerm) || 
+                referencia.includes(searchTerm)) {
+                fila.style.display = '';
+                contadorResultados++;
+            } else {
+                fila.style.display = 'none';
+            }
         }
-    }
 
-    // Actualizar contador y mostrar/ocultar mensajes
-    document.getElementById('contador-resultados').textContent = contadorResultados;
-    document.getElementById('filtros-activos').style.display = searchTerm ? 'block' : 'none';
-    document.getElementById('texto-filtros-activos').textContent = searchTerm ? `Término: "${searchTerm}"` : '';
-    document.getElementById('sin-resultados').style.display = (contadorResultados === 0 && searchTerm) ? 'block' : 'none';
+        // Actualizar contador y mostrar/ocultar mensajes
+        document.getElementById('contador-resultados').textContent = contadorResultados;
+        document.getElementById('filtros-activos').style.display = searchTerm ? 'block' : 'none';
+        document.getElementById('texto-filtros-activos').textContent = searchTerm ? `Término: "${searchTerm}"` : '';
+        document.getElementById('sin-resultados').style.display = (contadorResultados === 0 && searchTerm) ? 'block' : 'none';
+
+        // Reset to first page when searching
+        if (searchTerm) {
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('pagina', '1');
+            window.history.pushState({}, '', currentUrl);
+        }
+    }, 300); // Wait 300ms after user stops typing before filtering
 });
 
 function solicitarAutorizacion(id, tipo) {
@@ -381,6 +466,18 @@ function aplicarFiltros() {
     document.getElementById('filtros-activos').style.display = filtrosActivos.length > 0 ? 'block' : 'none';
     document.getElementById('texto-filtros-activos').textContent = filtrosActivos.join(' | ');
     document.getElementById('sin-resultados').style.display = contadorResultados === 0 ? 'block' : 'none';
+
+    // Reset to first page when applying filters
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('pagina', '1');
+    
+    // Add filter parameters to URL
+    if (tiposMovimiento.length > 0) currentUrl.searchParams.set('tipos', tiposMovimiento.join(','));
+    if (estados.length > 0) currentUrl.searchParams.set('estados', estados.join(','));
+    if (fechaInicio) currentUrl.searchParams.set('fecha_inicio', fechaInicio);
+    if (fechaFin) currentUrl.searchParams.set('fecha_fin', fechaFin);
+    
+    window.history.pushState({}, '', currentUrl);
 
     $('#filtrosModal').modal('hide');
 }

@@ -1,50 +1,120 @@
-licoreria/
+.
 ├── assets/
 │   ├── css/
+│   │   ├── bootstrap.css
 │   │   ├── dashgum/
-│   │   └── style.css
-│   ├── js/
-│   │   └── custom.js
+│   │   ├── style-responsive.css
+│   │   ├── style.css
+│   │   ├── table-responsive.css
+│   │   ├── to-do.css
+│   │   └── zabuto_calendar.css
+│   ├── font-awesome/
+│   │   ├── css/
+│   │   └── fonts/
+│   ├── fonts/
+│   │   ├── glyphicons-halflings-regular.eot
+│   │   ├── glyphicons-halflings-regular.svg
+│   │   ├── glyphicons-halflings-regular.ttf
+│   │   └── glyphicons-halflings-regular.woff
 │   ├── img/
-│   └── fonts/
+│   │   ├── account.svg
+│   │   ├── blog-bg.jpg
+│   │   ├── botella.png
+│   │   ├── botella2.png
+│   │   ├── cerveza2.jpg
+│   │   ├── checkbox-gray.png
+│   │   ├── friends/
+│   │   ├── instagram.jpg
+│   │   ├── login-bg.jpg
+│   │   ├── lorde.jpg
+│   │   ├── mask.png
+│   │   ├── ny.jpg
+│   │   ├── portfolio/
+│   │   ├── product.jpg
+│   │   ├── product.png
+│   │   ├── profile-01.jpg
+│   │   ├── profile-02.jpg
+│   │   ├── radio-gray.png
+│   │   ├── ui-danro.jpg
+│   │   ├── ui-divya.jpg
+│   │   ├── ui-sam.jpg
+│   │   ├── ui-sherman.jpg
+│   │   ├── ui-zac.jpg
+│   │   ├── weather.jpg
+│   │   └── zoom.png
+│   ├── js/
+│   │   ├── bootstrap-inputmask/
+│   │   ├── bootstrap-switch.js
+│   │   ├── bootstrap.min.js
+│   │   ├── calendar-conf-events.js
+│   │   ├── chart-master/
+│   │   ├── chartjs-conf.js
+│   │   ├── common-scripts.js
+│   │   ├── easy-pie-chart.js
+│   │   ├── fancybox/
+│   │   ├── form-component.js
+│   │   ├── fullcalendar/
+│   │   ├── gritter/
+│   │   ├── gritter-conf.js
+│   │   ├── jquery-1.8.3.min.js
+│   │   ├── jquery-easy-pie-chart/
+│   │   ├── jquery-ui-1.9.2.custom.min.js
+│   │   ├── jquery.backstretch.min.js
+│   │   ├── jquery.dcjqaccordion.2.7.js
+│   │   ├── jquery.js
+│   │   ├── jquery.nicescroll.js
+│   │   ├── jquery.scrollTo.min.js
+│   │   ├── jquery.sparkline.js
+│   │   ├── jquery.tagsinput.js
+│   │   ├── jquery.ui.touch-punch.min.js
+│   │   ├── morris-conf.js
+│   │   ├── sparkline-chart.js
+│   │   ├── tasks.js
+│   │   └── zabuto_calendar.js
+│   └── lineicons/
+│       ├── fonts/
+│       ├── index.html
+│       ├── lte-ie7.js
+│       └── style.css
 ├── config/
 │   └── database.php
 ├── controllers/
 │   ├── AuthController.php
-│   ├── ProductoController.php
+│   ├── CategoriaController.php
 │   ├── ClienteController.php
 │   ├── DashboardController.php
-│   ├── VentaController.php
-│   ├── ProveedorController.php
-│   ├── CategoriaController.php
-│   ├── TipoCategoriaController.php
-│   ├── ProductoProveedorController.php
 │   ├── MovimientoInventarioController.php
-│   ├── StockLimiteController.php
+│   ├── ProductoController.php
+│   ├── ProductoProveedorController.php
+│   ├── ProveedorController.php
 │   ├── ReporteController.php
-│   └── UsuarioController.php
+│   ├── StockLimiteController.php
+│   ├── TipoCategoriaController.php
+│   ├── UsuarioController.php
+│   └── VentaController.php
 ├── helpers/
-│   └── functions.php
+│   ├── functions.php
+│   └── notifications.php
 ├── models/
-│   ├── ProductoModel.php
-│   ├── ClienteModel.php
-│   ├── VentaModel.php
-│   ├── ProveedorModel.php
-│   ├── ProductoProveedorModel.php
 │   ├── CategoriaModel.php
+│   ├── ClienteModel.php
+│   ├── Database.php
+│   ├── MovimientoInventarioModel.php
+│   ├── ProductoModel.php
+│   ├── ProductoProveedorModel.php
+│   ├── ProveedorModel.php
+│   ├── ReporteModel.php
+│   ├── StockLimiteModel.php
 │   ├── TipoCategoriaModel.php
 │   ├── UsuarioModel.php
-│   ├── MovimientoInventarioModel.php
-│   ├── StockLimiteModel.php
-│   ├── ReporteModel.php
-│   └── Database.php
+│   └── VentaModel.php
 ├── views/
 │   ├── layouts/
 │   │   ├── header.php
 │   │   ├── footer.php
-│   │   └──sidebar.php
+│   │   └── sidebar.php
 │   ├── auth/
-│   │   ├── login.php
+│   │   └── login.php
 │   ├── productos/
 │   │   ├── index.php
 │   │   ├── crear.php
@@ -75,7 +145,7 @@ licoreria/
 │   │   ├── crear.php
 │   │   ├── editar.php
 │   │   └── mostrar.php
-│   ├── TipoCategoria/
+│   ├── tipos_categoria/
 │   │   ├── index.php
 │   │   ├── crear.php
 │   │   ├── editar.php
@@ -88,6 +158,9 @@ licoreria/
 │   ├── movimientos_inventario/
 │   │   ├── index.php
 │   │   ├── mostrar.php
+│   │   ├── mostrar_venta.php
+│   │   ├── modificar_venta.php
+│   │   ├── editar.php
 │   │   ├── por_producto.php
 │   │   └── resumen.php
 │   ├── stock_limite/
@@ -96,10 +169,11 @@ licoreria/
 │   │   └── alertas.php
 │   ├── reportes/
 │   │   ├── index.php
-│   │   ├── resumen_de_venta.php
+│   │   ├── resumen_ventas.php
 │   │   ├── productos_mas_vendidos.php
 │   │   ├── inventario.php
-│   │   └── detalles_de_ventas.php
+│   │   └── detalle_ventas.php
 │   └── dashboard.php
 ├── .htaccess
-└── index.php
+├── index.php
+└── licoreria.sql

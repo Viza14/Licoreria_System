@@ -21,8 +21,37 @@ class MovimientoInventarioController
     public function index()
     {
         $this->checkSession();
-        $movimientos = $this->model->obtenerTodosMovimientos();
-        $this->loadView('movimientos_inventario/index', ['movimientos' => $movimientos]);
+        $pagina = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
+        $porPagina = isset($_GET['por_pagina']) ? (int)$_GET['por_pagina'] : 10;
+        
+        // Process filter parameters from URL
+        $filtros = [];
+        
+        if (isset($_GET['tipos'])) {
+            $filtros['tipos'] = explode(',', $_GET['tipos']);
+        }
+        
+        if (isset($_GET['estados'])) {
+            $filtros['estados'] = explode(',', $_GET['estados']);
+        }
+        
+        if (isset($_GET['fecha_inicio'])) {
+            $filtros['fecha_inicio'] = $_GET['fecha_inicio'];
+        }
+        
+        if (isset($_GET['fecha_fin'])) {
+            $filtros['fecha_fin'] = $_GET['fecha_fin'];
+        }
+        
+        $resultado = $this->model->obtenerTodosMovimientos($pagina, $porPagina, $filtros);
+        $this->loadView('movimientos_inventario/index', [
+            'movimientos' => $resultado['data'],
+            'total' => $resultado['total'],
+            'pagina_actual' => $resultado['pagina_actual'],
+            'por_pagina' => $resultado['por_pagina'],
+            'total_paginas' => $resultado['total_paginas'],
+            'filtros_activos' => $filtros
+        ]);
     }
 
     public function mostrar($id)
