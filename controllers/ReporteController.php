@@ -79,10 +79,23 @@ class ReporteController
         
         $filtros = [];
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $filtros = [
-                'fecha_inicio' => $_POST['fecha_inicio'] ?? null,
-                'fecha_fin' => $_POST['fecha_fin'] ?? null
-            ];
+            // Validate and sanitize dates
+            $fechaInicio = filter_input(INPUT_POST, 'fecha_inicio', FILTER_SANITIZE_STRING);
+            $fechaFin = filter_input(INPUT_POST, 'fecha_fin', FILTER_SANITIZE_STRING);
+            
+            // Validate date format
+            if ($this->validateDate($fechaInicio) && $this->validateDate($fechaFin)) {
+                $filtros = [
+                    'fecha_inicio' => $fechaInicio,
+                    'fecha_fin' => $fechaFin
+                ];
+            } else {
+                $_SESSION['error'] = [
+                    'title' => 'Error de validación',
+                    'text' => 'Las fechas ingresadas no son válidas',
+                    'icon' => 'error'
+                ];
+            }
         }
         
         $reporte = $this->model->obtenerResumenVentas($filtros);
@@ -224,5 +237,12 @@ class ReporteController
         require ROOT_PATH . 'views/layouts/sidebar.php';
         require ROOT_PATH . 'views/' . $view . '.php';
         require ROOT_PATH . 'views/layouts/footer.php';
+    }
+
+    // Validate date format YYYY-MM-DD
+    private function validateDate($date, $format = 'Y-m-d')
+    {
+        $d = DateTime::createFromFormat($format, $date);
+        return $d && $d->format($format) === $date;
     }
 }

@@ -101,11 +101,10 @@ class ReporteModel
                       JOIN usuarios u ON v.id_usuario = u.id
                       JOIN detalle_venta dv ON v.id = dv.id_venta
                       JOIN producto p ON dv.id_producto = p.id
-                      WHERE 1=1";
+                      WHERE v.id_estatus = 1";
 
             $params = [];
 
-            // Filtros
             if (!empty($filtros['fecha_inicio'])) {
                 $query .= " AND v.fecha >= :fecha_inicio";
                 $params[':fecha_inicio'] = $filtros['fecha_inicio'];
@@ -156,7 +155,7 @@ class ReporteModel
                       JOIN producto p ON dv.id_producto = p.id
                       JOIN clientes c ON v.cedula_cliente = c.cedula
                       JOIN usuarios u ON v.id_usuario = u.id
-                      WHERE 1=1";
+                      WHERE v.id_estatus = 1";
 
             $params = [];
 
@@ -195,15 +194,14 @@ class ReporteModel
                         DATE_FORMAT(v.fecha, '%Y-%m') as mes,
                         COUNT(v.id) as total_ventas,
                         SUM(v.monto_total) as monto_total,
-                        AVG(v.monto_total) as promedio_venta,
+                        ROUND(AVG(v.monto_total), 2) as promedio_venta,
                         MAX(v.monto_total) as venta_maxima,
                         MIN(v.monto_total) as venta_minima
-                      FROM ventas v
-                      WHERE 1=1";
+                    FROM ventas v
+                    WHERE v.id_estatus = 1";
 
             $params = [];
-
-            // Filtros
+            
             if (!empty($filtros['fecha_inicio'])) {
                 $query .= " AND v.fecha >= :fecha_inicio";
                 $params[':fecha_inicio'] = $filtros['fecha_inicio'];
@@ -240,7 +238,7 @@ class ReporteModel
                       JOIN producto p ON dv.id_producto = p.id
                       JOIN categorias c ON p.id_categoria = c.id
                       JOIN ventas v ON dv.id_venta = v.id
-                      WHERE 1=1";
+                      WHERE v.id_estatus = 1";
 
             $params = [];
 
@@ -292,6 +290,7 @@ class ReporteModel
                      ORDER BY fecha DESC LIMIT 1) as cierre
                   FROM ventas
                   WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+                  AND id_estatus = 1
                   GROUP BY YEAR(fecha), MONTH(fecha)
                   ORDER BY anio, mes";
         $stmt = $this->db->prepare($query);
@@ -308,6 +307,7 @@ class ReporteModel
                     SUM((SELECT SUM(cantidad) FROM detalle_venta WHERE id_venta = v.id)) as total_productos
                   FROM ventas v
                   WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 8 WEEK)
+                  AND id_estatus = 1
                   GROUP BY YEARWEEK(fecha, 1)
                   ORDER BY semana DESC
                   LIMIT 7";
@@ -347,6 +347,7 @@ class ReporteModel
                         SUM((SELECT SUM(cantidad) FROM detalle_venta WHERE id_venta = v.id)) as total_productos
                       FROM ventas v
                       WHERE fecha >= :inicio_semana
+                      AND id_estatus = 1
                       GROUP BY DATE(fecha), DAYNAME(fecha)
                       ORDER BY fecha";
             
