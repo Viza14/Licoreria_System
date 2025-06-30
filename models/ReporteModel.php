@@ -324,10 +324,10 @@ class ReporteModel
 
     public function obtenerProductosPorDiaSemana() {
         try {
-            // Get current week's Monday
+            // Start from current day
             $hoy = new DateTime();
             $inicioSemana = clone $hoy;
-            $inicioSemana->modify('monday this week');
+            $inicioSemana->modify('-6 days'); // Get data from 6 days ago
             
             // Spanish day abbreviations array
             $diasSemana = [
@@ -340,13 +340,14 @@ class ReporteModel
                 'Sunday' => 'DOM'
             ];
             
-            // Query to get products sold by day for current week
+            // Query to get products sold for the last 7 days
             $query = "SELECT 
                         DATE(fecha) as fecha,
                         DAYNAME(fecha) as dia_semana,
                         SUM((SELECT SUM(cantidad) FROM detalle_venta WHERE id_venta = v.id)) as total_productos
                       FROM ventas v
                       WHERE fecha >= :inicio_semana
+                      AND fecha <= NOW()
                       AND id_estatus = 1
                       GROUP BY DATE(fecha), DAYNAME(fecha)
                       ORDER BY fecha";
@@ -355,11 +356,11 @@ class ReporteModel
             $stmt->execute([':inicio_semana' => $inicioSemana->format('Y-m-d')]);
             $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            // Initialize array with current week days
+            // Initialize array with last 7 days
             $diasCompletos = [];
             $fechaActual = clone $inicioSemana;
             
-            // Fill array with all week days
+            // Fill array with the last 7 days
             for ($i = 0; $i < 7; $i++) {
                 $nombreDiaIngles = $fechaActual->format('l');
                 $nombreDiaCorto = $diasSemana[$nombreDiaIngles];

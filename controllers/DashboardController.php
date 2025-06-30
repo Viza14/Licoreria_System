@@ -30,8 +30,11 @@ class DashboardController {
             // Get products by day of week (already formatted from model)
             $productosPorDia = $this->reporteModel->obtenerProductosPorDiaSemana();
             
-            // Get current month name
-            $mesActual = date('F');
+            // Get date range for last 7 days
+            $fechaFin = new DateTime();
+            $fechaInicio = clone $fechaFin;
+            $fechaInicio->modify('-6 days');
+            
             $nombresMeses = [
                 'January' => 'ENERO',
                 'February' => 'FEBRERO',
@@ -46,7 +49,12 @@ class DashboardController {
                 'November' => 'NOVIEMBRE',
                 'December' => 'DICIEMBRE'
             ];
-            $mesActualEsp = $nombresMeses[$mesActual];
+            
+            $mesInicioEsp = $nombresMeses[$fechaInicio->format('F')];
+            $mesFinalEsp = $nombresMeses[$fechaFin->format('F')];
+            
+            $rangoFechas = $fechaInicio->format('d') . ' ' . $mesInicioEsp . ' - ' . 
+                          $fechaFin->format('d') . ' ' . $mesFinalEsp;
             
             // Prepare data for view
             $data = [
@@ -58,7 +66,7 @@ class DashboardController {
                 'topProductos' => $this->reporteModel->obtenerProductosMasVendidos() ?? [],
                 'ultimasVentas' => $this->ventaModel->obtenerVentasRecientes() ?? [],
                 'productosPorDia' => $productosPorDia,
-                'mesActual' => $mesActualEsp,
+                'mesActual' => $rangoFechas,
                 'userNombre' => $_SESSION['user_nombre'] ?? 'Usuario'
             ];
             
