@@ -31,6 +31,22 @@ class MovimientoInventarioModel
         $whereConditions = [];
         $params = [];
 
+        if (!empty($filtros['busqueda'])) {
+            $whereConditions[] = "(p.descripcion LIKE ? OR 
+                                  mi.tipo_movimiento LIKE ? OR 
+                                  CONCAT(u.nombres, ' ', u.apellidos) LIKE ? OR 
+                                  CASE 
+                                    WHEN mi.tipo_referencia = 'VENTA' THEN CONCAT('Venta #', mi.id_referencia)
+                                    WHEN mi.tipo_referencia = 'COMPRA' THEN CONCAT('Compra #', mi.id_referencia)
+                                    ELSE mi.observaciones
+                                  END LIKE ?)";
+            $searchTerm = '%' . $filtros['busqueda'] . '%';
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+        }
+
         if (!empty($filtros['tipos'])) {
             $whereConditions[] = "mi.tipo_movimiento IN (" . implode(',', array_fill(0, count($filtros['tipos']), '?')) . ")";
             foreach ($filtros['tipos'] as $tipo) {
@@ -193,6 +209,7 @@ class MovimientoInventarioModel
     {
         try {
             $this->db->beginTransaction();
+            error_log("Transacción iniciada");
 
             // 1. Get current movement
             $movimientoActual = $this->obtenerMovimientoPorId($id);
@@ -256,9 +273,11 @@ class MovimientoInventarioModel
             $stmt->execute();
             
             $this->db->commit();
+            error_log("Transacción completada exitosamente");
             return true;
         } catch (PDOException $e) {
             $this->db->rollBack();
+            error_log("Error en la transacción: " . $e->getMessage());
             $this->errors[] = "Error al actualizar movimiento: " . $e->getMessage();
             return false;
         }
@@ -345,16 +364,41 @@ class MovimientoInventarioModel
     {
         $query = "SELECT v.*, 
                   CONCAT(c.nombres, ' ', c.apellidos) as cliente,
-                  CONCAT(u.nombres, ' ', u.apellidos) as usuario
+                  CONCAT(u.nombres, ' ', u.apellidos) as usuario,
+                  GROUP_CONCAT(
+                      CONCAT(pv.forma_pago, ':', pv.monto, ':', IFNULL(pv.referencia_pago, 'NULL'))
+                      SEPARATOR '|'
+                  ) as pagos_info
                   FROM ventas v
                   JOIN clientes c ON v.cedula_cliente = c.cedula
                   JOIN usuarios u ON v.id_usuario = u.id
-                  WHERE v.id = :id AND v.id_estatus = 1";
+                  LEFT JOIN pagos_venta pv ON v.id = pv.id_venta
+                  WHERE v.id = :id AND v.id_estatus = 1
+                  GROUP BY v.id";
         
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(":id", $id_venta);
         $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        $venta = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($venta) {
+            $pagos = [];
+            if ($venta['pagos_info']) {
+                foreach (explode('|', $venta['pagos_info']) as $pago_info) {
+                    list($forma_pago, $monto, $referencia) = explode(':', $pago_info);
+                    $pagos[] = [
+                        'forma_pago' => $forma_pago,
+                        'monto' => $monto,
+                        'referencia_pago' => $referencia === 'NULL' ? null : $referencia
+                    ];
+                }
+            }
+            $venta['pagos'] = $pagos;
+            unset($venta['pagos_info']);
+        }
+        
+        return $venta;
     }
 
     public function obtenerDetallesVentaParaModificacion($id_venta)
@@ -370,122 +414,148 @@ class MovimientoInventarioModel
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function modificarVentaConAjuste($id_venta, $data)
-    {
-        try {
-            $this->db->beginTransaction();
+public function modificarVentaConAjuste($id_venta, $data)
+{
+    try {
+        error_log("Iniciando modificación de venta #" . $id_venta);
+        error_log("Datos recibidos: " . print_r($data, true));
+        $this->db->beginTransaction();
 
-            // 1. Obtener venta actual y sus detalles
-            $venta_actual = $this->obtenerVentaParaModificacion($id_venta);
-            if (!$venta_actual) {
-                throw new PDOException("Venta no encontrada o ya ha sido modificada");
-            }
-            $detalles_actuales = $this->obtenerDetallesVentaParaModificacion($id_venta);
+        // 1. Get current sale
+        $venta_actual = $this->obtenerVentaParaModificacion($id_venta);
+        if (!$venta_actual) {
+            throw new PDOException("Venta no encontrada o no modificable");
+        }
 
-            // 2. Marcar venta original como histórica
-            $query = "UPDATE ventas SET id_estatus = 2 WHERE id = :id";
-            $stmt = $this->db->prepare($query);
-            $stmt->bindParam(":id", $id_venta);
-            $stmt->execute();
+        // 2. Mark current sale as inactive
+        $query = "UPDATE ventas SET id_estatus = 2 WHERE id = :id";
+        $stmt = $this->db->prepare($query);
+        $stmt->bindParam(":id", $id_venta);
+        $stmt->execute();
 
-            // 3. Crear nueva venta (como ajuste)
-            $query = "INSERT INTO ventas (
-                cedula_cliente, id_usuario, fecha, monto_total, 
-                forma_pago, referencia_pago, id_venta_original, id_estatus
-            ) VALUES (
-                :cedula_cliente, :id_usuario, :fecha, :monto_total, 
-                :forma_pago, :referencia_pago, :id_venta_original, 1
-            )";
+        // 3. Create new sale as adjustment
+        $query = "INSERT INTO ventas (
+            cedula_cliente, id_usuario, fecha, monto_total,
+            id_venta_original, id_estatus
+        ) VALUES (
+            :cedula_cliente, :id_usuario, :fecha, :monto_total,
+            :id_venta_original, 1
+        )";
 
-            $stmt = $this->db->prepare($query);
-            $stmt->bindParam(":cedula_cliente", $data['cedula_cliente']);
-            $stmt->bindParam(":id_usuario", $data['id_usuario']);
-            $stmt->bindParam(":fecha", $data['fecha']);
-            $stmt->bindParam(":monto_total", $data['monto_total']);
-            $stmt->bindParam(":forma_pago", $data['forma_pago']);
-            $stmt->bindParam(":referencia_pago", $data['referencia_pago']);
-            $stmt->bindParam(":id_venta_original", $id_venta);
-            $stmt->execute();
+        $stmt = $this->db->prepare($query);
+        $stmt->bindParam(":cedula_cliente", $data['cedula_cliente']);
+        $stmt->bindParam(":id_usuario", $data['id_usuario']);
+        $stmt->bindParam(":fecha", $data['fecha']);
+        $stmt->bindParam(":monto_total", $data['monto_total']);
+        $stmt->bindParam(":id_venta_original", $id_venta);
+        $stmt->execute();
 
-            $nuevo_id_venta = $this->db->lastInsertId();
+        $nuevo_id_venta = $this->db->lastInsertId();
+        error_log("Nueva venta creada con ID: " . $nuevo_id_venta);
 
-            // 4. Procesar productos y movimientos de inventario
-            foreach ($data['productos'] as $id_detalle => $producto) {
-                // Registrar detalle de venta
-                $query = "INSERT INTO detalle_venta (id_venta, id_producto, cantidad, monto) 
-                          VALUES (:id_venta, :id_producto, :cantidad, :monto)";
+        // Register payments
+        error_log("Registrando pagos: " . print_r($data['pagos'], true));
+        foreach ($data['pagos'] as $pago) {
+            try {
+                $query = "INSERT INTO pagos_venta (
+                    id_venta, forma_pago, monto, referencia_pago
+                ) VALUES (
+                    :id_venta, :forma_pago, :monto, :referencia_pago
+                )";
                 
                 $stmt = $this->db->prepare($query);
                 $stmt->bindParam(":id_venta", $nuevo_id_venta);
+                $stmt->bindParam(":forma_pago", $pago['forma_pago']);
+                $stmt->bindParam(":monto", $pago['monto']);
+                $stmt->bindParam(":referencia_pago", $pago['referencia_pago'], PDO::PARAM_STR);
+                
+                $stmt->execute();
+            } catch (PDOException $e) {
+                error_log("Error al insertar pago: " . $e->getMessage());
+                throw $e;
+            }
+        }
+
+        // Process products
+        foreach ($data['productos'] as $producto) {
+            $subtotal = (float)$producto['cantidad'] * (float)$producto['precio_unitario'];
+            
+            // Register sale detail
+            $query = "INSERT INTO detalle_venta (id_venta, id_producto, cantidad, monto, precio_unitario) 
+                      VALUES (:id_venta, :id_producto, :cantidad, :monto, :precio_unitario)";
+            
+            $stmt = $this->db->prepare($query);
+            $stmt->bindParam(":id_venta", $nuevo_id_venta);
+            $stmt->bindParam(":id_producto", $producto['id_producto']);
+            $stmt->bindParam(":cantidad", $producto['cantidad']);
+            $stmt->bindParam(":monto", $subtotal);
+            $stmt->bindParam(":precio_unitario", $producto['precio_unitario']);
+            $stmt->execute();
+
+            // Find original outbound movement for this product
+            $query = "SELECT id FROM movimientos_inventario 
+                      WHERE tipo_movimiento = 'SALIDA' 
+                      AND tipo_referencia = 'VENTA' 
+                      AND id_referencia = :id_venta 
+                      AND id_producto = :id_producto 
+                      AND id_estatus = 1";
+            $stmt = $this->db->prepare($query);
+            $stmt->bindParam(":id_venta", $id_venta);
+            $stmt->bindParam(":id_producto", $producto['id_producto']);
+            $stmt->execute();
+            $movimiento_original = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($movimiento_original) {
+                // Mark original movement as inactive
+                $query = "UPDATE movimientos_inventario SET id_estatus = 2 
+                          WHERE id = :id";
+                $stmt = $this->db->prepare($query);
+                $stmt->bindParam(":id", $movimiento_original['id']);
+                $stmt->execute();
+
+                // Register new outbound movement (sale adjustment)
+                $query = "INSERT INTO movimientos_inventario (
+                    id_producto, tipo_movimiento, cantidad, precio_unitario, 
+                    id_referencia, tipo_referencia, id_usuario, id_movimiento_original,
+                    observaciones, id_estatus
+                ) VALUES (
+                    :id_producto, 'SALIDA', :cantidad, :precio_unitario, 
+                    :id_referencia, 'VENTA', :id_usuario, :id_movimiento_original,
+                    :observaciones, 1
+                )";
+                
+                $observaciones = "Modificación de venta #{$id_venta} - Nueva venta #{$nuevo_id_venta}";
+                
+                $stmt = $this->db->prepare($query);
                 $stmt->bindParam(":id_producto", $producto['id_producto']);
                 $stmt->bindParam(":cantidad", $producto['cantidad']);
-                $stmt->bindParam(":monto", $producto['subtotal']);
+                $stmt->bindParam(":precio_unitario", $producto['precio_unitario']);
+                $stmt->bindParam(":id_referencia", $nuevo_id_venta);
+                $stmt->bindParam(":id_usuario", $data['id_usuario']);
+                $stmt->bindParam(":id_movimiento_original", $movimiento_original['id']);
+                $stmt->bindParam(":observaciones", $observaciones);
                 $stmt->execute();
 
-                // Buscar el movimiento original de salida para este producto
-                $query = "SELECT id FROM movimientos_inventario 
-                          WHERE tipo_movimiento = 'SALIDA' 
-                          AND tipo_referencia = 'VENTA' 
-                          AND id_referencia = :id_venta 
-                          AND id_producto = :id_producto 
-                          AND id_estatus = 1";
+                // Adjust stock
+                $diferencia = $this->calcularDiferenciaStock($id_venta, $producto['id_producto'], $producto['cantidad']);
+                
+                $query = "UPDATE producto SET cantidad = cantidad + :diferencia 
+                          WHERE id = :id_producto";
                 $stmt = $this->db->prepare($query);
-                $stmt->bindParam(":id_venta", $id_venta);
+                $stmt->bindParam(":diferencia", $diferencia);
                 $stmt->bindParam(":id_producto", $producto['id_producto']);
                 $stmt->execute();
-                $movimiento_original = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                if ($movimiento_original) {
-                    // Marcar el movimiento original como histórico
-                    $query = "UPDATE movimientos_inventario SET id_estatus = 2 
-                              WHERE id = :id";
-                    $stmt = $this->db->prepare($query);
-                    $stmt->bindParam(":id", $movimiento_original['id']);
-                    $stmt->execute();
-
-                    // Registrar nuevo movimiento de salida (ajuste de venta)
-                    $query = "INSERT INTO movimientos_inventario (
-                        id_producto, tipo_movimiento, cantidad, precio_unitario, 
-                        id_referencia, tipo_referencia, id_usuario, id_movimiento_original,
-                        observaciones, id_estatus
-                    ) VALUES (
-                        :id_producto, 'SALIDA', :cantidad, :precio_unitario, 
-                        :id_referencia, 'VENTA', :id_usuario, :id_movimiento_original,
-                        :observaciones, 1
-                    )";
-                    
-                    $observaciones = "Modificación de venta #{$id_venta} - Nueva venta #{$nuevo_id_venta}";
-                    
-                    $stmt = $this->db->prepare($query);
-                    $stmt->bindParam(":id_producto", $producto['id_producto']);
-                    $stmt->bindParam(":cantidad", $producto['cantidad']);
-                    $stmt->bindParam(":precio_unitario", $producto['precio_unitario']);
-                    $stmt->bindParam(":id_referencia", $nuevo_id_venta);
-                    $stmt->bindParam(":id_usuario", $data['id_usuario']);
-                    $stmt->bindParam(":id_movimiento_original", $movimiento_original['id']);
-                    $stmt->bindParam(":observaciones", $observaciones);
-                    $stmt->execute();
-
-                    // Ajustar stock
-                    $diferencia = $this->calcularDiferenciaStock($id_venta, $producto['id_producto'], $producto['cantidad']);
-                    
-                    $query = "UPDATE producto SET cantidad = cantidad + :diferencia 
-                              WHERE id = :id_producto";
-                    $stmt = $this->db->prepare($query);
-                    $stmt->bindParam(":diferencia", $diferencia);
-                    $stmt->bindParam(":id_producto", $producto['id_producto']);
-                    $stmt->execute();
-                }
             }
-
-            $this->db->commit();
-            return $nuevo_id_venta;
-        } catch (PDOException $e) {
-            $this->db->rollBack();
-            $this->errors[] = "Error al modificar venta: " . $e->getMessage();
-            return false;
         }
+
+        $this->db->commit();
+        return $nuevo_id_venta;
+    } catch (PDOException $e) {
+        $this->db->rollBack();
+        $this->errors[] = "Error al modificar venta: " . $e->getMessage();
+        return false;
     }
+}
 
     private function calcularDiferenciaStock($id_venta_original, $id_producto, $nueva_cantidad)
     {

@@ -38,18 +38,27 @@
                                         <td><?= htmlspecialchars($venta['usuario']) ?></td>
                                     </tr>
                                     <tr>
-                                        <th>Forma de Pago:</th>
+                                        <th>Formas de Pago:</th>
                                         <td>
-                                            <?= 
-                                            match($venta['forma_pago']) {
-                                                'EFECTIVO' => 'Efectivo',
-                                                'TARJETA' => 'Tarjeta',
-                                                'PAGO_MOVIL' => 'Pago Móvil',
-                                                default => $venta['forma_pago']
-                                            }
-                                            ?>
-                                            <?php if($venta['referencia_pago']): ?>
-                                                (Ref: <?= htmlspecialchars($venta['referencia_pago']) ?>)
+                                            <?php if (!empty($pagos)): ?>
+                                                <ul style="list-style: none; padding-left: 0;">
+                                                <?php foreach ($pagos as $pago): ?>
+                                                    <li>
+                                                        <?= match($pago['forma_pago']) {
+                                                            'EFECTIVO' => 'Efectivo',
+                                                            'TARJETA' => 'Tarjeta',
+                                                            'PAGO_MOVIL' => 'Pago Móvil',
+                                                            default => $pago['forma_pago']
+                                                        } ?>
+                                                        (<?= number_format($pago['monto'], 2, ',', '.') ?> Bs)
+                                                        <?php if($pago['referencia_pago']): ?>
+                                                            <br>Ref: <?= htmlspecialchars($pago['referencia_pago']) ?>
+                                                        <?php endif; ?>
+                                                    </li>
+                                                <?php endforeach; ?>
+                                                </ul>
+                                            <?php else: ?>
+                                                <span class="text-muted">No hay información de pagos disponible</span>
                                             <?php endif; ?>
                                         </td>
                                     </tr>

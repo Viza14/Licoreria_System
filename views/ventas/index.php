@@ -187,25 +187,35 @@
             sinResultados.hide();
         });
 
-        // Mostrar mensajes de sesión con SweetAlert
-        <?php if (isset($_SESSION['mensaje'])): ?>
-            Swal.fire({
-                title: '<?= $_SESSION['mensaje']['title'] ?>',
-                text: '<?= $_SESSION['mensaje']['text'] ?>',
-                icon: '<?= $_SESSION['mensaje']['icon'] ?>',
-                timer: 3000
-            });
-        <?php unset($_SESSION['mensaje']);
-        endif; ?>
 
-        <?php if (isset($_SESSION['error'])): ?>
-            Swal.fire({
-                title: '<?= $_SESSION['error']['title'] ?>',
-                text: '<?= $_SESSION['error']['text'] ?>',
-                icon: '<?= $_SESSION['error']['icon'] ?>'
-            });
-        <?php unset($_SESSION['error']);
-        endif; ?>
     });
 </script>
 <!--main content end-->
+
+<?php if (isset($_SESSION['mensaje'])): ?>
+<script>
+    Swal.fire({
+        title: '<?= $_SESSION['mensaje']['title'] ?>',
+        text: '<?= $_SESSION['mensaje']['text'] ?>',
+        icon: '<?= $_SESSION['mensaje']['icon'] ?>',
+        timer: 3000,
+        timerProgressBar: true
+    });
+</script>
+<?php unset($_SESSION['mensaje']); ?>
+<?php endif; ?>
+
+<?php if (isset($_SESSION['error'])): ?>
+<script>
+    Swal.fire({
+        title: '<?= $_SESSION['error']['title'] ?>',
+        text: '<?= $_SESSION['error']['text'] ?>',
+        icon: '<?= $_SESSION['error']['icon'] ?>',
+        timer: 3000,
+        timerProgressBar: true
+    });
+</script>
+<?php unset($_SESSION['error']); ?>
+<?php endif; ?>
+
+</section>

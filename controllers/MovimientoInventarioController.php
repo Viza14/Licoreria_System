@@ -23,26 +23,30 @@ class MovimientoInventarioController
         $this->checkSession();
         $pagina = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
         $porPagina = isset($_GET['por_pagina']) ? (int)$_GET['por_pagina'] : 10;
-        
+
         // Process filter parameters from URL
         $filtros = [];
-        
+
+        if (isset($_GET['busqueda'])) {
+            $filtros['busqueda'] = $_GET['busqueda'];
+        }
+
         if (isset($_GET['tipos'])) {
             $filtros['tipos'] = explode(',', $_GET['tipos']);
         }
-        
+
         if (isset($_GET['estados'])) {
             $filtros['estados'] = explode(',', $_GET['estados']);
         }
-        
+
         if (isset($_GET['fecha_inicio'])) {
             $filtros['fecha_inicio'] = $_GET['fecha_inicio'];
         }
-        
+
         if (isset($_GET['fecha_fin'])) {
             $filtros['fecha_fin'] = $_GET['fecha_fin'];
         }
-        
+
         $resultado = $this->model->obtenerTodosMovimientos($pagina, $porPagina, $filtros);
         $this->loadView('movimientos_inventario/index', [
             'movimientos' => $resultado['data'],
@@ -58,7 +62,7 @@ class MovimientoInventarioController
     {
         $this->checkSession();
         $movimiento = $this->model->obtenerMovimientoPorId($id);
-        
+
         if (!$movimiento) {
             $_SESSION['error'] = [
                 'title' => 'Error',
@@ -67,7 +71,7 @@ class MovimientoInventarioController
             ];
             $this->redirect('movimientos-inventario');
         }
-        
+
         // Determinar qué vista cargar basado en el tipo de movimiento
         if ($movimiento['tipo_movimiento'] == 'SALIDA' && $movimiento['tipo_referencia'] == 'VENTA') {
             $this->loadView('movimientos_inventario/mostrar_venta', ['movimiento' => $movimiento]);
@@ -81,7 +85,7 @@ class MovimientoInventarioController
         $this->checkSession();
         $producto = $this->productoModel->obtenerProductoPorId($idProducto);
         $movimientos = $this->model->obtenerMovimientosPorProducto($idProducto);
-        
+
         $this->loadView('movimientos_inventario/por_producto', [
             'producto' => $producto,
             'movimientos' => $movimientos
@@ -91,7 +95,7 @@ class MovimientoInventarioController
     public function resumen()
     {
         $this->checkSession();
-        
+
         $filtros = [];
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $filtros = [
@@ -100,10 +104,10 @@ class MovimientoInventarioController
                 'id_producto' => $_POST['id_producto'] ?? null
             ];
         }
-        
+
         $resumen = $this->model->obtenerResumenMovimientos($filtros);
         $productos = $this->productoModel->obtenerTodosProductos();
-        
+
         $this->loadView('movimientos_inventario/resumen', [
             'resumen' => $resumen,
             'productos' => $productos,
@@ -114,9 +118,9 @@ class MovimientoInventarioController
     public function editar($id)
     {
         $this->checkSession();
-        
+
         $movimiento = $this->model->obtenerMovimientoPorId($id);
-        
+
         if (!$movimiento) {
             $_SESSION['error'] = [
                 'title' => 'Error',
@@ -128,19 +132,19 @@ class MovimientoInventarioController
 
         $producto = $this->productoModel->obtenerProductoPorId($movimiento['id_producto']);
         $proveedores = $this->proveedorModel->obtenerProveedoresActivos();
-        
+
         // Get existing price relationships for JS preloading
         $precios = [];
         require_once ROOT_PATH . 'models/ProductoProveedorModel.php';
         $ppModel = new ProductoProveedorModel();
-        
+
         foreach ($proveedores as $proveedor) {
             $precio = $ppModel->obtenerPrecioPorProveedorProducto($movimiento['id_producto'], $proveedor['cedula']);
             if ($precio) {
                 $precios[$movimiento['id_producto']][$proveedor['cedula']] = $precio;
             }
         }
-        
+
         $this->loadView('movimientos_inventario/editar', [
             'movimiento' => $movimiento,
             'producto' => $producto,
@@ -153,10 +157,10 @@ class MovimientoInventarioController
     public function actualizar($id)
     {
         $this->checkSession();
-        
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $movimiento = $this->model->obtenerMovimientoPorId($id);
-            
+
             if (!$movimiento) {
                 $_SESSION['error'] = [
                     'title' => 'Error',
@@ -176,13 +180,13 @@ class MovimientoInventarioController
                 $this->redirect('movimientos-inventario');
                 return;
             }
-            
+
             $data = [
                 'cantidad' => (int)$_POST['cantidad'],
                 'precio_unitario' => (float)$_POST['precio_unitario'],
                 'observaciones' => $_POST['observaciones'] ?? null
             ];
-            
+
             if ($this->model->actualizarMovimiento($id, $data)) {
                 $_SESSION['mensaje'] = [
                     'title' => 'Éxito',
@@ -197,7 +201,7 @@ class MovimientoInventarioController
                     'icon' => 'error'
                 ];
             }
-            
+
             $this->redirect('movimientos-inventario');
         }
     }
@@ -205,7 +209,7 @@ class MovimientoInventarioController
     public function modificarVenta($id_venta)
     {
         $this->checkSession();
-        
+
         // Obtener datos de la venta
         $venta = $this->model->obtenerVentaParaModificacion($id_venta);
         if (!$venta) {
@@ -233,34 +237,85 @@ class MovimientoInventarioController
     public function actualizarVenta($id_venta)
     {
         $this->checkSession();
-        
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Procesar datos del formulario
             $productos = [];
             $monto_total = 0;
-            
+
+            if (!isset($_POST['productos']) || !is_array($_POST['productos'])) {
+                $_SESSION['error'] = [
+                    'title' => 'Error',
+                    'text' => 'No se recibieron productos para la venta',
+                    'icon' => 'error'
+                ];
+                $this->redirect('movimientos-inventario&method=modificarVenta&id=' . $id_venta);
+                return;
+            }
+
             foreach ($_POST['productos'] as $id_detalle => $producto) {
-                $subtotal = $producto['cantidad'] * $producto['precio'];
-                
+                if (!isset($producto['id_producto']) || !isset($producto['cantidad']) || !isset($producto['precio'])) {
+                    $_SESSION['error'] = [
+                        'title' => 'Error',
+                        'text' => 'Datos de producto incompletos',
+                        'icon' => 'error'
+                    ];
+                    $this->redirect('movimientos-inventario&method=modificarVenta&id=' . $id_venta);
+                    return;
+                }
+
+                $subtotal = (float)$producto['cantidad'] * (float)$producto['precio'];
+
                 $productos[] = [
                     'id_detalle' => $id_detalle,
-                    'id_producto' => $producto['id'],
-                    'cantidad' => $producto['cantidad'],
-                    'precio_unitario' => $producto['precio'],
+                    'id_producto' => $producto['id_producto'],
+                    'cantidad' => (float)$producto['cantidad'],
+                    'precio_unitario' => (float)$producto['precio'],
                     'subtotal' => $subtotal
                 ];
-                
+
                 $monto_total += $subtotal;
+            }
+
+            if (!isset($_POST['cedula_cliente']) || !isset($_POST['fecha'])) {
+                $_SESSION['error'] = [
+                    'title' => 'Error',
+                    'text' => 'Faltan datos requeridos para la venta',
+                    'icon' => 'error'
+                ];
+                $this->redirect('movimientos-inventario&method=modificarVenta&id=' . $id_venta);
+                return;
+            }
+
+            // Procesar pagos
+            $pagos = [];
+            if (isset($_POST['formas_pago']) && is_array($_POST['formas_pago'])) {
+                $formas_pago = $_POST['formas_pago'];
+                $montos_pago = $_POST['montos_pago'];
+                $referencias_pago = $_POST['referencias_pago'] ?? [];
+
+                for ($i = 0; $i < count($formas_pago); $i++) {
+                    $forma_pago = $formas_pago[$i];
+                    $monto = (float)$montos_pago[$i];
+
+                    // Solo agregar referencia si no es efectivo
+                    $referencia = ($forma_pago !== 'EFECTIVO') ? ($referencias_pago[$i] ?? null) : null;
+
+                    $pagos[] = [
+                        'forma_pago' => $forma_pago,
+                        'monto' => $monto,
+                        'referencia_pago' => $referencia
+                    ];
+                }
             }
 
             $data = [
                 'cedula_cliente' => $_POST['cedula_cliente'],
                 'id_usuario' => $_SESSION['user_id'],
                 'fecha' => $_POST['fecha'],
-                'forma_pago' => $_POST['forma_pago'],
-                'referencia_pago' => $_POST['forma_pago'] != 'EFECTIVO' ? $_POST['referencia_pago'] : null,
                 'monto_total' => $monto_total,
-                'productos' => $productos
+                'productos' => $productos,
+                'pagos' => $pagos
             ];
 
             // Validaciones
@@ -274,9 +329,24 @@ class MovimientoInventarioController
                 return;
             }
 
+            // Validar que el total de pagos coincida con el monto total
+            $total_pagado = array_reduce($pagos, function ($carry, $pago) {
+                return $carry + $pago['monto'];
+            }, 0);
+
+            if (abs($total_pagado - $monto_total) > 0.01) {
+                $_SESSION['error'] = [
+                    'title' => 'Error',
+                    'text' => 'El total de los pagos (' . number_format($total_pagado, 2) . ') debe ser igual al total de la venta (' . number_format($monto_total, 2) . ')',
+                    'icon' => 'error'
+                ];
+                $this->redirect('movimientos-inventario&method=modificarVenta&id=' . $id_venta);
+                return;
+            }
+
             // Modificar la venta
             $resultado = $this->model->modificarVentaConAjuste($id_venta, $data);
-            
+
             if ($resultado) {
                 $_SESSION['mensaje'] = [
                     'title' => 'Éxito',

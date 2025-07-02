@@ -164,6 +164,77 @@
                                                         <?= $movimiento['observaciones'] != $movimiento['observaciones_original'] ? '<i class="fa fa-check text-success"></i>' : '<i class="fa fa-minus text-muted"></i>' ?>
                                                     </td>
                                                 </tr>
+                                                <tr>
+                                                    <td>Forma de Pago</td>
+                                                    <td>
+                                                        <?php if (isset($movimiento['pagos_original']) && is_array($movimiento['pagos_original'])): ?>
+                                                            <strong>Pago Partido</strong><br>
+                                                            <?php foreach ($movimiento['pagos_original'] as $pago): ?>
+                                                                <div class="payment-item" style="margin-bottom: 5px; padding: 5px; background-color: #f9f9f9; border-radius: 4px;">
+                                                                    <span class="label label-info"><?= $pago['forma_pago'] ?></span>
+                                                                    <strong>(<?= number_format($pago['monto'], 2, ',', '.') ?> Bs)</strong>
+                                                                    <?php if ($pago['referencia_pago']): ?>
+                                                                        <br><small>Ref: <?= $pago['referencia_pago'] ?></small>
+                                                                    <?php endif; ?>
+                                                                </div>
+                                                            <?php endforeach; ?>
+                                                        <?php else: ?>
+                                                            <strong>Pago Normal</strong><br>
+                                                            <div class="payment-item" style="margin-top: 5px; padding: 5px; background-color: #f9f9f9; border-radius: 4px;">
+                                                                <span class="label label-info"><?= $movimiento['forma_pago_original'] ?? 'No disponible' ?></span>
+                                                                <?php if (isset($movimiento['referencia_pago_original'])): ?>
+                                                                    <br><small>Ref: <?= $movimiento['referencia_pago_original'] ?></small>
+                                                                <?php endif; ?>
+                                                            </div>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td>
+                                                        <?php if (isset($movimiento['pagos']) && is_array($movimiento['pagos'])): ?>
+                                                            <strong>Pago Partido</strong><br>
+                                                            <?php foreach ($movimiento['pagos'] as $pago): ?>
+                                                                <div class="payment-item" style="margin-bottom: 5px; padding: 5px; background-color: #f9f9f9; border-radius: 4px;">
+                                                                    <span class="label label-info"><?= $pago['forma_pago'] ?></span>
+                                                                    <strong>(<?= number_format($pago['monto'], 2, ',', '.') ?> Bs)</strong>
+                                                                    <?php if ($pago['referencia_pago']): ?>
+                                                                        <br><small>Ref: <?= $pago['referencia_pago'] ?></small>
+                                                                    <?php endif; ?>
+                                                                </div>
+                                                            <?php endforeach; ?>
+                                                        <?php else: ?>
+                                                            <strong>Pago Normal</strong><br>
+                                                            <div class="payment-item" style="margin-top: 5px; padding: 5px; background-color: #f9f9f9; border-radius: 4px;">
+                                                                <span class="label label-info"><?= $movimiento['forma_pago'] ?? 'No disponible' ?></span>
+                                                                <?php if (isset($movimiento['referencia_pago'])): ?>
+                                                                    <br><small>Ref: <?= $movimiento['referencia_pago'] ?></small>
+                                                                <?php endif; ?>
+                                                            </div>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <?php
+                                                        $pagos_cambiaron = false;
+                                                        if (isset($movimiento['pagos']) && isset($movimiento['pagos_original'])) {
+                                                            if (count($movimiento['pagos']) !== count($movimiento['pagos_original'])) {
+                                                                $pagos_cambiaron = true;
+                                                            } else {
+                                                                foreach ($movimiento['pagos'] as $index => $pago_nuevo) {
+                                                                    $pago_original = $movimiento['pagos_original'][$index];
+                                                                    if ($pago_nuevo['forma_pago'] !== $pago_original['forma_pago'] ||
+                                                                        $pago_nuevo['monto'] !== $pago_original['monto'] ||
+                                                                        $pago_nuevo['referencia_pago'] !== ($pago_original['referencia_pago'] ?? null)) {
+                                                                        $pagos_cambiaron = true;
+                                                                        break;
+                                                                    }
+                                                                }
+                                                            }
+                                                        } else {
+                                                            $pagos_cambiaron = ($movimiento['forma_pago'] ?? null) !== ($movimiento['forma_pago_original'] ?? null) ||
+                                                                            ($movimiento['referencia_pago'] ?? null) !== ($movimiento['referencia_pago_original'] ?? null);
+                                                        }
+                                                        ?>
+                                                        <?= $pagos_cambiaron ? '<i class="fa fa-check text-success"></i>' : '<i class="fa fa-minus text-muted"></i>' ?>
+                                                    </td>
+                                                </tr>
                                             </tbody>
                                         </table>
                                     </div>

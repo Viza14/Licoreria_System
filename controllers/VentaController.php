@@ -5,6 +5,42 @@ class VentaController
     private $productoModel;
     private $clienteModel;
     private $usuarioModel;
+
+    private function procesarPagos($post_data)
+    {
+        $pagos = [];
+        
+        // Verificar si es pago partido o simple
+        if (isset($post_data['formas_pago'])) {
+            // Pago partido
+            $formas_pago = $post_data['formas_pago'];
+            $montos = $post_data['montos_pago'];
+            $referencias = $post_data['referencias_pago'] ?? [];
+
+            for ($i = 0; $i < count($formas_pago); $i++) {
+                if (!empty($formas_pago[$i]) && !empty($montos[$i])) {
+                    $pagos[] = [
+                        'forma_pago' => $formas_pago[$i],
+                        'monto' => $montos[$i],
+                        'referencia_pago' => ($formas_pago[$i] != 'EFECTIVO') ? $referencias[$i] : null
+                    ];
+                }
+            }
+        } else {
+            // Pago simple
+            $forma_pago = $post_data['forma_pago'];
+            $monto = $post_data['monto_pago'];
+            $referencia = $post_data['referencia_pago'] ?? null;
+
+            $pagos[] = [
+                'forma_pago' => $forma_pago,
+                'monto' => $monto,
+                'referencia_pago' => ($forma_pago != 'EFECTIVO') ? $referencia : null
+            ];
+        }
+
+        return $pagos;
+    }
     
     public function __construct()
     {
@@ -78,8 +114,7 @@ class VentaController
                 'id_usuario' => $_SESSION['user_id'],
                 'productos' => $_POST['productos'],
                 'fecha' => $_POST['fecha'],
-                'forma_pago' => $_POST['forma_pago'],
-                'referencia_pago' => $_POST['forma_pago'] != 'EFECTIVO' ? $_POST['referencia_pago'] : null
+                'pagos' => $this->procesarPagos($_POST)
             ];
 
             // Basic validation
@@ -103,20 +138,32 @@ class VentaController
                 return;
             }
 
-            if (empty($data['forma_pago'])) {
+            // Validar pagos
+            if (empty($data['pagos'])) {
                 $_SESSION['error'] = [
                     'title' => 'Error',
-                    'text' => 'Debe seleccionar una forma de pago',
+                    'text' => 'Debe ingresar al menos un método de pago',
                     'icon' => 'error'
                 ];
                 $this->redirect('ventas&method=crear');
                 return;
             }
 
-            if ($data['forma_pago'] != 'EFECTIVO' && empty($data['referencia_pago'])) {
+            // Validar que el total de los pagos coincida con el total de la venta
+            $total_venta = 0;
+            foreach ($data['productos'] as $producto) {
+                $total_venta += $producto['precio'] * $producto['cantidad'];
+            }
+
+            $total_pagos = 0;
+            foreach ($data['pagos'] as $pago) {
+                $total_pagos += $pago['monto'];
+            }
+
+            if ($total_pagos != $total_venta) {
                 $_SESSION['error'] = [
                     'title' => 'Error',
-                    'text' => 'Debe ingresar el número de referencia del pago',
+                    'text' => 'El total de los pagos debe ser igual al total de la venta',
                     'icon' => 'error'
                 ];
                 $this->redirect('ventas&method=crear');
@@ -228,8 +275,8 @@ class VentaController
     public function mostrar($id)
     {
         $this->checkSession();
-        $venta = $this->model->obtenerVentaPorId($id);
         
+        $venta = $this->model->obtenerVentaPorId($id);
         if (!$venta) {
             $_SESSION['error'] = [
                 'title' => 'Error',
@@ -237,13 +284,16 @@ class VentaController
                 'icon' => 'error'
             ];
             $this->redirect('ventas');
-            return;
         }
 
         $detalles = $this->model->obtenerDetallesVenta($id);
+        $pagos = $venta['pagos'] ?? [];
+        unset($venta['pagos']); // Removemos los pagos del array principal de venta
+
         $this->loadView('ventas/mostrar', [
             'venta' => $venta,
-            'detalles' => $detalles
+            'detalles' => $detalles,
+            'pagos' => $pagos
         ]);
     }
 

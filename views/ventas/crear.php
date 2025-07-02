@@ -111,23 +111,45 @@
                             <div class="row">
                                 <div class="col-md-12">
                                     <h4 style="margin-top: 30px; color: #337ab7;"><i class="fa fa-credit-card"></i> Forma de Pago</h4>
-                                    <div class="form-group">
-                                        <div class="btn-group btn-group-toggle" data-toggle="buttons">
-                                            <label class="btn btn-outline-primary active">
-                                                <input type="radio" name="forma_pago" value="EFECTIVO" checked> Efectivo
-                                            </label>
-                                            <label class="btn btn-outline-primary">
-                                                <input type="radio" name="forma_pago" value="TARJETA"> Tarjeta
-                                            </label>
-                                            <label class="btn btn-outline-primary">
-                                                <input type="radio" name="forma_pago" value="PAGO_MOVIL"> Pago Móvil
-                                            </label>
+                                    <div class="form-check" style="margin-bottom: 15px;">
+                                        <input type="checkbox" class="form-check-input" id="habilitarPagoPartido">
+                                        <label class="form-check-label" for="habilitarPagoPartido">Habilitar pago partido</label>
+                                    </div>
+                                    <div id="pago_simple" class="row">
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label>Forma de Pago</label>
+                                                <select class="form-control" name="forma_pago" id="forma_pago" required>
+                                                    <option value="EFECTIVO">Efectivo</option>
+                                                    <option value="TARJETA">Tarjeta</option>
+                                                    <option value="PAGO_MOVIL">Pago Móvil</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label>Monto</label>
+                                                <input type="number" class="form-control" id="monto_pago" name="monto_pago" step="0.01" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4" id="referencia_container" style="display: none;">
+                                            <div class="form-group">
+                                                <label>Referencia</label>
+                                                <input type="text" class="form-control" id="referencia_pago" name="referencia_pago" maxlength="6">
+                                            </div>
                                         </div>
                                     </div>
-
-                                    <div id="referencia_pago_container" class="form-group" style="display: none;">
-                                        <label for="referencia_pago">Número de Referencia</label>
-                                        <input type="text" class="form-control" id="referencia_pago" name="referencia_pago" placeholder="Ingrese número de referencia">
+                                    <div id="pago_partido" style="display: none;">
+                                        <div id="formas_pago_container">
+                                            <!-- Aquí se agregarán dinámicamente las formas de pago -->
+                                        </div>
+                                        <button type="button" class="btn btn-info" id="agregarFormaPago" style="margin-top: 10px;">
+                                            <i class="fa fa-plus"></i> Agregar Forma de Pago
+                                        </button>
+                                        <div class="alert alert-info" style="margin-top: 10px;">
+                                            <strong>Monto restante por pagar: </strong>
+                                            <span id="montoRestante">0,00 Bs</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -159,7 +181,7 @@
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');
             const day = String(now.getDate()).padStart(2, '0');
-            const hours = String(now.getHours()).padStart(2, '0'); // Mantener formato 24h
+            const hours = String(now.getHours()).padStart(2, '0');
             const minutes = String(now.getMinutes()).padStart(2, '0');
 
             return `${year}-${month}-${day}T${hours}:${minutes}`;
@@ -167,16 +189,137 @@
 
         $('#fecha').val(setDefaultDateTime());
 
-        // Payment method handler
-        $('input[name="forma_pago"]').change(function() {
-            const paymentMethod = $(this).val();
-            if (paymentMethod === 'TARJETA' || paymentMethod === 'PAGO_MOVIL') {
-                $('#referencia_pago_container').show();
-                $('#referencia_pago').prop('required', true);
+        // Manejo de pagos divididos
+        let totalVentaActual = 0;
+
+        function actualizarMontoRestante() {
+            let totalPagado = 0;
+            if ($('#habilitarPagoPartido').is(':checked')) {
+                $('input[name="montos_pago[]"]').each(function() {
+                    totalPagado += parseFloat($(this).val() || 0);
+                });
             } else {
-                $('#referencia_pago_container').hide();
-                $('#referencia_pago').prop('required', false);
+                totalPagado = parseFloat($('#monto_pago').val() || 0);
             }
+            const montoRestante = totalVentaActual - totalPagado;
+            $('#montoRestante').text(montoRestante.toFixed(2) + ' Bs');
+            
+            // Actualizar el estado cuando no hay formas de pago
+            if ($('#habilitarPagoPartido').is(':checked')) {
+                const formasPago = $('select[name="formas_pago[]"]');
+                if (formasPago.length === 0) {
+                    $('#montoRestante').text(totalVentaActual.toFixed(2) + ' Bs');
+                    return totalVentaActual;
+                }
+            }
+            
+            return montoRestante;
+        }
+
+        function crearFormaPago() {
+            const index = $('#formas_pago_container').children().length;
+            const template = `
+                <div class="forma-pago-item" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 5px;">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Forma de Pago</label>
+                                <select class="form-control" name="formas_pago[]" required>
+                                    <option value="EFECTIVO">Efectivo</option>
+                                    <option value="TARJETA">Tarjeta</option>
+                                    <option value="PAGO_MOVIL">Pago Móvil</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Monto</label>
+                                <input type="number" class="form-control monto-pago" name="montos_pago[]" step="0.01" required>
+                            </div>
+                        </div>
+                        <div class="col-md-3 referencia-container" style="display: none;">
+                            <div class="form-group">
+                                <label>Referencia</label>
+                                <input type="text" class="form-control" name="referencias_pago[]" maxlength="6">
+                            </div>
+                        </div>
+                        <div class="col-md-1">
+                            <label>&nbsp;</label>
+                            <button type="button" class="btn btn-danger btn-block eliminar-forma-pago">
+                                <i class="fa fa-trash-o"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            $('#formas_pago_container').append(template);
+        }
+
+        $('#agregarFormaPago').click(function() {
+            crearFormaPago();
+            actualizarMontoRestante();
+        });
+
+        $(document).on('change', 'select[name="formas_pago[]"]', function() {
+            const referenciaContainer = $(this).closest('.forma-pago-item').find('.referencia-container');
+            const referenciaInput = referenciaContainer.find('input');
+            
+            if ($(this).val() === 'EFECTIVO') {
+                referenciaContainer.hide();
+                referenciaInput.prop('required', false);
+            } else {
+                referenciaContainer.show();
+                referenciaInput.prop('required', true);
+            }
+        });
+
+        $(document).on('click', '.eliminar-forma-pago', function() {
+            $(this).closest('.forma-pago-item').remove();
+            const montoRestante = actualizarMontoRestante();
+            
+            // Mostrar mensaje si no quedan formas de pago
+            if ($('.forma-pago-item').length === 0) {
+                Swal.fire({
+                    title: 'Atención',
+                    text: 'Debe agregar al menos una forma de pago',
+                    icon: 'warning',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            }
+        });
+
+        // Manejar cambio entre pago simple y partido
+        $('#habilitarPagoPartido').change(function() {
+            if ($(this).is(':checked')) {
+                $('#pago_simple').hide();
+                $('#pago_partido').show();
+                $('#formas_pago_container').empty();
+                crearFormaPago();
+                $('#monto_pago').val('').prop('required', false);
+            } else {
+                $('#pago_simple').show();
+                $('#pago_partido').hide();
+                $('#formas_pago_container').empty();
+                $('#monto_pago').val(totalVentaActual.toFixed(2)).prop('required', true);
+            }
+            actualizarMontoRestante();
+        });
+
+        // Manejar cambio de forma de pago simple
+        $('#forma_pago').change(function() {
+            if ($(this).val() === 'EFECTIVO') {
+                $('#referencia_container').hide();
+                $('#referencia_pago').prop('required', false);
+            } else {
+                $('#referencia_container').show();
+                $('#referencia_pago').prop('required', true);
+            }
+        });
+
+        // Manejar cambio en monto de pago simple
+        $('#monto_pago').on('input', function() {
+            actualizarMontoRestante();
         });
 
         // Date edit switch handler
@@ -195,7 +338,6 @@
                     cancelButtonText: 'No, mantener actual'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        $('#fecha').prop('readonly', false);
                         $('#fecha').prop('readonly', false);
                     } else {
                         $(this).prop('checked', false);
@@ -352,6 +494,15 @@
                 totalVenta += producto.subtotal;
             });
             $('#totalVenta').text(totalVenta.toFixed(2).replace('.', ',') + ' Bs');
+            // Update total for split payments
+            totalVentaActual = totalVenta;
+            
+            // Actualizar el monto de pago simple si está visible
+            if (!$('#habilitarPagoPartido').is(':checked')) {
+                $('#monto_pago').val(totalVenta.toFixed(2));
+            }
+            
+            actualizarMontoRestante();
         }
 
         // Add product to table
@@ -435,82 +586,160 @@
             `;
                 tbody.append(row);
             });
-
-            // Add events to edit buttons
-            $('.editar-cantidad').click(function() {
-                const index = $(this).data('index');
-                const producto = productosAgregados[index];
-                
-                Swal.fire({
-                    title: 'Editar Cantidad',
-                    html: `
-                        <div class="form-group">
-                            <label>Producto: ${producto.descripcion}</label>
-                            <input type="number" id="nueva-cantidad" class="form-control" value="${producto.cantidad}" min="1">
-                        </div>
-                    `,
-                    showCancelButton: true,
-                    confirmButtonText: 'Guardar',
-                    cancelButtonText: 'Cancelar',
-                    preConfirm: () => {
-                        const nuevaCantidad = parseInt($('#nueva-cantidad').val());
-                        if (nuevaCantidad < 1) {
-                            Swal.showValidationMessage('La cantidad debe ser mayor a 0');
-                            return false;
-                        }
-                        return nuevaCantidad;
-                    }
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        const nuevaCantidad = result.value;
-                        productosAgregados[index].cantidad = nuevaCantidad;
-                        productosAgregados[index].subtotal = nuevaCantidad * producto.precio;
-                        renderizarTablaProductos();
-                        actualizarTotal();
-                    }
-                });
-            });
-
-            // Add events to delete buttons
-            $('.eliminar-producto').click(function() {
-                const index = $(this).data('index');
-                Swal.fire({
-                    title: '¿Está seguro?',
-                    text: "Se eliminará el producto de la venta",
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#d33',
-                    cancelButtonColor: '#3085d6',
-                    confirmButtonText: 'Sí, eliminar',
-                    cancelButtonText: 'Cancelar'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        productosAgregados.splice(index, 1);
-                        renderizarTablaProductos();
-                        actualizarTotal();
-                    }
-                });
-            });
         }
+
+        // Add events to edit buttons
+        $(document).on('click', '.editar-cantidad', function() {
+            const index = $(this).data('index');
+            const producto = productosAgregados[index];
+                
+            Swal.fire({
+                title: 'Editar Cantidad',
+                html: `
+                    <div class="form-group">
+                        <label>Producto: ${producto.descripcion}</label>
+                        <input type="number" id="nueva-cantidad" class="form-control" value="${producto.cantidad}" min="1">
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Guardar',
+                cancelButtonText: 'Cancelar',
+                preConfirm: () => {
+                    const nuevaCantidad = parseInt($('#nueva-cantidad').val());
+                    if (nuevaCantidad < 1) {
+                        Swal.showValidationMessage('La cantidad debe ser mayor a 0');
+                        return false;
+                    }
+                    return nuevaCantidad;
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const nuevaCantidad = result.value;
+                    productosAgregados[index].cantidad = nuevaCantidad;
+                    productosAgregados[index].subtotal = nuevaCantidad * producto.precio;
+                    renderizarTablaProductos();
+                    actualizarTotal();
+                }
+            });
+        });
+
+        // Add events to delete buttons
+        $(document).on('click', '.eliminar-producto', function() {
+            const index = $(this).data('index');
+            Swal.fire({
+                title: '¿Está seguro?',
+                text: "Se eliminará el producto de la venta",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    productosAgregados.splice(index, 1);
+                    renderizarTablaProductos();
+                    actualizarTotal();
+                }
+            });
+        });
 
         // Validate form before submit
         $('#formVenta').submit(function(e) {
+            e.preventDefault();
+            let errores = [];
+
+            // Validar productos
             if (productosAgregados.length === 0) {
-                e.preventDefault();
-                Swal.fire('Error', 'Debe agregar al menos un producto', 'error');
+                errores.push('Debe agregar al menos un producto');
             }
 
+            // Validar cliente
             if (!$('#cedula_cliente').val()) {
-                e.preventDefault();
-                Swal.fire('Error', 'Debe seleccionar un cliente', 'error');
+                errores.push('Debe seleccionar un cliente');
             }
 
-            const paymentMethod = $('input[name="forma_pago"]:checked').val();
-            if ((paymentMethod === 'TARJETA' || paymentMethod === 'PAGO_MOVIL') && !$('#referencia_pago').val()) {
-                e.preventDefault();
-                Swal.fire('Error', 'Debe ingresar el número de referencia', 'error');
+            // Validar formas de pago
+            if ($('#habilitarPagoPartido').is(':checked')) {
+                if ($('.forma-pago-item').length === 0) {
+                    errores.push('Debe agregar al menos una forma de pago');
+                }
+            } else {
+                if (!$('#monto_pago').val() || parseFloat($('#monto_pago').val()) <= 0) {
+                    errores.push('Debe ingresar un monto válido');
+                }
+            }
+
+            // Validar montos y referencias
+            let totalPagado = 0;
+            if ($('#habilitarPagoPartido').is(':checked')) {
+                $('.forma-pago-item').each(function() {
+                    const formaPago = $(this).find('select[name="formas_pago[]"]').val();
+                    const monto = parseFloat($(this).find('input[name="montos_pago[]"]').val() || 0);
+                    const referencia = $(this).find('input[name="referencias_pago[]"]').val();
+
+                    if (monto <= 0) {
+                        errores.push('Los montos deben ser mayores a 0');
+                    }
+
+                    if (formaPago !== 'EFECTIVO' && !referencia) {
+                        errores.push('Debe ingresar el número de referencia para pagos con tarjeta o pago móvil');
+                    }
+
+                    totalPagado += monto;
+                });
+            } else {
+                totalPagado = parseFloat($('#monto_pago').val() || 0);
+                const formaPago = $('#forma_pago').val();
+                const referencia = $('#referencia_pago').val();
+
+                if (formaPago !== 'EFECTIVO' && !referencia) {
+                    errores.push('Debe ingresar el número de referencia para pagos con tarjeta o pago móvil');
+                }
+            }
+
+            // Validar que el total pagado coincida con el total de la venta
+            if (Math.abs(totalPagado - totalVentaActual) > 0.01) {
+                errores.push('El total de los pagos debe ser igual al total de la venta');
+            }
+
+            if (errores.length > 0) {
+                Swal.fire({
+                    title: 'Error',
+                    html: errores.join('<br>'),
+                    icon: 'error'
+                });
+            } else {
+                this.submit();
             }
         });
     });
-</script>
-<!--main content end-->
+
+    // Mostrar mensajes de sesión con SweetAlert
+    <?php if (isset($_SESSION['mensaje'])): ?>
+    <script>
+        Swal.fire({
+            title: '<?= $_SESSION['mensaje']['title'] ?>',
+            text: '<?= $_SESSION['mensaje']['text'] ?>',
+            icon: '<?= $_SESSION['mensaje']['icon'] ?>',
+            timer: 3000,
+            timerProgressBar: true
+        });
+    </script>
+    <?php unset($_SESSION['mensaje']); ?>
+    <?php endif; ?>
+    
+    <?php if (isset($_SESSION['error'])): ?>
+    <script>
+        Swal.fire({
+            title: '<?= $_SESSION['error']['title'] ?>',
+            text: '<?= $_SESSION['error']['text'] ?>',
+            icon: '<?= $_SESSION['error']['icon'] ?>',
+            timer: 3000,
+            timerProgressBar: true
+        });
+    </script>
+    <?php unset($_SESSION['error']); ?>
+    <?php endif; ?>
+    </script>
+</section>

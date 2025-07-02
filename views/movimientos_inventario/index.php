@@ -22,7 +22,7 @@
                             <button class="btn btn-info btn-xs" data-toggle="modal" data-target="#filtrosModal">
                                 <i class="fa fa-filter"></i> Filtros
                             </button>
-                            <?php if ($_SESSION['user_rol'] != 2): ?> <!-- Asumiendo que 2 es el rol de empleado -->
+                            <?php if ($_SESSION['user_rol'] != 2): ?>
                                 <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=resumen" class="btn btn-info btn-xs">
                                     <i class="fa fa-pie-chart"></i> Resumen
                                 </a>
@@ -33,192 +33,166 @@
                         <div class="form-group">
                             <div class="input-group">
                                 <span class="input-group-addon"><i class="fa fa-search"></i></span>
-                                <input type="text" id="busqueda" class="form-control" placeholder="Buscar por producto, usuario...">
+                                <input type="text" id="busqueda" class="form-control" placeholder="Buscar por producto, usuario..." value="<?= isset($_GET['busqueda']) ? htmlspecialchars($_GET['busqueda']) : '' ?>">
                             </div>
                         </div>
 
-                        <div id="filtros-activos" class="alert alert-info" style="display: none; margin-bottom: 10px;">
-                            <i class="fa fa-filter"></i> Filtros activos: <span id="texto-filtros-activos"></span>
+                        <div id="filtros-activos" class="alert alert-info" style="<?= (isset($_GET['busqueda']) || isset($_GET['tipos']) || isset($_GET['estados']) || isset($_GET['fecha_inicio']) || isset($_GET['fecha_fin'])) ? 'display: block;' : 'display: none;' ?> margin-bottom: 10px;">
+                            <i class="fa fa-filter"></i> Filtros activos: <span id="texto-filtros-activos"><?php
+                                $filtros_texto = [];
+                                if (isset($_GET['busqueda'])) {
+                                    $filtros_texto[] = 'Término: "' . htmlspecialchars($_GET['busqueda']) . '"';
+                                }
+                                if (isset($_GET['tipos'])) {
+                                    $filtros_texto[] = 'Tipos: ' . htmlspecialchars($_GET['tipos']);
+                                }
+                                if (isset($_GET['estados'])) {
+                                    $filtros_texto[] = 'Estados: ' . htmlspecialchars($_GET['estados']);
+                                }
+                                if (isset($_GET['fecha_inicio']) || isset($_GET['fecha_fin'])) {
+                                    $filtros_texto[] = 'Fechas: ' . 
+                                        (isset($_GET['fecha_inicio']) ? htmlspecialchars($_GET['fecha_inicio']) : 'Inicio') . ' - ' . 
+                                        (isset($_GET['fecha_fin']) ? htmlspecialchars($_GET['fecha_fin']) : 'Fin');
+                                }
+                                echo implode(' | ', $filtros_texto);
+                            ?></span>
                             <div class="pull-right">
-                                <strong><i class="fa fa-list"></i> Resultados encontrados: <span id="contador-resultados">0</span></strong>
+                                <strong><i class="fa fa-list"></i> Resultados encontrados: <span id="contador-resultados"><?= count($movimientos) ?></span></strong>
                             </div>
                         </div>
 
-                        <div id="sin-resultados" class="alert alert-warning text-center" style="display: none;">
+                        <div id="sin-resultados" class="alert alert-warning text-center" style="<?= empty($movimientos) ? 'display: block;' : 'display: none;' ?>">
                             <i class="fa fa-exclamation-circle"></i> No se encontraron movimientos que coincidan con los criterios de búsqueda
                         </div>
 
                         <div class="table-responsive">
                             <table id="tablaMovimientos" class="table table-striped table-advance table-hover">
-                            <thead>
-                                <tr>
-                                    <th><i class="fa fa-calendar"></i> Fecha</th>
-                                    <th><i class="fa fa-box"></i> Producto</th>
-                                    <th><i class="fa fa-exchange"></i> Tipo</th>
-                                    <th><i class="fa fa-sort-numeric-up"></i> Cantidad</th>
-                                    <th><i class="fa fa-money-bill"></i> Precio</th>
-                                    <th><i class="fa fa-user"></i> Usuario</th>
-                                    <th><i class="fa fa-hashtag"></i> Referencia</th>
-                                    <th><i class="fa fa-cogs"></i> Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($movimientos as $movimiento): ?>
-                                    <?php
-                                    // Determine if has adjustment
-                                    $tiene_ajuste = isset($movimiento['tiene_ajuste']) ? $movimiento['tiene_ajuste'] : 0;
-                                    $es_ajuste = $movimiento['tipo_movimiento'] == 'AJUSTE';
-                                    $es_inactivo = $movimiento['id_estatus'] == 2;
-                                    ?>
-
-                                    <tr class="<?php
-                                                if ($es_inactivo || ($tiene_ajuste > 0 && ($movimiento['tipo_movimiento'] == 'SALIDA' || $movimiento['tipo_movimiento'] == 'ENTRADA'))) {
-                                                    echo 'inactive-movement';
-                                                } elseif ($es_ajuste) {
-                                                    echo 'adjustment-movement';
-                                                } else {
-                                                    echo '';
-                                                }
-                                                ?>">
-                                        <td><?= date('d/m/Y h:i A', strtotime($movimiento['fecha_movimiento'])); ?></td>
-                                        <td><?= htmlspecialchars($movimiento['producto']); ?></td>
-                                        <td>
-                                            <span class="label label-<?= $movimiento['tipo_movimiento'] == 'ENTRADA' ? 'success' : ($movimiento['tipo_movimiento'] == 'SALIDA' ? 'danger' : 'warning'); ?>">
-                                                <?= $movimiento['tipo_movimiento']; ?>
-                                            </span>
-                                            <?php if ($es_inactivo): ?>
-                                                <span class="label label-default">Inactivo</span>
-                                            <?php elseif ($tiene_ajuste > 0): ?>
-                                                <span class="label label-info">Ajustado</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td><?= $movimiento['cantidad']; ?></td>
-                                        <td class="<?= $movimiento['tipo_movimiento'] == 'ENTRADA' ? 'text-success' : ($movimiento['tipo_movimiento'] == 'SALIDA' ? 'text-danger' : ''); ?>">
-                                            <?= number_format($movimiento['precio_unitario'], 2, ',', '.'); ?> Bs
-                                        </td>
-                                        <td><?= $movimiento['usuario']; ?></td>
-                                        <td><?= $movimiento['referencia'] ?? 'N/A'; ?></td>
-                                        <td>
-                                            <?php if (!$es_inactivo && $tiene_ajuste == 0): ?>
-                                                <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=mostrar&id=<?= $movimiento['id']; ?>"
-                                                    class="btn btn-success btn-xs" title="Ver Detalles">
-                                                    <i class="fa fa-eye"></i>
-                                                </a>
-
-                                                <?php if (($movimiento['tipo_movimiento'] == 'SALIDA' && $movimiento['tipo_referencia'] == 'VENTA') ||
-                                                    ($movimiento['tipo_movimiento'] == 'AJUSTE' && $movimiento['tipo_referencia'] == 'VENTA')
-                                                ): ?>
-                                                    <?php if ($_SESSION['user_rol'] == 2): ?>
-                                                        <button class="btn btn-primary btn-xs" title="Modificar Venta" 
-                                                            onclick="solicitarAutorizacion('<?= $movimiento['id_referencia'] ?>', 'venta')">
-                                                            <i class="fa fa-edit"></i>
-                                                        </button>
-                                                    <?php else: ?>
-                                                        <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=modificarVenta&id=<?= $movimiento['id_referencia'] ?>"
-                                                            class="btn btn-primary btn-xs" title="Modificar Venta">
-                                                            <i class="fa fa-edit"></i>
-                                                        </a>
-                                                    <?php endif; ?>
-                                                <?php elseif (
-                                                    $movimiento['tipo_movimiento'] == 'ENTRADA' ||
-                                                    ($movimiento['tipo_movimiento'] == 'AJUSTE' && $movimiento['tipo_referencia'] != 'VENTA')
-                                                ): ?>
-                                                    <?php if ($_SESSION['user_rol'] != 2): ?>
-                                                        <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=editar&id=<?= $movimiento['id'] ?>"
-                                                            class="btn btn-primary btn-xs" title="Editar Entrada">
-                                                            <i class="fa fa-edit"></i>
-                                                        </a>
-                                                    <?php endif; ?>
-                                                <?php endif; ?>
-                                            <?php elseif ($tiene_ajuste > 0 || $es_inactivo): ?>
-                                                <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=mostrar&id=<?= $movimiento['id'] ?>"
-                                                    class="btn btn-info btn-xs" title="Ver Detalle">
-                                                    <i class="fa fa-eye"></i>
-                                                </a>
-                                            <?php endif; ?>
-                                        </td>
+                                <thead>
+                                    <tr>
+                                        <th><i class="fa fa-calendar"></i> Fecha</th>
+                                        <th><i class="fa fa-box"></i> Producto</th>
+                                        <th><i class="fa fa-exchange"></i> Tipo</th>
+                                        <th><i class="fa fa-sort-numeric-up"></i> Cantidad</th>
+                                        <th><i class="fa fa-money-bill"></i> Precio</th>
+                                        <th><i class="fa fa-user"></i> Usuario</th>
+                                        <th><i class="fa fa-hashtag"></i> Referencia</th>
+                                        <th><i class="fa fa-cogs"></i> Acciones</th>
                                     </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                    <!-- Pagination Start -->
-                    <?php if ($total_paginas > 1): ?>
-                    <div class="text-center">
-                        <ul class="pagination pagination-sm">
-                            <?php
-                            function buildPaginationUrl($page) {
-                                global $filtros_activos;
-                                $url = BASE_URL . "index.php?action=movimientos-inventario&pagina=" . $page;
-                                
-                                if (!empty($filtros_activos)) {
-                                    if (!empty($filtros_activos['tipos'])) {
-                                        $url .= "&tipos=" . implode(',', $filtros_activos['tipos']);
-                                    }
-                                    if (!empty($filtros_activos['estados'])) {
-                                        $url .= "&estados=" . implode(',', $filtros_activos['estados']);
-                                    }
-                                    if (!empty($filtros_activos['fecha_inicio'])) {
-                                        $url .= "&fecha_inicio=" . $filtros_activos['fecha_inicio'];
-                                    }
-                                    if (!empty($filtros_activos['fecha_fin'])) {
-                                        $url .= "&fecha_fin=" . $filtros_activos['fecha_fin'];
-                                    }
-                                }
-                                return $url;
-                            }
-                            ?>
-                            
-                            <?php if ($pagina_actual > 1): ?>
-                                <li>
-                                    <a href="<?= buildPaginationUrl(1) ?>">
-                                        <i class="fa fa-angle-double-left"></i>
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="<?= buildPaginationUrl($pagina_actual - 1) ?>">
-                                        <i class="fa fa-angle-left"></i>
-                                    </a>
-                                </li>
-                            <?php endif; ?>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($movimientos as $movimiento): ?>
+                                        <?php
+                                        $tiene_ajuste = isset($movimiento['tiene_ajuste']) ? $movimiento['tiene_ajuste'] : 0;
+                                        $es_ajuste = $movimiento['tipo_movimiento'] == 'AJUSTE';
+                                        $es_inactivo = $movimiento['id_estatus'] == 2;
+                                        ?>
+                                        <tr class="<?php
+                                            if ($es_inactivo || ($tiene_ajuste > 0 && ($movimiento['tipo_movimiento'] == 'SALIDA' || $movimiento['tipo_movimiento'] == 'ENTRADA'))) {
+                                                echo 'inactive-movement';
+                                            } elseif ($es_ajuste) {
+                                                echo 'adjustment-movement';
+                                            } else {
+                                                echo '';
+                                            }
+                                            ?>">
+                                            <td><?= date('d/m/Y h:i A', strtotime($movimiento['fecha_movimiento'])); ?></td>
+                                            <td><?= htmlspecialchars($movimiento['producto']); ?></td>
+                                            <td>
+                                                <span class="label label-<?= $movimiento['tipo_movimiento'] == 'ENTRADA' ? 'success' : ($movimiento['tipo_movimiento'] == 'SALIDA' ? 'danger' : 'warning'); ?>">
+                                                    <?= $movimiento['tipo_movimiento']; ?>
+                                                </span>
+                                                <?php if ($es_inactivo): ?>
+                                                    <span class="label label-default">Inactivo</span>
+                                                <?php elseif ($tiene_ajuste > 0): ?>
+                                                    <span class="label label-info">Ajustado</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td><?= $movimiento['cantidad']; ?></td>
+                                            <td class="<?= $movimiento['tipo_movimiento'] == 'ENTRADA' ? 'text-success' : ($movimiento['tipo_movimiento'] == 'SALIDA' ? 'text-danger' : ''); ?>">
+                                                <?= number_format($movimiento['precio_unitario'], 2, ',', '.'); ?> Bs
+                                            </td>
+                                            <td><?= $movimiento['usuario']; ?></td>
+                                            <td><?= $movimiento['referencia'] ?? 'N/A'; ?></td>
+                                            <td>
+                                                <?php if (!$es_inactivo && $tiene_ajuste == 0): ?>
+                                                    <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=mostrar&id=<?= $movimiento['id']; ?>"
+                                                        class="btn btn-success btn-xs" title="Ver Detalles">
+                                                        <i class="fa fa-eye"></i>
+                                                    </a>
 
-                            <?php
-                            $inicio = max(1, $pagina_actual - 2);
-                            $fin = min($total_paginas, $pagina_actual + 2);
-
-                            for ($i = $inicio; $i <= $fin; $i++): ?>
-                                <li class="<?= $i == $pagina_actual ? 'active' : '' ?>">
-                                    <a href="<?= buildPaginationUrl($i) ?>"><?= $i ?></a>
-                                </li>
-                            <?php endfor; ?>
-
-                            <?php if ($pagina_actual < $total_paginas): ?>
-                                <li>
-                                    <a href="<?= buildPaginationUrl($pagina_actual + 1) ?>">
-                                        <i class="fa fa-angle-right"></i>
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="<?= buildPaginationUrl($total_paginas) ?>">
-                                        <i class="fa fa-angle-double-right"></i>
-                                    </a>
-                                </li>
-                            <?php endif; ?>
-                        </ul>
-                        <div class="text-muted">
-                            Mostrando <?= count($movimientos) ?> de <?= $total ?> registros | 
-                            Página <?= $pagina_actual ?> de <?= $total_paginas ?>
+                                                    <?php if (($movimiento['tipo_movimiento'] == 'SALIDA' && $movimiento['tipo_referencia'] == 'VENTA') ||
+                                                        ($movimiento['tipo_movimiento'] == 'AJUSTE' && $movimiento['tipo_referencia'] == 'VENTA')
+                                                    ): ?>
+                                                        <?php if ($_SESSION['user_rol'] == 2): ?>
+                                                            <button class="btn btn-primary btn-xs" title="Modificar Venta" 
+                                                                onclick="solicitarAutorizacion('<?= $movimiento['id_referencia'] ?>', 'venta')">
+                                                                <i class="fa fa-edit"></i>
+                                                            </button>
+                                                        <?php else: ?>
+                                                            <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=modificarVenta&id=<?= $movimiento['id_referencia'] ?>"
+                                                                class="btn btn-primary btn-xs" title="Modificar Venta">
+                                                                <i class="fa fa-edit"></i>
+                                                            </a>
+                                                        <?php endif; ?>
+                                                    <?php elseif (
+                                                        $movimiento['tipo_movimiento'] == 'ENTRADA' ||
+                                                        ($movimiento['tipo_movimiento'] == 'AJUSTE' && $movimiento['tipo_referencia'] != 'VENTA')
+                                                    ): ?>
+                                                        <?php if ($_SESSION['user_rol'] != 2): ?>
+                                                            <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=editar&id=<?= $movimiento['id'] ?>"
+                                                                class="btn btn-primary btn-xs" title="Editar Entrada">
+                                                                <i class="fa fa-edit"></i>
+                                                            </a>
+                                                        <?php endif; ?>
+                                                    <?php endif; ?>
+                                                <?php elseif ($tiene_ajuste > 0 || $es_inactivo): ?>
+                                                    <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=mostrar&id=<?= $movimiento['id'] ?>"
+                                                        class="btn btn-info btn-xs" title="Ver Detalle">
+                                                        <i class="fa fa-eye"></i>
+                                                    </a>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
                         </div>
-                    </div>
-                    <?php endif; ?>
-                    <!-- Pagination End -->
+                        <!-- Paginación -->
+                        <?php if ($total_paginas > 1): ?>
+                            <div class="text-center">
+                                <ul class="pagination pagination-sm">
+                                    <?php if ($pagina_actual > 1): ?>
+                                        <li>
+                                            <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=index&pagina=<?= $pagina_actual - 1 ?>">
+                                                <i class="fa fa-angle-left"></i>
+                                            </a>
+                                        </li>
+                                    <?php endif; ?>
+
+                                    <?php for ($i = 1; $i <= $total_paginas; $i++): ?>
+                                        <li class="<?= $i == $pagina_actual ? 'active' : '' ?>">
+                                            <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=index&pagina=<?= $i ?>">
+                                                <?= $i ?>
+                                            </a>
+                                        </li>
+                                    <?php endfor; ?>
+
+                                    <?php if ($pagina_actual < $total_paginas): ?>
+                                        <li>
+                                            <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=index&pagina=<?= $pagina_actual + 1 ?>">
+                                                <i class="fa fa-angle-right"></i>
+                                            </a>
+                                        </li>
+                                    <?php endif; ?>
+                                </ul>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </section>
             </div>
         </div>
     </section>
 </section>
-
 
 <!-- Modal de Autorización -->
 <div class="modal fade" id="autorizacionModal" tabindex="-1" role="dialog" aria-labelledby="autorizacionModalLabel">
@@ -252,87 +226,6 @@
         </div>
     </div>
 </div>
-
-<script>
-// Función para búsqueda en tiempo real con paginación
-let searchTimeout;
-document.getElementById('busqueda').addEventListener('input', function(e) {
-    const searchTerm = e.target.value.toLowerCase();
-    
-    // Clear previous timeout
-    clearTimeout(searchTimeout);
-    
-    // Set new timeout to prevent multiple rapid requests
-    searchTimeout = setTimeout(function() {
-        const tabla = document.getElementById('tablaMovimientos');
-        const filas = tabla.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
-        let contadorResultados = 0;
-
-        for (let fila of filas) {
-            const producto = fila.cells[1].textContent.toLowerCase();
-            const tipo = fila.cells[2].textContent.toLowerCase();
-            const usuario = fila.cells[5].textContent.toLowerCase();
-            const referencia = fila.cells[6].textContent.toLowerCase();
-
-            if (producto.includes(searchTerm) || 
-                tipo.includes(searchTerm) || 
-                usuario.includes(searchTerm) || 
-                referencia.includes(searchTerm)) {
-                fila.style.display = '';
-                contadorResultados++;
-            } else {
-                fila.style.display = 'none';
-            }
-        }
-
-        // Actualizar contador y mostrar/ocultar mensajes
-        document.getElementById('contador-resultados').textContent = contadorResultados;
-        document.getElementById('filtros-activos').style.display = searchTerm ? 'block' : 'none';
-        document.getElementById('texto-filtros-activos').textContent = searchTerm ? `Término: "${searchTerm}"` : '';
-        document.getElementById('sin-resultados').style.display = (contadorResultados === 0 && searchTerm) ? 'block' : 'none';
-
-        // Reset to first page when searching
-        if (searchTerm) {
-            const currentUrl = new URL(window.location.href);
-            currentUrl.searchParams.set('pagina', '1');
-            window.history.pushState({}, '', currentUrl);
-        }
-    }, 300); // Wait 300ms after user stops typing before filtering
-});
-
-function solicitarAutorizacion(id, tipo) {
-    document.getElementById('idReferencia').value = id;
-    document.getElementById('tipoOperacion').value = tipo;
-    $('#autorizacionModal').modal('show');
-}
-
-function verificarAutorizacion() {
-    const formData = new FormData(document.getElementById('formAutorizacion'));
-    
-    fetch('<?= BASE_URL ?>index.php?action=auth&method=verificarAdmin', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            const id = document.getElementById('idReferencia').value;
-            const tipo = document.getElementById('tipoOperacion').value;
-            
-            if (tipo === 'venta') {
-                window.location.href = `<?= BASE_URL ?>index.php?action=movimientos-inventario&method=modificarVenta&id=${id}`;
-            }
-            $('#autorizacionModal').modal('hide');
-        } else {
-            alert('Credenciales incorrectas. Por favor, intente nuevamente.');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Ocurrió un error al verificar las credenciales.');
-    });
-}
-</script>
 
 <!-- Modal de Filtros -->
 <div class="modal fade" id="filtrosModal" tabindex="-1" role="dialog" aria-labelledby="filtrosModalLabel">
@@ -392,6 +285,61 @@ function verificarAutorizacion() {
 </div>
 
 <script>
+// Función para búsqueda en tiempo real con paginación
+let searchTimeout;
+document.getElementById('busqueda').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    
+    // Clear previous timeout
+    clearTimeout(searchTimeout);
+    
+    // Set new timeout to prevent multiple rapid requests
+    searchTimeout = setTimeout(function() {
+        // En lugar de ocultar filas, redirigir al servidor con el término de búsqueda
+        const currentUrl = new URL(window.location.href);
+        if (searchTerm) {
+            currentUrl.searchParams.set('busqueda', searchTerm);
+            currentUrl.searchParams.set('pagina', '1');
+        } else {
+            currentUrl.searchParams.delete('busqueda');
+        }
+        window.location.href = currentUrl.toString();
+    }, 300); // Wait 300ms after user stops typing before filtering
+});
+
+function solicitarAutorizacion(id, tipo) {
+    document.getElementById('idReferencia').value = id;
+    document.getElementById('tipoOperacion').value = tipo;
+    $('#autorizacionModal').modal('show');
+}
+
+function verificarAutorizacion() {
+    const formData = new FormData(document.getElementById('formAutorizacion'));
+    
+    fetch('<?= BASE_URL ?>index.php?action=auth&method=verificarAdmin', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const id = document.getElementById('idReferencia').value;
+            const tipo = document.getElementById('tipoOperacion').value;
+            
+            if (tipo === 'venta') {
+                window.location.href = `<?= BASE_URL ?>index.php?action=movimientos-inventario&method=modificarVenta&id=${id}`;
+            }
+            $('#autorizacionModal').modal('hide');
+        } else {
+            alert('Credenciales incorrectas. Por favor, intente nuevamente.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Ocurrió un error al verificar las credenciales.');
+    });
+}
+
 function aplicarFiltros() {
     const formData = new FormData(document.getElementById('formFiltros'));
     const filtros = {};
@@ -477,6 +425,12 @@ function aplicarFiltros() {
     if (fechaInicio) currentUrl.searchParams.set('fecha_inicio', fechaInicio);
     if (fechaFin) currentUrl.searchParams.set('fecha_fin', fechaFin);
     
+    // Mantener el término de búsqueda si existe
+    const busquedaActual = document.getElementById('busqueda').value;
+    if (busquedaActual) {
+        currentUrl.searchParams.set('busqueda', busquedaActual);
+    }
+    
     window.history.pushState({}, '', currentUrl);
 
     $('#filtrosModal').modal('hide');
@@ -484,17 +438,42 @@ function aplicarFiltros() {
 
 function limpiarFiltros() {
     document.getElementById('formFiltros').reset();
-    const tabla = document.getElementById('tablaMovimientos');
-    const filas = tabla.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    document.getElementById('busqueda').value = '';
     
-    for (let fila of filas) {
-        fila.style.display = '';
-    }
-
-    document.getElementById('filtros-activos').style.display = 'none';
-    document.getElementById('sin-resultados').style.display = 'none';
-    document.getElementById('contador-resultados').textContent = filas.length;
+    // Redirigir a la página sin filtros
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.delete('tipos');
+    currentUrl.searchParams.delete('estados');
+    currentUrl.searchParams.delete('fecha_inicio');
+    currentUrl.searchParams.delete('fecha_fin');
+    currentUrl.searchParams.delete('busqueda');
+    currentUrl.searchParams.set('pagina', '1');
+    window.location.href = currentUrl.toString();
 }
 </script>
 
-<!--main content end-->
+<?php if (isset($_SESSION['mensaje'])): ?>
+<script>
+    Swal.fire({
+        title: '<?= $_SESSION['mensaje']['title'] ?>',
+        text: '<?= $_SESSION['mensaje']['text'] ?>',
+        icon: '<?= $_SESSION['mensaje']['icon'] ?>',
+        timer: 3000,
+        timerProgressBar: true
+    });
+</script>
+<?php unset($_SESSION['mensaje']); ?>
+<?php endif; ?>
+
+<?php if (isset($_SESSION['error'])): ?>
+<script>
+    Swal.fire({
+        title: '<?= $_SESSION['error']['title'] ?>',
+        text: '<?= $_SESSION['error']['text'] ?>',
+        icon: '<?= $_SESSION['error']['icon'] ?>',
+        timer: 3000,
+        timerProgressBar: true
+    });
+</script>
+<?php unset($_SESSION['error']); ?>
+<?php endif; ?>

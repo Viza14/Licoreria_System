@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 26-06-2025 a las 21:22:54
+-- Tiempo de generación: 01-07-2025 a las 15:37:02
 -- Versión del servidor: 10.4.28-MariaDB
 -- Versión de PHP: 8.2.4
 
@@ -333,6 +333,21 @@ CREATE TABLE `movimientos_inventario_historico` (
 -- --------------------------------------------------------
 
 --
+-- Estructura de tabla para la tabla `pagos_venta`
+--
+
+CREATE TABLE `pagos_venta` (
+  `id` int(11) NOT NULL,
+  `id_venta` int(255) NOT NULL,
+  `forma_pago` enum('EFECTIVO','TARJETA','PAGO_MOVIL') NOT NULL,
+  `monto` decimal(10,2) NOT NULL,
+  `referencia_pago` varchar(6) DEFAULT NULL,
+  `fecha_pago` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+-- --------------------------------------------------------
+
+--
 -- Estructura de tabla para la tabla `perdidas`
 --
 
@@ -569,8 +584,6 @@ CREATE TABLE `ventas` (
   `id_usuario` int(11) NOT NULL,
   `fecha` datetime NOT NULL,
   `monto_total` decimal(10,2) NOT NULL,
-  `forma_pago` enum('EFECTIVO','TARJETA','PAGO_MOVIL') NOT NULL DEFAULT 'EFECTIVO',
-  `referencia_pago` varchar(6) DEFAULT NULL COMMENT 'Número de referencia para tarjeta o pago móvil',
   `id_venta_original` int(11) DEFAULT NULL,
   `id_estatus` int(11) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
@@ -579,12 +592,12 @@ CREATE TABLE `ventas` (
 -- Volcado de datos para la tabla `ventas`
 --
 
-INSERT INTO `ventas` (`id`, `cedula_cliente`, `id_usuario`, `fecha`, `monto_total`, `forma_pago`, `referencia_pago`, `id_venta_original`, `id_estatus`) VALUES
-(10, 'V-32670780', 1, '2025-06-25 10:49:00', 15.00, 'EFECTIVO', NULL, NULL, 2),
-(11, 'V-32670780', 1, '2025-06-25 10:49:00', 20.00, 'EFECTIVO', NULL, 10, 2),
-(12, 'V-32670780', 1, '2025-06-25 10:49:00', 20.00, 'TARJETA', '6565', 11, 2),
-(13, 'V-32670780', 1, '2025-06-25 10:49:00', 20.00, 'TARJETA', '6566', 12, 2),
-(14, 'V-32670780', 1, '2025-06-25 10:49:00', 25.00, 'TARJETA', '6566', 13, 1);
+INSERT INTO `ventas` (`id`, `cedula_cliente`, `id_usuario`, `fecha`, `monto_total`, `id_venta_original`, `id_estatus`) VALUES
+(10, 'V-32670780', 1, '2025-06-25 10:49:00', 15.00, NULL, 2),
+(11, 'V-32670780', 1, '2025-06-25 10:49:00', 20.00, 10, 2),
+(12, 'V-32670780', 1, '2025-06-25 10:49:00', 20.00, 11, 2),
+(13, 'V-32670780', 1, '2025-06-25 10:49:00', 20.00, 12, 2),
+(14, 'V-32670780', 1, '2025-06-25 10:49:00', 25.00, 13, 1);
 
 -- --------------------------------------------------------
 
@@ -729,6 +742,13 @@ ALTER TABLE `movimientos_inventario_historico`
   ADD KEY `id_usuario` (`id_usuario`);
 
 --
+-- Indices de la tabla `pagos_venta`
+--
+ALTER TABLE `pagos_venta`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `fk_pagos_venta_venta` (`id_venta`);
+
+--
 -- Indices de la tabla `perdidas`
 --
 ALTER TABLE `perdidas`
@@ -856,6 +876,12 @@ ALTER TABLE `movimientos_inventario_historico`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
+-- AUTO_INCREMENT de la tabla `pagos_venta`
+--
+ALTER TABLE `pagos_venta`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT de la tabla `perdidas`
 --
 ALTER TABLE `perdidas`
@@ -956,6 +982,12 @@ ALTER TABLE `movimientos_inventario`
   ADD CONSTRAINT `fk_movimientos_original` FOREIGN KEY (`id_movimiento_original`) REFERENCES `movimientos_inventario` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `movimientos_inventario_ibfk_1` FOREIGN KEY (`id_producto`) REFERENCES `producto` (`id`),
   ADD CONSTRAINT `movimientos_inventario_ibfk_2` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id`);
+
+--
+-- Filtros para la tabla `pagos_venta`
+--
+ALTER TABLE `pagos_venta`
+  ADD CONSTRAINT `fk_pagos_venta_venta` FOREIGN KEY (`id_venta`) REFERENCES `ventas` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Filtros para la tabla `perdidas`

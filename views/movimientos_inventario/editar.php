@@ -21,7 +21,29 @@
                         Editar Movimiento #<?= $movimiento['id'] ?>
                     </header>
                     <div class="panel-body">
+                        <?php if (isset($_SESSION['mensaje'])): ?>
+                            <script>
+                                Swal.fire({
+                                    title: '<?= $_SESSION['mensaje']['title'] ?>',
+                                    text: '<?= $_SESSION['mensaje']['text'] ?>',
+                                    icon: '<?= $_SESSION['mensaje']['icon'] ?>',
+                                    timer: 3000,
+                                    timerProgressBar: true
+                                });
+                            </script>
+                            <?php unset($_SESSION['mensaje']); ?>
+                        <?php endif; ?>
+
                         <?php if (isset($_SESSION['error'])): ?>
+                            <script>
+                                Swal.fire({
+                                    title: '<?= $_SESSION['error']['title'] ?>',
+                                    text: '<?= $_SESSION['error']['text'] ?>',
+                                    icon: '<?= $_SESSION['error']['icon'] ?>',
+                                    timer: 3000,
+                                    timerProgressBar: true
+                                });
+                            </script>
                             <div class="alert alert-danger">
                                 <strong><?= $_SESSION['error']['title'] ?></strong> <?= $_SESSION['error']['text'] ?>
                             </div>
@@ -61,8 +83,8 @@
                             <div class="form-group">
                                 <label class="col-sm-2 control-label">Cantidad *</label>
                                 <div class="col-sm-10">
-                                    <input type="number" class="form-control" name="cantidad" min="1" 
-                                           value="<?= $movimiento['cantidad'] ?>" required>
+                                    <input type="number" class="form-control" name="cantidad" min="1"
+                                        value="<?= $movimiento['cantidad'] ?>" required>
                                 </div>
                             </div>
                             <div class="form-group">
@@ -71,7 +93,7 @@
                                     <div class="input-group">
                                         <span class="input-group-addon">Bs</span>
                                         <input type="number" step="0.01" class="form-control" name="precio_unitario"
-                                               value="<?= $movimiento['precio_unitario'] ?>" required>
+                                            value="<?= $movimiento['precio_unitario'] ?>" required>
                                     </div>
                                     <small class="text-muted">Precio establecido en la relación producto-proveedor</small>
                                 </div>
@@ -103,32 +125,32 @@
 <!--main content end-->
 
 <script>
-// Precios pre-cargados desde PHP
-const preciosRelaciones = <?= $precios ?>;
-const precioActual = <?= $movimiento['precio_unitario'] ?>;
+    // Precios pre-cargados desde PHP
+    const preciosRelaciones = <?= $precios ?>;
+    const precioActual = <?= $movimiento['precio_unitario'] ?>;
 
-document.addEventListener('DOMContentLoaded', function() {
-    const proveedorSelect = document.querySelector('[name="cedula_proveedor"]');
-    const precioInput = document.getElementById('precio_compra');
-    const hiddenPrecioInput = document.getElementById('hidden_precio_unitario');
-    
-    // Set current price on load
-    precioInput.value = precioActual;
-    hiddenPrecioInput.value = precioActual;
+    document.addEventListener('DOMContentLoaded', function() {
+        const proveedorSelect = document.querySelector('[name="cedula_proveedor"]');
+        const precioInput = document.getElementById('precio_compra');
+        const hiddenPrecioInput = document.getElementById('hidden_precio_unitario');
 
-    function actualizarPrecio() {
-        const proveedorId = proveedorSelect.value;
-        const productoId = <?= $producto['id'] ?>;
+        // Set current price on load
+        precioInput.value = precioActual;
+        hiddenPrecioInput.value = precioActual;
 
-        if (proveedorId && 
-            preciosRelaciones[productoId] && 
-            preciosRelaciones[productoId][proveedorId]) {
-            const nuevoPrecio = preciosRelaciones[productoId][proveedorId];
-            precioInput.value = nuevoPrecio;
-            hiddenPrecioInput.value = nuevoPrecio;
+        function actualizarPrecio() {
+            const proveedorId = proveedorSelect.value;
+            const productoId = <?= $producto['id'] ?>;
+
+            if (proveedorId &&
+                preciosRelaciones[productoId] &&
+                preciosRelaciones[productoId][proveedorId]) {
+                const nuevoPrecio = preciosRelaciones[productoId][proveedorId];
+                precioInput.value = nuevoPrecio;
+                hiddenPrecioInput.value = nuevoPrecio;
+            }
         }
-    }
 
-    proveedorSelect.addEventListener('change', actualizarPrecio);
-});
+        proveedorSelect.addEventListener('change', actualizarPrecio);
+    });
 </script>
