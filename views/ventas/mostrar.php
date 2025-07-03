@@ -67,13 +67,19 @@
                             <div class="col-md-6">
                                 <h4>Resumen de Pago</h4>
                                 <table class="table table-bordered">
+                                    <?php
+                                    $subtotal = 0;
+                                    foreach ($detalles as $detalle) {
+                                        $subtotal += $detalle['monto'];
+                                    }
+                                    ?>
                                     <tr>
                                         <th>Subtotal:</th>
-                                        <td><?= number_format($venta['monto_total'], 2, ',', '.') ?> Bs</td>
+                                        <td><?= number_format($subtotal, 2, ',', '.') ?> Bs</td>
                                     </tr>
                                     <tr>
                                         <th>Total:</th>
-                                        <td><strong><?= number_format($venta['monto_total'], 2, ',', '.') ?> Bs</strong></td>
+                                        <td><strong><?= number_format($subtotal, 2, ',', '.') ?> Bs</strong></td>
                                     </tr>
                                 </table>
                             </div>

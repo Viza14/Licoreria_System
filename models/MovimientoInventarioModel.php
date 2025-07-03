@@ -133,9 +133,23 @@ class MovimientoInventarioModel
                   mo.precio_unitario as precio_unitario_original,
                   mo.fecha_movimiento as fecha_movimiento_original,
                   mo.observaciones as observaciones_original,
+                  -- Obtener información de pagos del movimiento original
+                  GROUP_CONCAT(DISTINCT
+                    CASE 
+                        WHEN mo.tipo_referencia = 'VENTA' THEN
+                            CONCAT(pvo.forma_pago, ':', pvo.monto, ':', IFNULL(pvo.referencia_pago, 'NULL'))
+                    END
+                  ) as pagos_original_info,
                   -- Obtener información de la venta relacionada si existe
                   v.monto_total as monto_venta,
-                  CONCAT(c.nombres, ' ', c.apellidos) as cliente_venta
+                  CONCAT(c.nombres, ' ', c.apellidos) as cliente_venta,
+                  -- Obtener información de pagos del movimiento actual
+                  GROUP_CONCAT(DISTINCT
+                    CASE 
+                        WHEN mi.tipo_referencia = 'VENTA' THEN
+                            CONCAT(pv.forma_pago, ':', pv.monto, ':', IFNULL(pv.referencia_pago, 'NULL'))
+                    END
+                  ) as pagos_info
                   FROM movimientos_inventario mi
                   JOIN producto p ON mi.id_producto = p.id
                   JOIN estatus e ON mi.id_estatus = e.id
@@ -143,11 +157,79 @@ class MovimientoInventarioModel
                   LEFT JOIN movimientos_inventario mo ON mi.id_movimiento_original = mo.id
                   LEFT JOIN ventas v ON (mi.tipo_referencia = 'VENTA' AND mi.id_referencia = v.id)
                   LEFT JOIN clientes c ON v.cedula_cliente = c.cedula
-                  WHERE mi.id = :id";
+                  LEFT JOIN pagos_venta pv ON (mi.tipo_referencia = 'VENTA' AND mi.id_referencia = pv.id_venta)
+                  LEFT JOIN pagos_venta pvo ON (mo.tipo_referencia = 'VENTA' AND mo.id_referencia = pvo.id_venta)
+                  WHERE mi.id = :id
+                  GROUP BY mi.id, mo.id, p.descripcion, e.nombre, u.nombres, u.apellidos, 
+                           mo.tipo_movimiento, mo.cantidad, mo.precio_unitario, 
+                           mo.fecha_movimiento, mo.observaciones, v.monto_total, 
+                           c.nombres, c.apellidos";
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(":id", $id);
         $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $movimiento = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($movimiento) {
+            // Procesar pagos del movimiento actual y original, marcando los cambios
+            $pagos = [];
+            $pagos_original = [];
+            
+            // Primero procesamos los pagos originales
+            if ($movimiento['pagos_original_info']) {
+                foreach (explode(',', $movimiento['pagos_original_info']) as $pago_info) {
+                    list($forma_pago, $monto, $referencia) = explode(':', $pago_info);
+                    $pagos_original[] = [
+                        'forma_pago' => $forma_pago,
+                        'monto' => $monto,
+                        'referencia_pago' => $referencia === 'NULL' ? null : $referencia,
+                        'cambio' => false
+                    ];
+                }
+            }
+            
+            // Luego procesamos los pagos actuales y comparamos
+            if ($movimiento['pagos_info']) {
+                foreach (explode(',', $movimiento['pagos_info']) as $index => $pago_info) {
+                    list($forma_pago, $monto, $referencia) = explode(':', $pago_info);
+                    $pago_actual = [
+                        'forma_pago' => $forma_pago,
+                        'monto' => $monto,
+                        'referencia_pago' => $referencia === 'NULL' ? null : $referencia,
+                        'cambio' => false
+                    ];
+                    
+                    // Verificar si hay un pago original correspondiente
+                    if (isset($pagos_original[$index])) {
+                        $pago_original = $pagos_original[$index];
+                        if ($pago_actual['forma_pago'] !== $pago_original['forma_pago'] ||
+                            $pago_actual['monto'] !== $pago_original['monto'] ||
+                            $pago_actual['referencia_pago'] !== $pago_original['referencia_pago']) {
+                            $pago_actual['cambio'] = true;
+                            $pagos_original[$index]['cambio'] = true;
+                        }
+                    } else {
+                        // Es un nuevo pago
+                        $pago_actual['cambio'] = true;
+                    }
+                    
+                    $pagos[] = $pago_actual;
+                }
+                
+                // Marcar pagos originales eliminados
+                if (count($pagos_original) > count($pagos)) {
+                    for ($i = count($pagos); $i < count($pagos_original); $i++) {
+                        $pagos_original[$i]['cambio'] = true;
+                    }
+                }
+            }
+            
+            $movimiento['pagos'] = $pagos;
+            $movimiento['pagos_original'] = $pagos_original;
+            unset($movimiento['pagos_info']);
+            unset($movimiento['pagos_original_info']);
+        }
+
+        return $movimiento;
     }
 
     public function registrarMovimiento($data)
