@@ -82,6 +82,29 @@
                 </section>
             </div>
         </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">Distribución del Estado de Stock</h3>
+                    </div>
+                    <div class="panel-body">
+                        <canvas id="stockChart" height="250"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">Valor Total por Categoría</h3>
+                    </div>
+                    <div class="panel-body">
+                        <canvas id="valorChart" height="250"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
     </section>
 </section>
 
@@ -138,6 +161,7 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 $(document).ready(function() {
     // Real-time search functionality
@@ -174,6 +198,124 @@ $(document).ready(function() {
     
     // Initialize category filter
     $('#id_tipo_categoria').trigger('change');
+
+    // Prepare data for charts
+    const stockData = {
+        labels: ['Crítico', 'Bajo', 'Normal', 'Exceso'],
+        datasets: [{
+            data: [
+                <?php 
+                $critico = $bajo = $normal = $exceso = 0;
+                foreach ($reporte as $item) {
+                    switch ($item['estado_stock']) {
+                        case 'CRÍTICO': $critico++; break;
+                        case 'BAJO': $bajo++; break;
+                        case 'NORMAL': $normal++; break;
+                        case 'EXCESO': $exceso++; break;
+                    }
+                }
+                echo "$critico, $bajo, $normal, $exceso";
+                ?>
+            ],
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.8)',
+                'rgba(255, 205, 86, 0.8)',
+                'rgba(75, 192, 192, 0.8)',
+                'rgba(54, 162, 235, 0.8)'
+            ]
+        }]
+    };
+
+    // Prepare category data
+    const categoriaData = {
+        labels: [],
+        datasets: [{
+            label: 'Valor Total',
+            data: [],
+            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1
+        }]
+    };
+
+    <?php
+    $categoriaValores = [];
+    foreach ($reporte as $item) {
+        if (!isset($categoriaValores[$item['categoria']])) {
+            $categoriaValores[$item['categoria']] = 0;
+        }
+        $categoriaValores[$item['categoria']] += $item['valor_total'];
+    }
+    arsort($categoriaValores);
+    $top5Categorias = array_slice($categoriaValores, 0, 5, true);
+    ?>
+
+    categoriaData.labels = <?= json_encode(array_keys($top5Categorias)) ?>;
+    categoriaData.datasets[0].data = <?= json_encode(array_values($top5Categorias)) ?>;
+
+    // Create Stock Status Distribution Chart
+    new Chart(document.getElementById('stockChart').getContext('2d'), {
+        type: 'pie',
+        data: stockData,
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = Math.round((context.raw / total) * 100);
+                            return `${context.label}: ${context.raw} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Create Category Value Chart
+    new Chart(document.getElementById('valorChart').getContext('2d'), {
+        type: 'bar',
+        data: categoriaData,
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `Valor: ${new Intl.NumberFormat('es-BO', {
+                                style: 'currency',
+                                currency: 'BOB'
+                            }).format(context.raw)}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Valor Total (Bs)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return new Intl.NumberFormat('es-BO', {
+                                style: 'currency',
+                                currency: 'BOB'
+                            }).format(value);
+                        }
+                    }
+                }
+            }
+        }
+    });
 });
 </script>
 <!--main content end-->

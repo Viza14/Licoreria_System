@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 01-07-2025 a las 15:37:02
+-- Tiempo de generación: 04-07-2025 a las 04:05:53
 -- Versión del servidor: 10.4.28-MariaDB
 -- Versión de PHP: 8.2.4
 
@@ -158,15 +158,6 @@ CREATE TABLE `categorias` (
   `id_estatus` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
---
--- Volcado de datos para la tabla `categorias`
---
-
-INSERT INTO `categorias` (`id`, `nombre`, `id_tipo_categoria`, `id_estatus`) VALUES
-(1, 'Refrescos', 1, 1),
-(2, 'Cervezas', 1, 1),
-(3, 'Papas', 2, 1),
-(4, 'Ron añejo', 4, 1);
 
 -- --------------------------------------------------------
 
@@ -184,16 +175,6 @@ CREATE TABLE `clientes` (
   `id_estatus` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
---
--- Volcado de datos para la tabla `clientes`
---
-
-INSERT INTO `clientes` (`cedula`, `id_simbolo_cedula`, `nombres`, `apellidos`, `telefono`, `direccion`, `id_estatus`) VALUES
-('30330301', 1, 'Samuel', 'Vizamon', '04244354455', 'Valencia', 1),
-('31117834', 1, 'Moises', 'Vizamon', '04125030111', 'naguanagua', 1),
-('V-32670780', 1, 'adoni', 'vespo', '045558974', 'tocuyito', 1),
-('V-8609665', 1, 'Zuleima', 'Vizamon', '0412123456', 'av bolivar', 1),
-('V-8609666', 1, 'Adolfo', 'Vizamon', '0412336558', 'San Diego', 1);
 
 -- --------------------------------------------------------
 
@@ -241,18 +222,6 @@ CREATE TABLE `detalle_venta` (
   `monto` decimal(10,2) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
---
--- Volcado de datos para la tabla `detalle_venta`
---
-
-INSERT INTO `detalle_venta` (`id`, `id_venta`, `id_producto`, `cantidad`, `precio_unitario`, `monto`) VALUES
-(18, 10, 1, 3, 5.00, 15.00),
-(19, 11, 1, 4, 0.00, 20.00),
-(20, 12, 1, 4, 0.00, 20.00),
-(21, 13, 1, 4, 0.00, 20.00),
-(22, 14, 1, 4, 0.00, 20.00),
-(23, 14, 3, 1, 0.00, 5.00);
-
 -- --------------------------------------------------------
 
 --
@@ -296,19 +265,6 @@ CREATE TABLE `movimientos_inventario` (
   `fecha_actualizacion` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
---
--- Volcado de datos para la tabla `movimientos_inventario`
---
-
-INSERT INTO `movimientos_inventario` (`id`, `id_producto`, `tipo_movimiento`, `cantidad`, `precio_unitario`, `id_referencia`, `tipo_referencia`, `fecha_movimiento`, `id_usuario`, `observaciones`, `id_estatus`, `id_movimiento_original`, `fecha_actualizacion`) VALUES
-(23, 1, 'SALIDA', 3, 5.00, 10, 'VENTA', '2025-06-25 22:50:14', 1, NULL, 2, NULL, NULL),
-(24, 1, 'SALIDA', 4, 5.00, 11, 'VENTA', '2025-06-25 22:59:28', 1, 'Modificación de venta #10 - Nueva venta #11', 2, 23, NULL),
-(25, 1, 'SALIDA', 4, 5.00, 12, 'VENTA', '2025-06-25 23:00:15', 1, 'Modificación de venta #11 - Nueva venta #12', 2, 24, NULL),
-(26, 1, 'SALIDA', 4, 5.00, 13, 'VENTA', '2025-06-26 14:46:51', 1, 'Modificación de venta #12 - Nueva venta #13', 2, 25, NULL),
-(27, 1, 'ENTRADA', 20, 500.50, NULL, NULL, '2025-06-26 14:47:16', 1, '', 2, NULL, NULL),
-(29, 1, 'ENTRADA', 15, 500.50, NULL, NULL, '2025-06-26 15:01:36', 1, 'Ajuste del movimiento #27 - ', 1, 27, '2025-06-26 15:21:11'),
-(30, 1, 'SALIDA', 4, 5.00, 14, 'VENTA', '2025-06-26 15:21:37', 1, 'Modificación de venta #13 - Nueva venta #14', 1, 26, NULL);
-
 -- --------------------------------------------------------
 
 --
@@ -345,6 +301,8 @@ CREATE TABLE `pagos_venta` (
   `fecha_pago` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
+
+
 -- --------------------------------------------------------
 
 --
@@ -374,15 +332,6 @@ CREATE TABLE `producto` (
   `id_estatus` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
---
--- Volcado de datos para la tabla `producto`
---
-
-INSERT INTO `producto` (`id`, `descripcion`, `cantidad`, `precio`, `id_categoria`, `id_estatus`) VALUES
-(1, 'Coca-Cola 2L', 49, 5.00, 1, 1),
-(2, 'Pepsi 2L', 98, 4.50, 1, 1),
-(3, 'Mani Jacks', 25, 5.00, 2, 1),
-(13, 'Papas Jacks', 106, 5.00, 3, 1);
 
 --
 -- Disparadores `producto`
@@ -410,12 +359,6 @@ CREATE TABLE `proveedores` (
   `id_estatus` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
---
--- Volcado de datos para la tabla `proveedores`
---
-
-INSERT INTO `proveedores` (`cedula`, `id_simbolo_cedula`, `nombre`, `telefono`, `direccion`, `id_estatus`) VALUES
-('165797821', 4, 'karina Contramaestre', '04124602233', 'naguanagua', 1);
 
 -- --------------------------------------------------------
 
@@ -432,13 +375,7 @@ CREATE TABLE `proveedor_producto` (
   `id_estatus` int(11) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
---
--- Volcado de datos para la tabla `proveedor_producto`
---
 
-INSERT INTO `proveedor_producto` (`id`, `cedula_proveedor`, `id_producto`, `precio_compra`, `fecha_actualizacion`, `id_estatus`) VALUES
-(1, '165797821', 1, 500.50, '2025-06-10 20:06:19', 1),
-(2, '165797821', 2, 140.00, '2025-06-24 01:01:39', 1);
 
 -- --------------------------------------------------------
 
@@ -495,14 +432,7 @@ CREATE TABLE `stock_limites` (
   `id_usuario` int(10) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
---
--- Volcado de datos para la tabla `stock_limites`
---
 
-INSERT INTO `stock_limites` (`id`, `id_producto`, `stock_minimo`, `stock_maximo`, `fecha_actualizacion`, `id_usuario`) VALUES
-(1, 13, 30, 100, '2025-06-16 13:34:29', 1),
-(2, 3, 50, 100, '2025-06-16 15:11:38', 1),
-(3, 1, 12, 100, '2025-06-16 15:12:13', 1);
 
 -- --------------------------------------------------------
 
@@ -516,16 +446,6 @@ CREATE TABLE `tipos_categoria` (
   `id_estatus` int(11) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
---
--- Volcado de datos para la tabla `tipos_categoria`
---
-
-INSERT INTO `tipos_categoria` (`id`, `nombre`, `id_estatus`) VALUES
-(1, 'Bebidas', 1),
-(2, 'Snacks', 1),
-(3, 'vino', 1),
-(4, 'Ron', 1),
-(5, 'dulces', 1);
 
 -- --------------------------------------------------------
 
@@ -553,12 +473,7 @@ CREATE TABLE `usuarios` (
 --
 
 INSERT INTO `usuarios` (`id`, `cedula`, `id_simbolo_cedula`, `nombres`, `apellidos`, `telefono`, `direccion`, `user`, `password`, `id_rol`, `id_estatus`, `ultimo_inicio_sesion`) VALUES
-(1, '31117854', 1, 'Moises', 'Vizamon', '04125050555', 'Naguanagua', 'admin', '$2y$10$.Dv.UCeKDYG3HIiK.4F7Jed5g2/1FZWq8j6zRHErVQNLYxUBhM4NG', 1, 1, '2025-06-26 14:46:42'),
-(2, '30330300', 1, 'Maria', 'Teran', '0414123457', 'Valencia', 'empleado', '$2y$10$InP6m5HokejhvGmvTg9YnuPy14zAy/EB5LKRxv69EndgVdmuf0KMm', 2, 1, '2025-06-12 10:59:18'),
-(4, '16579782', 1, 'Angel', 'Perez', '04125030223', 'Valencia', 'Angel123', '$2y$10$l8ILNvg5AQAUliKoN87M8exnKrXvOecoAqMZR/OJKH3L0oGgHXhjW', 2, 1, NULL),
-(5, '33333333', 1, 'german', 'garcia', '04244351695', 'tocuyito', 'german13', '$2y$10$iBxpB0rpNB6ycNoiRZ3LJeBzsvSzKzZwgXFgfsfmVVXUZdn6osCPu', 2, 1, NULL),
-(6, '444444444', 4, 'cristiano', 'ronaldo', '04245565125', 'no se', '77crz', '$2y$10$C3Hdm7aN1a.049TKuoX3HuV.KaOB8dCqcJlM1rl5.m3S/tW8iz5R2', 1, 1, NULL);
-
+(1, '31117854', 1, 'Moises', 'Vizamon', '04125050555', 'Naguanagua', 'admin', '$2y$10$.Dv.UCeKDYG3HIiK.4F7Jed5g2/1FZWq8j6zRHErVQNLYxUBhM4NG', 1, 1, '2025-06-26 14:46:42');
 --
 -- Disparadores `usuarios`
 --
@@ -588,16 +503,6 @@ CREATE TABLE `ventas` (
   `id_estatus` int(11) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
---
--- Volcado de datos para la tabla `ventas`
---
-
-INSERT INTO `ventas` (`id`, `cedula_cliente`, `id_usuario`, `fecha`, `monto_total`, `id_venta_original`, `id_estatus`) VALUES
-(10, 'V-32670780', 1, '2025-06-25 10:49:00', 15.00, NULL, 2),
-(11, 'V-32670780', 1, '2025-06-25 10:49:00', 20.00, 10, 2),
-(12, 'V-32670780', 1, '2025-06-25 10:49:00', 20.00, 11, 2),
-(13, 'V-32670780', 1, '2025-06-25 10:49:00', 20.00, 12, 2),
-(14, 'V-32670780', 1, '2025-06-25 10:49:00', 25.00, 13, 1);
 
 -- --------------------------------------------------------
 
@@ -837,7 +742,7 @@ ALTER TABLE `ventas`
 -- AUTO_INCREMENT de la tabla `categorias`
 --
 ALTER TABLE `categorias`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT de la tabla `compras`
@@ -855,25 +760,25 @@ ALTER TABLE `detalle_compra`
 -- AUTO_INCREMENT de la tabla `detalle_venta`
 --
 ALTER TABLE `detalle_venta`
-  MODIFY `id` int(255) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `id` int(255) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT de la tabla `estatus`
 --
 ALTER TABLE `estatus`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT de la tabla `movimientos_inventario`
 --
 ALTER TABLE `movimientos_inventario`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT de la tabla `movimientos_inventario_historico`
 --
 ALTER TABLE `movimientos_inventario_historico`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT de la tabla `pagos_venta`
@@ -891,49 +796,49 @@ ALTER TABLE `perdidas`
 -- AUTO_INCREMENT de la tabla `producto`
 --
 ALTER TABLE `producto`
-  MODIFY `id` int(10) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int(10) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT de la tabla `proveedor_producto`
 --
 ALTER TABLE `proveedor_producto`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT de la tabla `roles`
 --
 ALTER TABLE `roles`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT de la tabla `simbolos_cedula`
 --
 ALTER TABLE `simbolos_cedula`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT de la tabla `stock_limites`
 --
 ALTER TABLE `stock_limites`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT de la tabla `tipos_categoria`
 --
 ALTER TABLE `tipos_categoria`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT de la tabla `usuarios`
 --
 ALTER TABLE `usuarios`
-  MODIFY `id` int(10) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(10) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT de la tabla `ventas`
 --
 ALTER TABLE `ventas`
-  MODIFY `id` int(255) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `id` int(255) NOT NULL AUTO_INCREMENT;
 
 --
 -- Restricciones para tablas volcadas
@@ -1044,7 +949,7 @@ ALTER TABLE `usuarios`
 ALTER TABLE `ventas`
   ADD CONSTRAINT `fk_ventas_estatus` FOREIGN KEY (`id_estatus`) REFERENCES `estatus` (`id`),
   ADD CONSTRAINT `fk_ventas_original` FOREIGN KEY (`id_venta_original`) REFERENCES `ventas` (`id`),
-  ADD CONSTRAINT `ventas_ibfk_1` FOREIGN KEY (`cedula_cliente`) REFERENCES `clientes` (`cedula`),
+  ADD CONSTRAINT `ventas_ibfk_1` FOREIGN KEY (`cedula_cliente`) REFERENCES `clientes` (`cedula`) ON UPDATE CASCADE,
   ADD CONSTRAINT `ventas_ibfk_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id`);
 COMMIT;
 

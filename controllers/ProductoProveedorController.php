@@ -87,7 +87,8 @@ class ProductoProveedorController
         $this->checkSession();
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data = [
-                'precio_compra' => $_POST['precio_compra']
+                'precio_compra' => $_POST['precio_compra'],
+                'id_producto' => $_POST['id_producto']
             ];
 
             if ($this->model->actualizarRelacion($id, $data)) {

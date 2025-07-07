@@ -25,8 +25,13 @@
                             <div class="form-group">
                                 <label class="col-sm-2 control-label">Producto</label>
                                 <div class="col-sm-10">
-                                    <p class="form-control-static"><?= $relacion['producto']; ?></p>
-                                    <input type="hidden" name="id_producto" value="<?= $relacion['id_producto']; ?>">
+                                    <select class="form-control" name="id_producto" required>
+                                        <?php foreach ($productos as $producto): ?>
+                                            <option value="<?= $producto['id'] ?>" <?= ($producto['id'] == $relacion['id_producto']) ? 'selected' : '' ?>>
+                                                <?= $producto['descripcion'] ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
                                 </div>
                             </div>
                             <div class="form-group">

@@ -60,7 +60,7 @@ class VentaModel
 
     public function obtenerDetallesVenta($id_venta)
     {
-        $query = "SELECT dv.*, p.descripcion as producto, p.precio as precio_actual
+        $query = "SELECT dv.*, p.descripcion as producto, p.precio as precio_actual, p.cantidad as stock_actual
                   FROM detalle_venta dv
                   JOIN producto p ON dv.id_producto = p.id
                   WHERE dv.id_venta = :id_venta";
@@ -109,7 +109,6 @@ class VentaModel
 
             foreach ($data['productos'] as $producto) {
                 $subtotal = $producto['precio'] * $producto['cantidad'];
-                $monto_total += $subtotal;
 
                 // Register sale detail
                 $query = "INSERT INTO detalle_venta (id_venta, id_producto, cantidad, monto, precio_unitario) 

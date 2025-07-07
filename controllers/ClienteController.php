@@ -74,6 +74,29 @@ class ClienteController
                 return;
             }
 
+            // Validar caracteres especiales en nombres y apellidos
+            if (!preg_match('/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/', $_POST['nombres'])) {
+                $_SESSION['error'] = [
+                    'title' => 'Error',
+                    'text' => 'El campo nombres solo puede contener letras y espacios',
+                    'icon' => 'error'
+                ];
+                $_SESSION['form_data'] = $_POST;
+                $this->redirect('clientes&method=crear');
+                return;
+            }
+
+            if (!preg_match('/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/', $_POST['apellidos'])) {
+                $_SESSION['error'] = [
+                    'title' => 'Error',
+                    'text' => 'El campo apellidos solo puede contener letras y espacios',
+                    'icon' => 'error'
+                ];
+                $_SESSION['form_data'] = $_POST;
+                $this->redirect('clientes&method=crear');
+                return;
+            }
+
             // Validar teléfono (11 dígitos)
             if (strlen($telefono) != 11 || !ctype_digit($telefono)) {
                 $_SESSION['error'] = [

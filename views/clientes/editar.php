@@ -49,13 +49,19 @@
                             <div class="form-group">
                                 <label class="col-sm-2 control-label">Nombres</label>
                                 <div class="col-sm-10">
-                                    <input type="text" class="form-control" name="nombres" value="<?= $cliente['nombres'] ?>" required>
+                                    <input type="text" class="form-control" name="nombres" value="<?= $cliente['nombres'] ?>" required
+                                           pattern="^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$"
+                                           title="Solo se permiten letras y espacios">
+                                    <small class="text-muted">Solo letras y espacios permitidos</small>
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label class="col-sm-2 control-label">Apellidos</label>
                                 <div class="col-sm-10">
-                                    <input type="text" class="form-control" name="apellidos" value="<?= $cliente['apellidos'] ?>" required>
+                                    <input type="text" class="form-control" name="apellidos" value="<?= $cliente['apellidos'] ?>" required
+                                           pattern="^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$"
+                                           title="Solo se permiten letras y espacios">
+                                    <small class="text-muted">Solo letras y espacios permitidos</small>
                                 </div>
                             </div>
                             <div class="form-group">
@@ -188,6 +194,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize
     actualizarValidacion();
+
+    // Validación de nombres y apellidos
+    const nombresInput = document.querySelector('[name="nombres"]');
+    const apellidosInput = document.querySelector('[name="apellidos"]');
+
+    function validarSoloLetras(input) {
+        input.value = input.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
+    }
+
+    nombresInput.addEventListener('input', function() {
+        validarSoloLetras(this);
+    });
+
+    apellidosInput.addEventListener('input', function() {
+        validarSoloLetras(this);
+    });
 });
 
 // Show SweetAlert messages

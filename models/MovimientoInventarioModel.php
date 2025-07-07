@@ -128,15 +128,32 @@ class MovimientoInventarioModel
         $query = "SELECT mi.*, p.descripcion as producto, e.nombre as estado,
                   CONCAT(u.nombres, ' ', u.apellidos) as usuario,
                   -- Obtener información del movimiento original si es un ajuste
-                  mo.tipo_movimiento as tipo_movimiento_original,
-                  mo.cantidad as cantidad_original,
-                  mo.precio_unitario as precio_unitario_original,
-                  mo.fecha_movimiento as fecha_movimiento_original,
-                  mo.observaciones as observaciones_original,
+                  CASE
+                    WHEN mi.tipo_movimiento = 'AJUSTE' THEN mo.tipo_movimiento
+                    ELSE mi.tipo_movimiento
+                  END as tipo_movimiento_original,
+                  CASE
+                    WHEN mi.tipo_movimiento = 'AJUSTE' THEN mo.cantidad
+                    ELSE mi.cantidad
+                  END as cantidad_original,
+                  CASE
+                    WHEN mi.tipo_movimiento = 'AJUSTE' THEN mo.precio_unitario
+                    ELSE mi.precio_unitario
+                  END as precio_unitario_original,
+                  CASE
+                    WHEN mi.tipo_movimiento = 'AJUSTE' THEN mo.fecha_movimiento
+                    ELSE mi.fecha_movimiento
+                  END as fecha_movimiento_original,
+                  CASE
+                    WHEN mi.tipo_movimiento = 'AJUSTE' THEN mo.observaciones
+                    ELSE mi.observaciones
+                  END as observaciones_original,
+                  -- Obtener el ID del movimiento ajustado si existe
+                  (SELECT id FROM movimientos_inventario WHERE id_movimiento_original = mi.id LIMIT 1) as id_movimiento_ajustado,
                   -- Obtener información de pagos del movimiento original
                   GROUP_CONCAT(DISTINCT
                     CASE 
-                        WHEN mo.tipo_referencia = 'VENTA' THEN
+                        WHEN (mo.tipo_referencia = 'VENTA' AND mi.tipo_movimiento = 'AJUSTE') OR (mi.tipo_movimiento != 'AJUSTE' AND mi.tipo_referencia = 'VENTA') THEN
                             CONCAT(pvo.forma_pago, ':', pvo.monto, ':', IFNULL(pvo.referencia_pago, 'NULL'))
                     END
                   ) as pagos_original_info,
@@ -158,7 +175,7 @@ class MovimientoInventarioModel
                   LEFT JOIN ventas v ON (mi.tipo_referencia = 'VENTA' AND mi.id_referencia = v.id)
                   LEFT JOIN clientes c ON v.cedula_cliente = c.cedula
                   LEFT JOIN pagos_venta pv ON (mi.tipo_referencia = 'VENTA' AND mi.id_referencia = pv.id_venta)
-                  LEFT JOIN pagos_venta pvo ON (mo.tipo_referencia = 'VENTA' AND mo.id_referencia = pvo.id_venta)
+                  LEFT JOIN pagos_venta pvo ON (mo.id IS NOT NULL AND mo.tipo_referencia = 'VENTA' AND mo.id_referencia = pvo.id_venta)
                   WHERE mi.id = :id
                   GROUP BY mi.id, mo.id, p.descripcion, e.nombre, u.nombres, u.apellidos, 
                            mo.tipo_movimiento, mo.cantidad, mo.precio_unitario, 
@@ -485,7 +502,7 @@ class MovimientoInventarioModel
 
     public function obtenerDetallesVentaParaModificacion($id_venta)
     {
-        $query = "SELECT dv.*, p.descripcion as producto, p.precio as precio_actual
+        $query = "SELECT dv.*, p.descripcion as producto, p.precio as precio_actual, p.cantidad as stock_actual
                   FROM detalle_venta dv
                   JOIN producto p ON dv.id_producto = p.id
                   WHERE dv.id_venta = :id_venta";

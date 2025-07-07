@@ -79,8 +79,26 @@ class ProductoProveedorModel
     public function actualizarRelacion($id, $data)
     {
         try {
+            // Verificar si ya existe la relación con el nuevo producto
+            if (isset($data['id_producto'])) {
+                $query = "SELECT COUNT(*) as count FROM proveedor_producto 
+                          WHERE cedula_proveedor = (SELECT cedula_proveedor FROM proveedor_producto WHERE id = :id)
+                          AND id_producto = :id_producto AND id != :id";
+                $stmt = $this->db->prepare($query);
+                $stmt->bindParam(":id", $id);
+                $stmt->bindParam(":id_producto", $data['id_producto']);
+                $stmt->execute();
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($result['count'] > 0) {
+                    $this->errors[] = "Ya existe una relación con este producto y proveedor";
+                    return false;
+                }
+            }
+
             $query = "UPDATE proveedor_producto SET 
-                      precio_compra = :precio_compra
+                      precio_compra = :precio_compra,
+                      id_producto = :id_producto
                       WHERE id = :id";
             $stmt = $this->db->prepare($query);
             $data['id'] = $id;

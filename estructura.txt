@@ -173,6 +173,8 @@
 │   │   ├── productos_mas_vendidos.php
 │   │   ├── inventario.php
 │   │   └── detalle_ventas.php
+│   ├── errors/
+│   │   └── 404.php
 │   └── dashboard.php
 ├── .htaccess
 ├── index.php
