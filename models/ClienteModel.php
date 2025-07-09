@@ -45,13 +45,33 @@ class ClienteModel
 
     public function obtenerTodosClientes()
     {
-        $query = "SELECT c.*, e.nombre as estatus, sc.nombre as nombre_simbolo 
-                  FROM clientes c
-                  JOIN estatus e ON c.id_estatus = e.id
-                  JOIN simbolos_cedula sc ON c.id_simbolo_cedula = sc.id";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            if (!$this->db) {
+                throw new Exception('Error de conexión a la base de datos');
+            }
+
+            $query = "SELECT c.*, e.nombre as estatus, sc.nombre as nombre_simbolo 
+                      FROM clientes c
+                      JOIN estatus e ON c.id_estatus = e.id
+                      JOIN simbolos_cedula sc ON c.id_simbolo_cedula = sc.id";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute();
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            if ($result === false) {
+                throw new Exception('Error al obtener los datos de clientes');
+            }
+
+            return $result;
+        } catch (PDOException $e) {
+            $this->errors[] = "Error de base de datos: " . $e->getMessage();
+            error_log("Error en obtenerTodosClientes: " . $e->getMessage());
+            return false;
+        } catch (Exception $e) {
+            $this->errors[] = $e->getMessage();
+            error_log("Error en obtenerTodosClientes: " . $e->getMessage());
+            return false;
+        }
     }
 
     public function obtenerClientePorCedula($cedula)
@@ -147,12 +167,29 @@ class ClienteModel
     }
     public function obtenerTotalVentasCliente($cedula)
     {
-        $query = "SELECT CalcularTotalVentasCliente(:cedula) as total";
-        $stmt = $this->db->prepare($query);
-        $stmt->bindParam(":cedula", $cedula);
-        $stmt->execute();
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $result['total'] ?? 0;
+        try {
+            if (!$this->db) {
+                throw new Exception('Error de conexión a la base de datos');
+            }
+
+            $query = "SELECT COALESCE(SUM(v.total), 0) as total 
+                      FROM ventas v 
+                      WHERE v.cedula_cliente = :cedula";
+            $stmt = $this->db->prepare($query);
+            $stmt->bindParam(":cedula", $cedula);
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return floatval($result['total']);
+        } catch (PDOException $e) {
+            $this->errors[] = "Error al calcular total de ventas: " . $e->getMessage();
+            error_log("Error en obtenerTotalVentasCliente: " . $e->getMessage());
+            return 0;
+        } catch (Exception $e) {
+            $this->errors[] = $e->getMessage();
+            error_log("Error en obtenerTotalVentasCliente: " . $e->getMessage());
+            return 0;
+        }
     }
     public function eliminarCliente($cedula)
     {

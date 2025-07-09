@@ -1,3 +1,13 @@
+<?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+if (!isset($_SESSION['user_id'])) {
+    header("Location: " . BASE_URL . "index.php?action=login");
+    exit();
+}
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -62,13 +72,15 @@
             color: #f27c1f;
             transform: scale(1.2);
         }
-        /* Hover al botón de notificaciones (fa-bell-o) */
-        .dropdown-toggle .fa-bell-o {
+        /* Hover al botón de notificaciones y backup */
+        .dropdown-toggle .fa-bell-o,
+        .dropdown-toggle .fa-download {
             cursor: pointer;
             transition: color 0.3s ease, transform 0.2s ease;
         }
-        .dropdown-toggle .fa-bell-o:hover {
-            color: #f27c1f;
+        .dropdown-toggle .fa-bell-o:hover,
+        .dropdown-toggle .fa-download:hover {
+            color: #1d2a58;
             transform: scale(1.2);
         }
         /* Opcional: efecto para el badge de notificaciones */
@@ -153,11 +165,104 @@
                         </ul>
                     </li>
                     <!-- alerts dropdown end -->
+                    <?php if ($_SESSION['user_rol'] != 2): ?>
+                    <li class="dropdown">
+                        <a href="#" onclick="generarBackup(); return false;" class="dropdown-toggle">
+                            <i class="fa fa-download"></i>
+                        </a>
+                    </li>
+                    <?php endif; ?>
                 </ul>
                 <!--  notification end -->
             </div>
             <div class="top-menu">
                 <ul class="nav pull-right top-menu">
+    <script>
+    function generarBackup() {
+        Swal.fire({
+            title: '¿Deseas realizar una copia de seguridad?',
+            text: 'Se generará un respaldo completo de la base de datos',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#f27c1f',
+            cancelButtonColor: '#1d2a58',
+            confirmButtonText: 'Continuar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: '¿Estás completamente seguro?',
+                    html: '<p>Esta acción realizará lo siguiente:</p>' +
+                          '<ul style="text-align: left; display: inline-block;">' +
+                          '<li>Generará una copia completa de la base de datos</li>' +
+                          '<li>Incluirá todas las tablas y registros</li>' +
+                          '<li>Se descargará como archivo SQL</li>' +
+                          '<li>No afectará al sistema actual</li>' +
+                          '</ul>',
+                    icon: 'info',
+                    showCancelButton: true,
+                    confirmButtonColor: '#f27c1f',
+                    cancelButtonColor: '#1d2a58',
+                    confirmButtonText: 'Sí, generar backup',
+                    cancelButtonText: 'Cancelar'
+                }).then((result2) => {
+                    if (result2.isConfirmed) {
+                        Swal.fire({
+                            title: 'Generando backup...',
+                            text: 'Por favor espere...',
+                            allowOutsideClick: false,
+                            confirmButtonColor: '#f27c1f',
+                            didOpen: () => {
+                                Swal.showLoading()
+                            }
+                        });
+
+                        fetch('<?php echo BASE_URL; ?>index.php?action=backup&method=generarBackup')
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.status === 'success') {
+                                    // Crear el archivo blob desde el contenido base64
+                                    const binaryString = window.atob(data.content);
+                                    const bytes = new Uint8Array(binaryString.length);
+                                    for (let i = 0; i < binaryString.length; i++) {
+                                        bytes[i] = binaryString.charCodeAt(i);
+                                    }
+                                    const blob = new Blob([bytes], { type: 'application/sql' });
+                                    
+                                    // Crear y hacer clic en el enlace de descarga
+                                    const link = document.createElement('a');
+                                    link.href = window.URL.createObjectURL(blob);
+                                    link.download = data.filename;
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: '¡Éxito!',
+                                        text: data.message,
+                                        confirmButtonColor: '#f27c1f',
+                                        timer: 3000
+                                    });
+                                } else {
+                                    throw new Error(data.error);
+                                }
+                            })
+                            .catch(error => {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: error.message || 'Hubo un error al generar el backup',
+                                    confirmButtonColor: '#f27c1f',
+                                    confirmButtonText: 'Aceptar'
+                                });
+                            });
+                    }
+                });
+            }
+        });
+    }
+    </script>
                     <li><a class="logout" href="<?php echo BASE_URL; ?>index.php?action=logout">Cerrar Sesión</a></li>
                 </ul>
             </div>

@@ -5,6 +5,12 @@
     #sidebar {
         background: #1d2a58;
         transition: all 0.3s ease;
+        will-change: margin-left;
+    }
+
+    #main-content {
+        transition: margin-left 0.3s ease;
+        will-change: margin-left;
     }
 
     .sidebar-menu {

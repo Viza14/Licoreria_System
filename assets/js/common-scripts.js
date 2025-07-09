@@ -50,23 +50,27 @@ var Script = function () {
 
     $('.fa-bars').click(function () {
         if ($('#sidebar > ul').is(":visible") === true) {
-            $('#main-content').css({
-                'margin-left': '0px'
-            });
             $('#sidebar').css({
                 'margin-left': '-210px'
             });
-            $('#sidebar > ul').hide();
-            $("#container").addClass("sidebar-closed");
+            setTimeout(function() {
+                $('#main-content').css({
+                    'margin-left': '0px'
+                });
+                $('#sidebar > ul').hide();
+                $("#container").addClass("sidebar-closed");
+            }, 300);
         } else {
-            $('#main-content').css({
-                'margin-left': '210px'
-            });
-            $('#sidebar > ul').show();
             $('#sidebar').css({
                 'margin-left': '0'
             });
-            $("#container").removeClass("sidebar-closed");
+            $('#sidebar > ul').show();
+            setTimeout(function() {
+                $('#main-content').css({
+                    'margin-left': '210px'
+                });
+                $("#container").removeClass("sidebar-closed");
+            }, 50);
         }
     });
 

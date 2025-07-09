@@ -78,6 +78,7 @@
 │       └── style.css
 ├── config/
 │   └── database.php
+├── backups/
 ├── controllers/
 │   ├── AuthController.php
 │   ├── CategoriaController.php
@@ -87,6 +88,7 @@
 │   ├── ProductoController.php
 │   ├── ProductoProveedorController.php
 │   ├── ProveedorController.php
+│   ├── BackupController.php
 │   ├── ReporteController.php
 │   ├── StockLimiteController.php
 │   ├── TipoCategoriaController.php

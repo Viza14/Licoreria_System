@@ -49,7 +49,8 @@
 </section>
 
 <!-- js placed at the end of the document so the pages load faster -->
-<script src="<?php echo BASE_URL; ?>assets/js/jquery.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="<?php echo BASE_URL; ?>assets/js/bootstrap.min.js"></script>
 <script class="include" type="text/javascript" src="<?php echo BASE_URL; ?>assets/js/jquery.dcjqaccordion.2.7.js"></script>
 <script src="<?php echo BASE_URL; ?>assets/js/jquery.scrollTo.min.js"></script>

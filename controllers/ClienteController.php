@@ -9,18 +9,84 @@ class ClienteController
         $this->model = new ClienteModel();
     }
 
+    private function checkSession()
+    {
+        if (!isset($_SESSION['user_id'])) {
+            header("Location: " . BASE_URL . "index.php?action=login");
+            exit();
+        }
+    }
+
+    private function redirect($action)
+    {
+        header("Location: " . BASE_URL . "index.php?action=" . $action);
+        exit();
+    }
+
+    private function loadView($view, $data = [])
+    {
+        if (!isset($_SESSION['user_id'])) {
+            $this->redirect('login');
+            return;
+        }
+
+        if (headers_sent($file, $line)) {
+            error_log("Headers already sent in $file on line $line");
+            return;
+        }
+
+        ob_start();
+        try {
+            extract($data);
+            require_once ROOT_PATH . 'views/layouts/header.php';
+            require_once ROOT_PATH . 'views/layouts/sidebar.php';
+            require_once ROOT_PATH . 'views/' . $view . '.php';
+            require_once ROOT_PATH . 'views/layouts/footer.php';
+            ob_end_flush();
+        } catch (Exception $e) {
+            ob_end_clean();
+            error_log("Error al cargar la vista: " . $e->getMessage());
+            $_SESSION['error'] = [
+                'title' => 'Error',
+                'text' => 'Error al cargar la página. Por favor, intente nuevamente.',
+                'icon' => 'error'
+            ];
+            $this->redirect('dashboard');
+        }
+    }
+
     public function index()
     {
         $this->checkSession();
-        $clientes = $this->model->obtenerTodosClientes();
-        $this->loadView('clientes/index', ['clientes' => $clientes]);
+        try {
+            $clientes = $this->model->obtenerTodosClientes();
+            if ($clientes === false) {
+                throw new Exception('Error al obtener la lista de clientes');
+            }
+            $this->loadView('clientes/index', [
+                'clientes' => $clientes,
+                'pageTitle' => 'Gestión de Clientes',
+                'user_rol' => $_SESSION['user_rol'] ?? null
+            ]);
+        } catch (Exception $e) {
+            error_log("Error en index: " . $e->getMessage());
+            $_SESSION['error'] = [
+                'title' => 'Error',
+                'text' => 'Error al cargar la lista de clientes. Por favor, intente nuevamente.',
+                'icon' => 'error'
+            ];
+            $this->redirect('dashboard');
+        }
     }
 
     public function crear()
     {
         $this->checkSession();
         $simbolos = $this->model->obtenerSimbolosCedula();
-        $this->loadView('clientes/crear', ['simbolos' => $simbolos]);
+        $this->loadView('clientes/crear', [
+            'simbolos' => $simbolos,
+            'pageTitle' => 'Crear Cliente'
+        ]);
     }
     
    public function guardar()
@@ -166,7 +232,8 @@ class ClienteController
         $simbolos = $this->model->obtenerSimbolosCedula();
         $this->loadView('clientes/editar', [
             'cliente' => $cliente,
-            'simbolos' => $simbolos
+            'simbolos' => $simbolos,
+            'pageTitle' => 'Editar Cliente'
         ]);
     }
     public function actualizar($cedula)
@@ -244,18 +311,44 @@ public function cambiarEstado($cedula)
 {
     $this->checkSession();
 
-    $cliente = $this->model->obtenerClientePorCedula($cedula);
-    if (!$cliente) {
+    if (!isset($_SESSION['user_rol']) || $_SESSION['user_rol'] == 2) {
         $_SESSION['error'] = [
             'title' => 'Error',
-            'text' => 'Cliente no encontrado',
+            'text' => 'No tiene permisos para realizar esta acción',
             'icon' => 'error'
         ];
         $this->redirect('clientes');
         return;
     }
 
-    $nuevoEstado = $cliente['id_estatus'] == 1 ? 2 : 1; // Alternar entre 1 (Activo) y 2 (Inactivo)
+    try {
+        $cliente = $this->model->obtenerClientePorCedula($cedula);
+        if (!$cliente) {
+            throw new Exception('Cliente no encontrado');
+        }
+
+        $nuevoEstado = $cliente['id_estatus'] == 1 ? 2 : 1;
+        $estadoTexto = $nuevoEstado == 1 ? 'activado' : 'desactivado';
+
+        if ($this->model->cambiarEstado($cedula, $nuevoEstado)) {
+            $_SESSION['mensaje'] = [
+                'title' => 'Éxito',
+                'text' => "Cliente $estadoTexto correctamente",
+                'icon' => 'success'
+            ];
+        } else {
+            throw new Exception('Error al cambiar el estado: ' . implode(', ', $this->model->getErrors()));
+        }
+    } catch (Exception $e) {
+        error_log("Error en cambiarEstado: " . $e->getMessage());
+        $_SESSION['error'] = [
+            'title' => 'Error',
+            'text' => $e->getMessage(),
+            'icon' => 'error'
+        ];
+    }
+
+    $this->redirect('clientes');
     $estadoTexto = $nuevoEstado == 1 ? 'activado' : 'desactivado';
 
     if ($this->model->cambiarEstado($cedula, $nuevoEstado)) {
@@ -275,31 +368,5 @@ public function cambiarEstado($cedula)
     $this->redirect('clientes');
 }
 
-    // Métodos auxiliares
-    private function checkSession()
-    {
-        if (!isset($_SESSION['user_id'])) {
-            $_SESSION['error'] = [
-                'title' => 'Acceso denegado',
-                'text' => 'Debe iniciar sesión para acceder a esta página',
-                'icon' => 'error'
-            ];
-            $this->redirect('login');
-        }
-    }
-
-    private function redirect($action)
-    {
-        header("Location: " . BASE_URL . "index.php?action=$action");
-        exit();
-    }
-
-    private function loadView($view, $data = [])
-    {
-        extract($data);
-        require ROOT_PATH . 'views/layouts/header.php';
-        require ROOT_PATH . 'views/layouts/sidebar.php';
-        require ROOT_PATH . 'views/' . $view . '.php';
-        require ROOT_PATH . 'views/layouts/footer.php';
-    }
+   
 }

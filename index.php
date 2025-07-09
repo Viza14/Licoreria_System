@@ -23,6 +23,7 @@ require_once ROOT_PATH . 'controllers/StockLimiteController.php';
 require_once ROOT_PATH . 'controllers/ReporteController.php';
 require_once ROOT_PATH . 'models/VentaModel.php';
 require_once ROOT_PATH . 'controllers/VentaController.php';
+require_once ROOT_PATH . 'controllers/BackupController.php';
 // Cargar helpers
 require_once ROOT_PATH . 'helpers/notifications.php';
 
@@ -170,6 +171,10 @@ try {
             break;
 
         case 'clientes':
+            if (!isset($_SESSION['user_id'])) {
+                header("Location: " . BASE_URL . "index.php?action=login");
+                exit();
+            }
             $controller = new ClienteController();
             $method = $_GET['method'] ?? 'index';
             $param = $_GET['cedula'] ?? null;
@@ -335,6 +340,18 @@ try {
                     $controller->index();
                 }
                 break;
+
+        case 'backup':
+            if (!isset($_SESSION['user_id'])) {
+                header("Location: " . BASE_URL . "index.php?action=login");
+                exit();
+            }
+            $controller = new BackupController();
+            $method = $_GET['method'] ?? 'index';
+            if ($method === 'generarBackup') {
+                $controller->generarBackup();
+            }
+            break;
 
         case 'ventas':
             if (!isset($_SESSION['user_id'])) {
