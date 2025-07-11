@@ -75,6 +75,38 @@
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
+
+                        <?php if ($total_paginas > 1): ?>
+                            <div class="text-center">
+                                <ul class="pagination">
+                                    <?php
+                                    // Construir la URL base con los filtros actuales
+                                    $urlBase = BASE_URL . "index.php?action=reportes&method=detalleVentas";
+                                    if (!empty($filtros)) {
+                                        $urlBase .= "&" . http_build_query(['filtros' => $filtros]);
+                                    }
+                                    ?>
+
+                                    <!-- Botón Anterior -->
+                                    <li class="<?= $pagina_actual <= 1 ? 'disabled' : '' ?>">
+                                        <a href="<?= $pagina_actual > 1 ? $urlBase . '&pagina=' . ($pagina_actual - 1) : '#' ?>">&laquo;</a>
+                                    </li>
+
+                                    <!-- Números de página -->
+                                    <?php for ($i = 1; $i <= $total_paginas; $i++): ?>
+                                        <li class="<?= $i == $pagina_actual ? 'active' : '' ?>">
+                                            <a href="<?= $urlBase . '&pagina=' . $i ?>"><?= $i ?></a>
+                                        </li>
+                                    <?php endfor; ?>
+
+                                    <!-- Botón Siguiente -->
+                                    <li class="<?= $pagina_actual >= $total_paginas ? 'disabled' : '' ?>">
+                                        <a href="<?= $pagina_actual < $total_paginas ? $urlBase . '&pagina=' . ($pagina_actual + 1) : '#' ?>">&raquo;</a>
+                                    </li>
+                                </ul>
+                                <p class="text-muted">Mostrando página <?= $pagina_actual ?> de <?= $total_paginas ?> (<?= $total_registros ?> registros en total)</p>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </section>
             </div>

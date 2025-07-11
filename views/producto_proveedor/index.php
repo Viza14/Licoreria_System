@@ -79,6 +79,37 @@
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
+
+                        <?php if ($total_paginas > 1): ?>
+                        <div class="text-center">
+                            <div class="mb-2">
+                                Mostrando <?= count($relaciones) ?> de <?= $total_registros ?> registros
+                            </div>
+                            <ul class="pagination justify-content-center">
+                                <?php if ($pagina_actual > 1): ?>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?action=producto-proveedor&pagina=<?= $pagina_actual - 1 ?>">
+                                            <i class="fa fa-angle-left"></i> Anterior
+                                        </a>
+                                    </li>
+                                <?php endif; ?>
+
+                                <?php for ($i = 1; $i <= $total_paginas; $i++): ?>
+                                    <li class="page-item <?= $i === $pagina_actual ? 'active' : '' ?>">
+                                        <a class="page-link" href="?action=producto-proveedor&pagina=<?= $i ?>"><?= $i ?></a>
+                                    </li>
+                                <?php endfor; ?>
+
+                                <?php if ($pagina_actual < $total_paginas): ?>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?action=producto-proveedor&pagina=<?= $pagina_actual + 1 ?>">
+                                            Siguiente <i class="fa fa-angle-right"></i>
+                                        </a>
+                                    </li>
+                                <?php endif; ?>
+                            </ul>
+                        </div>
+                        <?php endif; ?>
                     </div>
                 </section>
             </div>

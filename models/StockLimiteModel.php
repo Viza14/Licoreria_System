@@ -25,17 +25,39 @@ class StockLimiteModel
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    public function obtenerTodosLimites()
+    public function obtenerTodosLimites($pagina = 1, $por_pagina = 10)
     {
+        // Calcular el offset
+        $offset = ($pagina - 1) * $por_pagina;
+
+        // Consulta para obtener el total de registros
+        $queryTotal = "SELECT COUNT(*) as total FROM stock_limites sl
+                       JOIN producto p ON sl.id_producto = p.id
+                       JOIN usuarios u ON sl.id_usuario = u.id";
+        $stmtTotal = $this->db->prepare($queryTotal);
+        $stmtTotal->execute();
+        $total = $stmtTotal->fetch(PDO::FETCH_ASSOC)['total'];
+
+        // Consulta principal con paginación
         $query = "SELECT sl.*, p.descripcion as producto, p.cantidad,
                   CONCAT(u.nombres, ' ', u.apellidos) as usuario
                   FROM stock_limites sl
                   JOIN producto p ON sl.id_producto = p.id
                   JOIN usuarios u ON sl.id_usuario = u.id
-                  ORDER BY p.descripcion";
+                  ORDER BY p.descripcion
+                  LIMIT :por_pagina OFFSET :offset";
+        
         $stmt = $this->db->prepare($query);
+        $stmt->bindValue(':por_pagina', $por_pagina, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return [
+            'limites' => $stmt->fetchAll(PDO::FETCH_ASSOC),
+            'total_registros' => $total,
+            'total_paginas' => ceil($total / $por_pagina),
+            'pagina_actual' => $pagina
+        ];
     }
 
     public function guardarLimites($data)

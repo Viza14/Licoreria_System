@@ -16,18 +16,54 @@ class ProductoProveedorModel
         return $this->errors;
     }
 
-    public function obtenerTodasRelaciones()
+    public function obtenerTodasRelaciones($pagina = 1, $por_pagina = 10)
     {
-        $query = "SELECT pp.*, p.descripcion as producto, pr.nombre as proveedor, 
-                  sc.nombre as simbolo_proveedor, e.nombre as estatus
-                  FROM proveedor_producto pp
-                  JOIN producto p ON pp.id_producto = p.id
-                  JOIN proveedores pr ON pp.cedula_proveedor = pr.cedula
-                  JOIN simbolos_cedula sc ON pr.id_simbolo_cedula = sc.id
-                  JOIN estatus e ON pp.id_estatus = e.id";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            // Obtener el total de registros
+            $queryCount = "SELECT COUNT(*) FROM proveedor_producto";
+            $stmtCount = $this->db->prepare($queryCount);
+            $stmtCount->execute();
+            $total_registros = $stmtCount->fetchColumn();
+            
+            // Calcular el total de páginas
+            $total_paginas = ceil($total_registros / $por_pagina);
+            
+            // Asegurar que la página actual es válida
+            $pagina = max(1, min($pagina, $total_paginas));
+            
+            // Calcular el offset
+            $offset = ($pagina - 1) * $por_pagina;
+            
+            // Consulta principal con paginación
+            $query = "SELECT pp.*, p.descripcion as producto, pr.nombre as proveedor, 
+                      sc.nombre as simbolo_proveedor, e.nombre as estatus
+                      FROM proveedor_producto pp
+                      JOIN producto p ON pp.id_producto = p.id
+                      JOIN proveedores pr ON pp.cedula_proveedor = pr.cedula
+                      JOIN simbolos_cedula sc ON pr.id_simbolo_cedula = sc.id
+                      JOIN estatus e ON pp.id_estatus = e.id
+                      LIMIT :limit OFFSET :offset";
+            
+            $stmt = $this->db->prepare($query);
+            $stmt->bindValue(':limit', $por_pagina, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+            $stmt->execute();
+            
+            return [
+                'datos' => $stmt->fetchAll(PDO::FETCH_ASSOC),
+                'total_registros' => $total_registros,
+                'total_paginas' => $total_paginas,
+                'pagina_actual' => $pagina
+            ];
+        } catch (PDOException $e) {
+            $this->errors[] = "Error al obtener las relaciones: " . $e->getMessage();
+            return [
+                'datos' => [],
+                'total_registros' => 0,
+                'total_paginas' => 1,
+                'pagina_actual' => 1
+            ];
+        }
     }
 
     public function obtenerRelacionPorId($id)

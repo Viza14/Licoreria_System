@@ -12,8 +12,20 @@ class TipoCategoriaController
     public function index()
     {
         $this->checkSession();
-        $tipos = $this->model->obtenerTodosTiposCategoria();
-        $this->loadView('tipos_categoria/index', ['tipos' => $tipos]);
+        
+        // Obtener parámetros de paginación
+        $pagina = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
+        $por_pagina = 10;
+
+        // Obtener datos paginados
+        $resultado = $this->model->obtenerTodosTiposCategoria($pagina, $por_pagina);
+        
+        $this->loadView('tipos_categoria/index', [
+            'tipos' => $resultado['tipos'],
+            'pagina_actual' => $resultado['pagina_actual'],
+            'total_paginas' => $resultado['total_paginas'],
+            'total_registros' => $resultado['total_registros']
+        ]);
     }
 
     public function crear()

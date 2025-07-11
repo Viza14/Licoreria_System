@@ -79,6 +79,7 @@
 ├── config/
 │   └── database.php
 ├── backups/
+│   └── backup_2025-07-09_00-17-45.sql
 ├── controllers/
 │   ├── AuthController.php
 │   ├── CategoriaController.php
@@ -94,9 +95,15 @@
 │   ├── TipoCategoriaController.php
 │   ├── UsuarioController.php
 │   └── VentaController.php
+├── facturas/
+│   └── factura_.pdf
 ├── helpers/
 │   ├── functions.php
 │   └── notifications.php
+├── lib/
+│   └── fpdf/
+│       ├── factura.php
+│       └── font/
 ├── models/
 │   ├── CategoriaModel.php
 │   ├── ClienteModel.php
@@ -110,6 +117,33 @@
 │   ├── TipoCategoriaModel.php
 │   ├── UsuarioModel.php
 │   └── VentaModel.php
+├── reportes/
+├── vendor/
+│   ├── autoload.php
+│   ├── composer/
+│   │   ├── ClassLoader.php
+│   │   ├── InstalledVersions.php
+│   │   ├── LICENSE
+│   │   ├── autoload_classmap.php
+│   │   ├── autoload_namespaces.php
+│   │   ├── autoload_psr4.php
+│   │   ├── autoload_real.php
+│   │   ├── autoload_static.php
+│   │   ├── installed.json
+│   │   ├── installed.php
+│   │   └── platform_check.php
+│   ├── dompdf/
+│   │   ├── dompdf/
+│   │   ├── php-font-lib/
+│   │   └── php-svg-lib/
+│   ├── masterminds/
+│   │   └── html5/
+│   ├── sabberworm/
+│   │   └── php-css-parser/
+│   ├── setasign/
+│   │   └── fpdf/
+│   └── tecnickcom/
+│       └── tcpdf/
 ├── views/
 │   ├── layouts/
 │   │   ├── header.php
@@ -179,5 +213,7 @@
 │   │   └── 404.php
 │   └── dashboard.php
 ├── .htaccess
+├── composer.json
+├── composer.lock
 ├── index.php
 └── licoreria.sql

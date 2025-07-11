@@ -16,9 +16,18 @@ class ReporteModel
         return $this->errors;
     }
 
-    public function generarReporteInventario($filtros = [])
+    public function generarReporteInventario($filtros = [], $pagina = 1, $por_pagina = 10)
     {
         try {
+            // Query base para contar el total de registros
+            $queryCount = "SELECT COUNT(*) as total
+                          FROM producto p
+                          JOIN categorias c ON p.id_categoria = c.id
+                          JOIN tipos_categoria tc ON c.id_tipo_categoria = tc.id
+                          LEFT JOIN stock_limites sl ON p.id = sl.id_producto
+                          WHERE p.id_estatus = 1";
+
+            // Query principal para los datos
             $query = "SELECT 
                         p.id,
                         p.descripcion as producto,
@@ -44,13 +53,15 @@ class ReporteModel
 
             $params = [];
 
-            // Filtros
+            // Aplicar filtros a ambas queries
             if (!empty($filtros['id_categoria'])) {
+                $queryCount .= " AND p.id_categoria = :id_categoria";
                 $query .= " AND p.id_categoria = :id_categoria";
                 $params[':id_categoria'] = $filtros['id_categoria'];
             }
 
             if (!empty($filtros['id_tipo_categoria'])) {
+                $queryCount .= " AND c.id_tipo_categoria = :id_tipo_categoria";
                 $query .= " AND c.id_tipo_categoria = :id_tipo_categoria";
                 $params[':id_tipo_categoria'] = $filtros['id_tipo_categoria'];
             }
@@ -58,26 +69,55 @@ class ReporteModel
             if (!empty($filtros['estado_stock'])) {
                 switch ($filtros['estado_stock']) {
                     case 'CRITICO':
+                        $queryCount .= " AND p.cantidad <= sl.stock_minimo";
                         $query .= " AND p.cantidad <= sl.stock_minimo";
                         break;
                     case 'BAJO':
+                        $queryCount .= " AND p.cantidad > sl.stock_minimo AND p.cantidad <= (sl.stock_minimo * 1.5)";
                         $query .= " AND p.cantidad > sl.stock_minimo AND p.cantidad <= (sl.stock_minimo * 1.5)";
                         break;
                     case 'EXCESO':
+                        $queryCount .= " AND p.cantidad >= sl.stock_maximo";
                         $query .= " AND p.cantidad >= sl.stock_maximo";
                         break;
                     case 'NORMAL':
+                        $queryCount .= " AND p.cantidad > (sl.stock_minimo * 1.5) AND p.cantidad < sl.stock_maximo";
                         $query .= " AND p.cantidad > (sl.stock_minimo * 1.5) AND p.cantidad < sl.stock_maximo";
                         break;
                 }
             }
 
-            $query .= " ORDER BY p.descripcion";
+            // Ejecutar query para contar registros
+            $stmtCount = $this->db->prepare($queryCount);
+            $stmtCount->execute($params);
+            $totalRegistros = $stmtCount->fetch(PDO::FETCH_ASSOC)['total'];
+
+            // Calcular total de páginas
+            $totalPaginas = ceil($totalRegistros / $por_pagina);
+            $pagina = max(1, min($pagina, $totalPaginas));
+            $offset = ($pagina - 1) * $por_pagina;
+
+            // Agregar paginación a la query principal
+            $query .= " ORDER BY p.descripcion LIMIT :offset, :por_pagina";
+            $params[':offset'] = $offset;
+            $params[':por_pagina'] = $por_pagina;
 
             $stmt = $this->db->prepare($query);
-            $stmt->execute($params);
+            foreach ($params as $param => $value) {
+                if ($param === ':offset' || $param === ':por_pagina') {
+                    $stmt->bindValue($param, $value, PDO::PARAM_INT);
+                } else {
+                    $stmt->bindValue($param, $value);
+                }
+            }
+            $stmt->execute();
 
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            return [
+                'datos' => $stmt->fetchAll(PDO::FETCH_ASSOC),
+                'total_registros' => $totalRegistros,
+                'total_paginas' => $totalPaginas,
+                'pagina_actual' => $pagina
+            ];
         } catch (PDOException $e) {
             $this->errors[] = "Error al generar reporte de inventario: " . $e->getMessage();
             return false;
@@ -138,9 +178,19 @@ class ReporteModel
         }
     }
 
-    public function generarDetalleVentas($filtros = [])
+    public function generarDetalleVentas($filtros = [], $pagina = 1, $por_pagina = 10)
     {
         try {
+            // Query base para contar el total de registros
+            $queryCount = "SELECT COUNT(*) as total
+                          FROM ventas v
+                          JOIN detalle_venta dv ON v.id = dv.id_venta
+                          JOIN producto p ON dv.id_producto = p.id
+                          JOIN clientes c ON v.cedula_cliente = c.cedula
+                          JOIN usuarios u ON v.id_usuario = u.id
+                          WHERE v.id_estatus = 1";
+
+            // Query para obtener los datos
             $query = "SELECT 
                         v.id as id_venta,
                         v.fecha,
@@ -159,28 +209,56 @@ class ReporteModel
 
             $params = [];
 
-            // Filtros
+            // Aplicar filtros a ambas queries
             if (!empty($filtros['fecha_inicio'])) {
+                $queryCount .= " AND v.fecha >= :fecha_inicio";
                 $query .= " AND v.fecha >= :fecha_inicio";
                 $params[':fecha_inicio'] = $filtros['fecha_inicio'];
             }
 
             if (!empty($filtros['fecha_fin'])) {
+                $queryCount .= " AND v.fecha <= :fecha_fin";
                 $query .= " AND v.fecha <= :fecha_fin";
                 $params[':fecha_fin'] = $filtros['fecha_fin'];
             }
 
             if (!empty($filtros['id_producto'])) {
+                $queryCount .= " AND dv.id_producto = :id_producto";
                 $query .= " AND dv.id_producto = :id_producto";
                 $params[':id_producto'] = $filtros['id_producto'];
             }
 
-            $query .= " ORDER BY v.fecha DESC, p.descripcion";
+            // Ejecutar query para contar registros
+            $stmtCount = $this->db->prepare($queryCount);
+            $stmtCount->execute($params);
+            $totalRegistros = $stmtCount->fetch(PDO::FETCH_ASSOC)['total'];
+
+            // Calcular total de páginas
+            $totalPaginas = ceil($totalRegistros / $por_pagina);
+            $pagina = max(1, min($pagina, $totalPaginas));
+            $offset = ($pagina - 1) * $por_pagina;
+
+            // Agregar paginación a la query principal
+            $query .= " ORDER BY v.fecha DESC, p.descripcion LIMIT :offset, :por_pagina";
+            $params[':offset'] = $offset;
+            $params[':por_pagina'] = $por_pagina;
 
             $stmt = $this->db->prepare($query);
-            $stmt->execute($params);
+            foreach ($params as $param => $value) {
+                if ($param === ':offset' || $param === ':por_pagina') {
+                    $stmt->bindValue($param, $value, PDO::PARAM_INT);
+                } else {
+                    $stmt->bindValue($param, $value);
+                }
+            }
+            $stmt->execute();
 
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            return [
+                'datos' => $stmt->fetchAll(PDO::FETCH_ASSOC),
+                'total_registros' => $totalRegistros,
+                'total_paginas' => $totalPaginas,
+                'pagina_actual' => $pagina
+            ];
         } catch (PDOException $e) {
             $this->errors[] = "Error al generar detalle de ventas: " . $e->getMessage();
             return false;

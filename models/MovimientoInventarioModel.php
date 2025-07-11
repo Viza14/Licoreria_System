@@ -57,11 +57,11 @@ class MovimientoInventarioModel
         if (!empty($filtros['estados'])) {
             $estadosConditions = [];
             foreach ($filtros['estados'] as $estado) {
-                if ($estado === 'inactivo') {
+                if ($estado === 'inactivo' || $estado === '2') {
                     $estadosConditions[] = "mi.id_estatus = 2";
                 } elseif ($estado === 'ajustado') {
                     $estadosConditions[] = "EXISTS (SELECT 1 FROM movimientos_inventario WHERE id_movimiento_original = mi.id)";
-                } elseif ($estado === 'activo') {
+                } elseif ($estado === 'activo' || $estado === '1') {
                     $estadosConditions[] = "mi.id_estatus = 1 AND NOT EXISTS (SELECT 1 FROM movimientos_inventario WHERE id_movimiento_original = mi.id)";
                 }
             }
@@ -415,48 +415,109 @@ class MovimientoInventarioModel
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function obtenerResumenMovimientos($filtros = [])
+    public function obtenerResumenGeneral($filtros = [])
     {
-        $query = "SELECT 
-                    p.id,
-                    p.descripcion as producto,
-                    c.nombre as categoria,
-                    SUM(CASE WHEN mi.tipo_movimiento = 'ENTRADA' AND mi.id_estatus = 1 THEN mi.cantidad ELSE 0 END) as entradas,
-                    SUM(CASE WHEN mi.tipo_movimiento = 'SALIDA' AND mi.id_estatus = 1 THEN mi.cantidad ELSE 0 END) as salidas,
-                    p.cantidad as stock_actual
-                  FROM producto p
-                  JOIN categorias c ON p.id_categoria = c.id
-                  LEFT JOIN movimientos_inventario mi ON p.id = mi.id_producto";
-        
         $where = [];
         $params = [];
-        
-        // Filtros opcionales
+
         if (!empty($filtros['fecha_inicio'])) {
             $where[] = "mi.fecha_movimiento >= :fecha_inicio";
             $params[':fecha_inicio'] = $filtros['fecha_inicio'];
         }
-        
+
         if (!empty($filtros['fecha_fin'])) {
             $where[] = "mi.fecha_movimiento <= :fecha_fin";
             $params[':fecha_fin'] = $filtros['fecha_fin'];
         }
-        
-        if (!empty($filtros['id_producto'])) {
-            $where[] = "p.id = :id_producto";
-            $params[':id_producto'] = $filtros['id_producto'];
+
+        if (!empty($filtros['categoria'])) {
+            $where[] = "p.id_categoria = :categoria";
+            $params[':categoria'] = $filtros['categoria'];
         }
-        
-        if (!empty($where)) {
-            $query .= " WHERE " . implode(" AND ", $where);
-        }
-        
-        $query .= " GROUP BY p.id, p.descripcion, c.nombre, p.cantidad
-                    ORDER BY p.descripcion";
-        
+
+        $whereClause = !empty($where) ? " WHERE " . implode(" AND ", $where) : "";
+
+        // Obtener totales
+        $query = "SELECT 
+                    COUNT(DISTINCT p.id) as total_productos,
+                    SUM(CASE WHEN mi.tipo_movimiento = 'ENTRADA' AND mi.id_estatus = 1 THEN mi.cantidad ELSE 0 END) as total_entradas,
+                    SUM(CASE WHEN mi.tipo_movimiento = 'SALIDA' AND mi.id_estatus = 1 THEN mi.cantidad ELSE 0 END) as total_salidas,
+                    SUM(p.cantidad * p.precio) as valor_inventario
+                  FROM producto p
+                  LEFT JOIN movimientos_inventario mi ON p.id = mi.id_producto
+                  LEFT JOIN categorias c ON p.id_categoria = c.id
+                  " . $whereClause;
+
         $stmt = $this->db->prepare($query);
         $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function obtenerResumenProductos($filtros = [], $pagina = 1, $por_pagina = 10)
+    {
+        $offset = ($pagina - 1) * $por_pagina;
+        $where = [];
+        $params = [];
+
+        if (!empty($filtros['fecha_inicio'])) {
+            $where[] = "mi.fecha_movimiento >= :fecha_inicio";
+            $params[':fecha_inicio'] = $filtros['fecha_inicio'];
+        }
+
+        if (!empty($filtros['fecha_fin'])) {
+            $where[] = "mi.fecha_movimiento <= :fecha_fin";
+            $params[':fecha_fin'] = $filtros['fecha_fin'];
+        }
+
+        if (!empty($filtros['categoria'])) {
+            $where[] = "p.id_categoria = :categoria";
+            $params[':categoria'] = $filtros['categoria'];
+        }
+
+        $whereClause = !empty($where) ? " WHERE " . implode(" AND ", $where) : "";
+
+        // Obtener total de registros
+        $queryTotal = "SELECT COUNT(DISTINCT p.id) as total
+                      FROM producto p
+                      LEFT JOIN movimientos_inventario mi ON p.id = mi.id_producto
+                      LEFT JOIN categorias c ON p.id_categoria = c.id
+                      " . $whereClause;
+
+        $stmtTotal = $this->db->prepare($queryTotal);
+        $stmtTotal->execute($params);
+        $total = $stmtTotal->fetch(PDO::FETCH_ASSOC)['total'];
+
+        // Obtener productos paginados
+        $query = "SELECT 
+                    p.id,
+                    p.descripcion,
+                    c.nombre as categoria,
+                    p.cantidad as stock_actual,
+                    COALESCE(SUM(CASE WHEN mi.tipo_movimiento = 'ENTRADA' AND mi.id_estatus = 1 THEN mi.cantidad ELSE 0 END), 0) as entradas,
+                    COALESCE(SUM(CASE WHEN mi.tipo_movimiento = 'SALIDA' AND mi.id_estatus = 1 THEN mi.cantidad ELSE 0 END), 0) as salidas,
+                    (p.cantidad * p.precio) as valor_total
+                  FROM producto p
+                  LEFT JOIN movimientos_inventario mi ON p.id = mi.id_producto
+                  LEFT JOIN categorias c ON p.id_categoria = c.id
+                  " . $whereClause . "
+                  GROUP BY p.id, p.descripcion, c.nombre, p.cantidad, p.precio
+                  ORDER BY p.descripcion ASC
+                  LIMIT :limit OFFSET :offset";
+
+        $stmt = $this->db->prepare($query);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        $stmt->bindValue(':limit', $por_pagina, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return [
+            'productos' => $stmt->fetchAll(PDO::FETCH_ASSOC),
+            'total' => $total,
+            'pagina_actual' => $pagina,
+            'total_paginas' => ceil($total / $por_pagina)
+        ];
     }
 
     public function obtenerVentaParaModificacion($id_venta)

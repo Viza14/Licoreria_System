@@ -12,11 +12,21 @@ class UsuarioController
     public function index()
     {
         $this->checkSession();
-        $usuarios = $this->model->obtenerTodosUsuarios();
-        $roles = $this->model->obtenerRoles(); // Agregado para los filtros
+        
+        // Obtener parámetros de paginación
+        $pagina = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
+        $por_pagina = 10;
+
+        // Obtener usuarios paginados
+        $resultado = $this->model->obtenerTodosUsuarios($pagina, $por_pagina);
+        $roles = $this->model->obtenerRoles(); // Para los filtros
+        
         $this->loadView('usuarios/index', [
-            'usuarios' => $usuarios,
-            'roles' => $roles // Pasamos roles a la vista para los filtros
+            'usuarios' => $resultado['usuarios'],
+            'pagina_actual' => $resultado['pagina_actual'],
+            'total_paginas' => $resultado['total_paginas'],
+            'total_registros' => $resultado['total_registros'],
+            'roles' => $roles // Para los filtros
         ]);
     }
 

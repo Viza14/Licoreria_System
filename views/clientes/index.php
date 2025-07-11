@@ -22,7 +22,7 @@
                             <button class="btn btn-info btn-xs" data-toggle="modal" data-target="#filtrosModal">
                                 <i class="fa fa-filter"></i> Filtros
                             </button>
-                            <a href="<?= BASE_URL ?>index.php?action=clientes&method=crear" class="btn btn-success btn-xs">
+                            <a href="<?= BASE_URL ?>index.php?action=clientes&method=crear" class="btn btn-primary btn-xs">
                                 <i class="fa fa-plus"></i> Nuevo Cliente
                             </a>
                         </div>
@@ -31,7 +31,7 @@
                         <div class="form-group">
                             <div class="input-group">
                                 <span class="input-group-addon"><i class="fa fa-search"></i></span>
-                                <input type="text" id="busqueda" class="form-control" placeholder="Buscar por cédula, nombre, apellido o teléfono...">
+                                <input type="text" id="busqueda" class="form-control" placeholder="Buscar por nombre, cédula, teléfono...">
                             </div>
                         </div>
 
@@ -54,7 +54,7 @@
                                         <td><?= $cliente['nombres'] . ' ' . $cliente['apellidos'] ?></td>
                                         <td><?= $cliente['telefono'] ?></td>
                                         <td><?= $cliente['direccion'] ?></td>
-                                        <td><?= number_format($this->model->obtenerTotalVentasCliente($cliente['cedula']), 2) ?> Bs</td>
+                                        <td><?= number_format($cliente['total_ventas'] ?? 0, 2) ?> Bs</td>
                                         <td>
                                             <span class="label label-<?= $cliente['id_estatus'] == 1 ? 'success' : 'danger' ?>">
                                                 <?= $cliente['estatus'] ?>
@@ -63,7 +63,7 @@
                                         <td>
                                             <div class="btn-group">
                                                 <a href="<?= BASE_URL ?>index.php?action=clientes&method=mostrar&cedula=<?= $cliente['cedula'] ?>" 
-                                                   class="btn btn-info btn-xs" title="Ver detalles">
+                                                   class="btn btn-success btn-xs" title="Ver detalles">
                                                     <i class="fa fa-eye"></i>
                                                 </a>
                                                 <?php if ($_SESSION['user_rol'] != 2): ?>
@@ -84,6 +84,34 @@
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
+
+                        <?php if ($total_paginas > 1): ?>
+                            <div class="text-center">
+                                <ul class="pagination pagination-sm">
+                                    <?php if ($pagina_actual > 1): ?>
+                                        <li>
+                                            <a href="<?= BASE_URL ?>index.php?action=clientes&method=index&pagina=<?= $pagina_actual - 1 ?>">
+                                                <i class="fa fa-angle-left"></i>
+                                            </a>
+                                        </li>
+                                    <?php endif; ?>
+
+                                    <?php for ($i = 1; $i <= $total_paginas; $i++): ?>
+                                        <li class="<?= $i == $pagina_actual ? 'active' : '' ?>">
+                                            <a href="<?= BASE_URL ?>index.php?action=clientes&method=index&pagina=<?= $i ?>"><?= $i ?></a>
+                                        </li>
+                                    <?php endfor; ?>
+
+                                    <?php if ($pagina_actual < $total_paginas): ?>
+                                        <li>
+                                            <a href="<?= BASE_URL ?>index.php?action=clientes&method=index&pagina=<?= $pagina_actual + 1 ?>">
+                                                <i class="fa fa-angle-right"></i>
+                                            </a>
+                                        </li>
+                                    <?php endif; ?>
+                                </ul>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </section>
             </div>
@@ -132,139 +160,142 @@
 
 <!-- Scripts para manejar la búsqueda, filtros y SweetAlert -->
 <script>
-$(document).ready(function() {
-    // Mensaje cuando no hay resultados
-    const sinResultados = $('<div id="sin-resultados" class="alert alert-warning text-center" style="display: none;">' +
-        '<i class="fa fa-exclamation-circle"></i> No se encontraron clientes que coincidan con la búsqueda</div>');
-    $('.panel-body').append(sinResultados);
+    $(document).ready(function() {
+        // Message when no results found
+        const sinResultados = $('<div id="sin-resultados" class="alert alert-warning text-center" style="display: none;">' +
+            '<i class="fa fa-exclamation-circle"></i> No se encontraron clientes que coincidan con la búsqueda</div>');
+        $('.panel-body').append(sinResultados);
 
-    // Búsqueda en tiempo real
-    $('#busqueda').on('input', function() {
-        const searchValue = $(this).val().trim().toLowerCase();
-        let resultados = 0;
+        // Real-time search
+        $('#busqueda').on('input', function() {
+            const searchValue = $(this).val().trim().toLowerCase();
+            let resultados = 0;
 
-        $('#tablaClientes tbody tr').each(function() {
-            const cedula = $(this).find('td:eq(0)').text().toLowerCase();
-            const nombreCompleto = $(this).find('td:eq(1)').text().toLowerCase();
-            const telefono = $(this).find('td:eq(2)').text().toLowerCase();
+            $('#tablaClientes tbody tr').each(function() {
+                const cedula = $(this).find('td:eq(0)').text().toLowerCase();
+                const nombres = $(this).find('td:eq(1)').text().toLowerCase();
+                const telefono = $(this).find('td:eq(2)').text().toLowerCase();
+                const direccion = $(this).find('td:eq(3)').text().toLowerCase();
 
-            const match = cedula.includes(searchValue) ||
-                nombreCompleto.includes(searchValue) ||
-                telefono.includes(searchValue);
+                const match = cedula.includes(searchValue) ||
+                    nombres.includes(searchValue) ||
+                    telefono.includes(searchValue) ||
+                    direccion.includes(searchValue);
 
-            if (match) {
-                $(this).show();
-                resultados++;
-            } else {
-                $(this).hide();
-            }
-        });
-
-        // Mostrar mensaje si no hay resultados
-        if (resultados === 0 && searchValue.length > 0) {
-            sinResultados.show();
-        } else {
-            sinResultados.hide();
-        }
-    });
-
-    // Filtros avanzados
-    $('#aplicarFiltros').click(function() {
-        const estatus = $('#filtroEstatus').val().toLowerCase();
-        const compras = $('#filtroCompras').val();
-        let resultados = 0;
-
-        $('#tablaClientes tbody tr').each(function() {
-            const estatusCliente = $(this).find('td:eq(5)').text().toLowerCase();
-            const comprasCliente = parseFloat($(this).find('td:eq(4)').text().replace(/[^0-9.]/g, ''));
-
-            // Validar estatus
-            const matchEstatus = estatus === '' || estatusCliente.includes(estatus);
-            
-            // Validar monto de compras
-            let matchCompras = true;
-            if (compras !== '') {
-                switch(compras) {
-                    case 'mayor':
-                        matchCompras = comprasCliente > 1000;
-                        break;
-                    case 'medio':
-                        matchCompras = comprasCliente >= 500 && comprasCliente <= 1000;
-                        break;
-                    case 'menor':
-                        matchCompras = comprasCliente < 500 && comprasCliente > 0;
-                        break;
-                    case 'cero':
-                        matchCompras = comprasCliente === 0;
-                        break;
+                if (match) {
+                    $(this).show();
+                    resultados++;
+                } else {
+                    $(this).hide();
                 }
-            }
+            });
 
-            if (matchEstatus && matchCompras) {
-                $(this).show();
-                resultados++;
+            if (resultados === 0 && searchValue.length > 0) {
+                sinResultados.show();
             } else {
-                $(this).hide();
+                sinResultados.hide();
             }
         });
 
-        // Mostrar mensaje si no hay resultados
-        if (resultados === 0) {
-            sinResultados.show();
-        } else {
+        // Advanced filters
+        $('#aplicarFiltros').click(function() {
+            const estatus = $('#filtroEstatus').val().toLowerCase();
+            const compras = $('#filtroCompras').val();
+            let resultados = 0;
+
+            $('#tablaClientes tbody tr').each(function() {
+                const estatusCliente = $(this).find('td:eq(5)').text().toLowerCase();
+                const comprasCliente = parseFloat($(this).find('td:eq(4)').text());
+
+                let matchEstatus = true;
+                let matchCompras = true;
+
+                if (estatus !== '') {
+                    matchEstatus = estatusCliente.includes(estatus);
+                }
+
+                if (compras !== '') {
+                    switch(compras) {
+                        case 'mayor':
+                            matchCompras = comprasCliente > 1000;
+                            break;
+                        case 'medio':
+                            matchCompras = comprasCliente >= 500 && comprasCliente <= 1000;
+                            break;
+                        case 'menor':
+                            matchCompras = comprasCliente < 500 && comprasCliente > 0;
+                            break;
+                        case 'cero':
+                            matchCompras = comprasCliente === 0;
+                            break;
+                    }
+                }
+
+                if (matchEstatus && matchCompras) {
+                    $(this).show();
+                    resultados++;
+                } else {
+                    $(this).hide();
+                }
+            });
+
+            if (resultados === 0) {
+                sinResultados.show();
+            } else {
+                sinResultados.hide();
+            }
+
+            $('#filtrosModal').modal('hide');
+        });
+
+        $('#limpiarFiltros').click(function() {
+            $('#formFiltros')[0].reset();
+            $('#tablaClientes tbody tr').show();
             sinResultados.hide();
-        }
-
-        $('#filtrosModal').modal('hide');
-    });
-
-    $('#limpiarFiltros').click(function() {
-        $('#formFiltros')[0].reset();
-        $('#tablaClientes tbody tr').show();
-        sinResultados.hide();
-        $('#busqueda').val('').trigger('input');
-    });
-
-    // Manejar cambio de estado
-    $(document).on('click', '.cambiar-estado', function() {
-        const cedula = $(this).data('cedula');
-        const accion = $(this).attr('title').toLowerCase();
-        
-        Swal.fire({
-            title: 'Confirmar',
-            text: `¿Está seguro que desea ${accion} este cliente?`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: `Sí, ${accion}`,
-            cancelButtonText: 'Cancelar'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                window.location.href = `<?= BASE_URL ?>index.php?action=clientes&method=cambiarEstado&cedula=${cedula}`;
-            }
+            $('#busqueda').val('');
         });
+
+        // Change client status
+        $('.cambiar-estado').click(function() {
+            const cedula = $(this).data('cedula');
+            const nuevoEstado = $(this).attr('title') === 'Activar' ? 1 : 2;
+            const mensaje = nuevoEstado === 1 ? 'activar' : 'desactivar';
+
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: `¿Deseas ${mensaje} este cliente?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Sí, confirmar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = `${baseUrl}index.php?action=clientes&method=cambiarEstado&cedula=${cedula}&estado=${nuevoEstado}`;
+                }
+            });
+        });
+
+        // Show session messages with SweetAlert
+        <?php if (isset($_SESSION['mensaje'])): ?>
+            Swal.fire({
+                title: '<?= $_SESSION["mensaje"]["title"] ?>',
+                text: '<?= $_SESSION["mensaje"]["text"] ?>',
+                icon: '<?= $_SESSION["mensaje"]["icon"] ?>',
+                timer: 3000
+            });
+        <?php unset($_SESSION['mensaje']);
+        endif; ?>
+
+        <?php if (isset($_SESSION['error'])): ?>
+            Swal.fire({
+                title: '<?= $_SESSION["error"]["title"] ?>',
+                text: '<?= $_SESSION["error"]["text"] ?>',
+                icon: '<?= $_SESSION["error"]["icon"] ?>'
+            });
+        <?php unset($_SESSION['error']);
+        endif; ?>
     });
-
-    // Mostrar mensajes de sesión con SweetAlert
-    <?php if (isset($_SESSION['mensaje'])): ?>
-        Swal.fire({
-            title: '<?= $_SESSION['mensaje']['title'] ?>',
-            text: '<?= $_SESSION['mensaje']['text'] ?>',
-            icon: '<?= $_SESSION['mensaje']['icon'] ?>',
-            timer: 3000
-        });
-    <?php unset($_SESSION['mensaje']);
-    endif; ?>
-
-    <?php if (isset($_SESSION['error'])): ?>
-        Swal.fire({
-            title: '<?= $_SESSION['error']['title'] ?>',
-            text: '<?= $_SESSION['error']['text'] ?>',
-            icon: '<?= $_SESSION['error']['icon'] ?>'
-        });
-    <?php unset($_SESSION['error']);
-    endif; ?>
-});
 </script>
 <!--main content end-->

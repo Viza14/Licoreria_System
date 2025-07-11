@@ -80,6 +80,34 @@
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
+
+                        <!-- Controles de paginación -->
+                        <?php if ($total_paginas > 1): ?>
+                        <div class="text-center">
+                            <ul class="pagination">
+                                <?php if ($pagina_actual > 1): ?>
+                                    <li>
+                                        <a href="<?= BASE_URL ?>index.php?action=categorias&pagina=<?= $pagina_actual - 1 ?>">&laquo; Anterior</a>
+                                    </li>
+                                <?php endif; ?>
+
+                                <?php for ($i = 1; $i <= $total_paginas; $i++): ?>
+                                    <li class="<?= $i == $pagina_actual ? 'active' : '' ?>">
+                                        <a href="<?= BASE_URL ?>index.php?action=categorias&pagina=<?= $i ?>"><?= $i ?></a>
+                                    </li>
+                                <?php endfor; ?>
+
+                                <?php if ($pagina_actual < $total_paginas): ?>
+                                    <li>
+                                        <a href="<?= BASE_URL ?>index.php?action=categorias&pagina=<?= $pagina_actual + 1 ?>">Siguiente &raquo;</a>
+                                    </li>
+                                <?php endif; ?>
+                            </ul>
+                            <div class="text-muted">
+                                Mostrando <?= count($categorias) ?> de <?= $total_registros ?> registros
+                            </div>
+                        </div>
+                        <?php endif; ?>
                     </div>
                 </section>
             </div>

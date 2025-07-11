@@ -239,9 +239,7 @@ CREATE TABLE `estatus` (
 
 INSERT INTO `estatus` (`id`, `nombre`) VALUES
 (1, 'Activo'),
-(2, 'Inactivo'),
-(3, 'Disponible'),
-(4, 'No disponible');
+(2, 'Inactivo');
 
 -- --------------------------------------------------------
 

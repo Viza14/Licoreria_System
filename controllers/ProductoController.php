@@ -13,13 +13,48 @@ class ProductoController
     public function index()
     {
         $this->checkSession();
-        // Obtener TODOS los productos (activos e inactivos) para la vista principal
-        $productos = $this->model->obtenerTodosProductos(false); // false = mostrar todos
+
+        // Obtener parámetros de paginación y búsqueda
+        $pagina = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
+        $porPagina = isset($_GET['por_pagina']) ? (int)$_GET['por_pagina'] : 10;
+        $termino_busqueda = isset($_GET['busqueda']) ? trim($_GET['busqueda']) : '';
+
+        // Preparar filtros
+        $filtros = [];
+        $filtros_activos = [];
+
+        if (!empty($termino_busqueda)) {
+            $filtros['busqueda'] = $termino_busqueda;
+            $filtros_activos[] = "Búsqueda: {$termino_busqueda}";
+        }
+
+        if (isset($_GET['categoria']) && !empty($_GET['categoria'])) {
+            $filtros['categoria'] = $_GET['categoria'];
+            $filtros_activos[] = "Categoría: {$_GET['categoria']}";
+        }
+
+        if (isset($_GET['estatus']) && !empty($_GET['estatus'])) {
+            $filtros['estatus'] = $_GET['estatus'];
+            $filtros_activos[] = "Estatus: {$_GET['estatus']}";
+        }
+
+        // Obtener productos paginados
+        $resultado = $this->model->obtenerTodosProductos(false, $pagina, $porPagina, $filtros);
         $categorias = $this->model->obtenerCategorias();
-        $this->loadView('productos/index', [
-            'productos' => $productos,
-            'categorias' => $categorias
-        ]);
+
+        // Preparar datos para la vista
+        $datos = [
+            'productos' => $resultado['productos'],
+            'categorias' => $categorias,
+            'total_registros' => $resultado['total_registros'],
+            'pagina_actual' => $resultado['pagina_actual'],
+            'por_pagina' => $resultado['por_pagina'],
+            'total_paginas' => $resultado['total_paginas'],
+            'termino_busqueda' => $termino_busqueda,
+            'filtros_activos' => $filtros_activos
+        ];
+
+        $this->loadView('productos/index', $datos);
     }
     public function crear()
     {

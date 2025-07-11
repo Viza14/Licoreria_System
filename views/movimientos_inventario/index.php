@@ -1,3 +1,6 @@
+<?php
+$total_registros = isset($total_registros) ? $total_registros : count($movimientos);
+?>
 <!--main content start-->
 <section id="main-content">
     <section class="wrapper">
@@ -33,35 +36,11 @@
                         <div class="form-group">
                             <div class="input-group">
                                 <span class="input-group-addon"><i class="fa fa-search"></i></span>
-                                <input type="text" id="busqueda" class="form-control" placeholder="Buscar por producto, usuario..." value="<?= isset($_GET['busqueda']) ? htmlspecialchars($_GET['busqueda']) : '' ?>">
+                                <input type="text" id="busqueda" class="form-control" placeholder="Buscar por producto, usuario..." value="<?= isset($filtros_activos['busqueda']) ? htmlspecialchars($filtros_activos['busqueda']) : '' ?>">
                             </div>
                         </div>
 
-                        <div id="filtros-activos" class="alert alert-info" style="<?= (isset($_GET['busqueda']) || isset($_GET['tipos']) || isset($_GET['estados']) || isset($_GET['fecha_inicio']) || isset($_GET['fecha_fin'])) ? 'display: block;' : 'display: none;' ?> margin-bottom: 10px;">
-                            <i class="fa fa-filter"></i> Filtros activos: <span id="texto-filtros-activos"><?php
-                                $filtros_texto = [];
-                                if (isset($_GET['busqueda'])) {
-                                    $filtros_texto[] = 'Término: "' . htmlspecialchars($_GET['busqueda']) . '"';
-                                }
-                                if (isset($_GET['tipos'])) {
-                                    $filtros_texto[] = 'Tipos: ' . htmlspecialchars($_GET['tipos']);
-                                }
-                                if (isset($_GET['estados'])) {
-                                    $filtros_texto[] = 'Estados: ' . htmlspecialchars($_GET['estados']);
-                                }
-                                if (isset($_GET['fecha_inicio']) || isset($_GET['fecha_fin'])) {
-                                    $filtros_texto[] = 'Fechas: ' . 
-                                        (isset($_GET['fecha_inicio']) ? htmlspecialchars($_GET['fecha_inicio']) : 'Inicio') . ' - ' . 
-                                        (isset($_GET['fecha_fin']) ? htmlspecialchars($_GET['fecha_fin']) : 'Fin');
-                                }
-                                echo implode(' | ', $filtros_texto);
-                            ?></span>
-                            <div class="pull-right">
-                                <strong><i class="fa fa-list"></i> Resultados encontrados: <span id="contador-resultados"><?= count($movimientos) ?></span></strong>
-                            </div>
-                        </div>
-
-                        <div id="sin-resultados" class="alert alert-warning text-center" style="<?= empty($movimientos) ? 'display: block;' : 'display: none;' ?>">
+                        <div id="sin-resultados" class="alert alert-warning text-center" style="display: none;">
                             <i class="fa fa-exclamation-circle"></i> No se encontraron movimientos que coincidan con los criterios de búsqueda
                         </div>
 
@@ -157,34 +136,37 @@
                                 </tbody>
                             </table>
                         </div>
-                        <!-- Paginación -->
+
                         <?php if ($total_paginas > 1): ?>
                             <div class="text-center">
-                                <ul class="pagination pagination-sm">
-                                    <?php if ($pagina_actual > 1): ?>
-                                        <li>
-                                            <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=index&pagina=<?= $pagina_actual - 1 ?>">
-                                                <i class="fa fa-angle-left"></i>
-                                            </a>
-                                        </li>
-                                    <?php endif; ?>
+                                <nav aria-label="Page navigation">
+                                    <ul class="pagination">
+                                        <?php if ($pagina_actual > 1): ?>
+                                            <li>
+                                                <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&pagina=<?= $pagina_actual - 1 ?>" aria-label="Previous">
+                                                    <span aria-hidden="true">&laquo;</span>
+                                                </a>
+                                            </li>
+                                        <?php endif; ?>
 
-                                    <?php for ($i = 1; $i <= $total_paginas; $i++): ?>
-                                        <li class="<?= $i == $pagina_actual ? 'active' : '' ?>">
-                                            <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=index&pagina=<?= $i ?>">
-                                                <?= $i ?>
-                                            </a>
-                                        </li>
-                                    <?php endfor; ?>
+                                        <?php for ($i = 1; $i <= $total_paginas; $i++): ?>
+                                            <li class="<?= $i == $pagina_actual ? 'active' : '' ?>">
+                                                <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&pagina=<?= $i ?>"><?= $i ?></a>
+                                            </li>
+                                        <?php endfor; ?>
 
-                                    <?php if ($pagina_actual < $total_paginas): ?>
-                                        <li>
-                                            <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=index&pagina=<?= $pagina_actual + 1 ?>">
-                                                <i class="fa fa-angle-right"></i>
-                                            </a>
-                                        </li>
-                                    <?php endif; ?>
-                                </ul>
+                                        <?php if ($pagina_actual < $total_paginas): ?>
+                                            <li>
+                                                <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&pagina=<?= $pagina_actual + 1 ?>" aria-label="Next">
+                                                    <span aria-hidden="true">&raquo;</span>
+                                                </a>
+                                            </li>
+                                        <?php endif; ?>
+                                    </ul>
+                                </nav>
+                                <div class="text-muted">
+                                    Mostrando <?= count($movimientos) ?> de <?= $total_registros ?> registros
+                                </div>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -233,78 +215,94 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h4 class="modal-title" id="filtrosModalLabel"><i class="fa fa-filter"></i> Filtros de Búsqueda</h4>
+                <h4 class="modal-title" id="filtrosModalLabel"><i class="fa fa-filter"></i> Filtros Avanzados</h4>
             </div>
             <div class="modal-body">
                 <form id="formFiltros">
                     <div class="form-group">
                         <label>Tipo de Movimiento</label>
-                        <div class="checkbox">
-                            <label>
-                                <input type="checkbox" name="tipo_movimiento[]" value="ENTRADA"> Entradas
-                            </label>
-                        </div>
-                        <div class="checkbox">
-                            <label>
-                                <input type="checkbox" name="tipo_movimiento[]" value="SALIDA"> Salidas
-                            </label>
-                        </div>
+                        <select class="form-control" id="filtroTipo">
+                            <option value="">Todos los tipos</option>
+                            <option value="ENTRADA" <?= isset($filtros_activos['tipos']) && in_array('ENTRADA', $filtros_activos['tipos']) ? 'selected' : '' ?>>Entrada</option>
+                            <option value="SALIDA" <?= isset($filtros_activos['tipos']) && in_array('SALIDA', $filtros_activos['tipos']) ? 'selected' : '' ?>>Salida</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label>Estado</label>
-                        <div class="checkbox">
-                            <label>
-                                <input type="checkbox" name="estado[]" value="activo"> Activos
-                            </label>
-                        </div>
-                        <div class="checkbox">
-                            <label>
-                                <input type="checkbox" name="estado[]" value="inactivo"> Inactivos
-                            </label>
-                        </div>
+                        <select class="form-control" id="filtroEstatus">
+                            <option value="">Todos los estados</option>
+                            <option value="1" <?= isset($filtros_activos['estados']) && in_array('1', $filtros_activos['estados']) ? 'selected' : '' ?>>Activo</option>
+                            <option value="2" <?= isset($filtros_activos['estados']) && in_array('2', $filtros_activos['estados']) ? 'selected' : '' ?>>Inactivo</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label>Rango de Fechas</label>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <input type="date" class="form-control" name="fecha_inicio" placeholder="Fecha Inicio">
-                            </div>
-                            <div class="col-md-6">
-                                <input type="date" class="form-control" name="fecha_fin" placeholder="Fecha Fin">
-                            </div>
+                        <div class="input-group">
+                            <input type="date" class="form-control" id="filtroFechaInicio" placeholder="Fecha Inicio" value="<?= isset($filtros_activos['fecha_inicio']) ? htmlspecialchars($filtros_activos['fecha_inicio']) : '' ?>">
+                            <span class="input-group-addon">hasta</span>
+                            <input type="date" class="form-control" id="filtroFechaFin" placeholder="Fecha Fin" value="<?= isset($filtros_activos['fecha_fin']) ? htmlspecialchars($filtros_activos['fecha_fin']) : '' ?>">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Rango de Precios</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="filtroPrecioMin" placeholder="Precio Mínimo" min="0" step="0.01">
+                            <span class="input-group-addon">a</span>
+                            <input type="number" class="form-control" id="filtroPrecioMax" placeholder="Precio Máximo" min="0" step="0.01">
                         </div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-default" onclick="limpiarFiltros()">Limpiar Filtros</button>
-                <button type="button" class="btn btn-primary" onclick="aplicarFiltros()">Aplicar Filtros</button>
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-primary" id="aplicarFiltros">Aplicar Filtros</button>
+                <button type="button" class="btn btn-link" id="limpiarFiltros">Limpiar Filtros</button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-// Función para búsqueda en tiempo real con paginación
-let searchTimeout;
-document.getElementById('busqueda').addEventListener('input', function(e) {
-    const searchTerm = e.target.value.toLowerCase();
-    
-    // Clear previous timeout
-    clearTimeout(searchTimeout);
-    
-    // Set new timeout to prevent multiple rapid requests
-    searchTimeout = setTimeout(function() {
-        // En lugar de ocultar filas, redirigir al servidor con el término de búsqueda
-        const currentUrl = new URL(window.location.href);
-        if (searchTerm) {
-            currentUrl.searchParams.set('busqueda', searchTerm);
-            currentUrl.searchParams.set('pagina', '1');
-        } else {
-            currentUrl.searchParams.delete('busqueda');
-        }
-        window.location.href = currentUrl.toString();
-    }, 300); // Wait 300ms after user stops typing before filtering
+$(document).ready(function() {
+    // Real-time search functionality with debounce
+    let searchTimeout;
+    $('#busqueda').on('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function() {
+            aplicarFiltros();
+        }, 500);
+    });
+
+    // Filter functionality
+    function aplicarFiltros() {
+        const searchValue = $('#busqueda').val().trim();
+        const tipo = $('#filtroTipo').val();
+        const estatus = $('#filtroEstatus').val();
+        const fechaInicio = $('#filtroFechaInicio').val();
+        const fechaFin = $('#filtroFechaFin').val();
+
+        // Construir la URL con los filtros
+        let url = '<?= BASE_URL ?>index.php?action=movimientos-inventario';
+        
+        if (searchValue) url += '&busqueda=' + encodeURIComponent(searchValue);
+        if (tipo) url += '&tipos=' + encodeURIComponent(tipo);
+        if (estatus) url += '&estados=' + encodeURIComponent(estatus);
+        if (fechaInicio) url += '&fecha_inicio=' + encodeURIComponent(fechaInicio);
+        if (fechaFin) url += '&fecha_fin=' + encodeURIComponent(fechaFin);
+
+        // Redirigir a la URL con los filtros
+        window.location.href = url;
+    }
+
+    $('#aplicarFiltros').click(function() {
+        aplicarFiltros();
+        $('#filtrosModal').modal('hide');
+    });
+
+    // Clear filters
+    $('#limpiarFiltros').click(function() {
+        window.location.href = '<?= BASE_URL ?>index.php?action=movimientos-inventario';
+    });
 });
 
 function solicitarAutorizacion(id, tipo) {
@@ -331,124 +329,21 @@ function verificarAutorizacion() {
             }
             $('#autorizacionModal').modal('hide');
         } else {
-            alert('Credenciales incorrectas. Por favor, intente nuevamente.');
+            Swal.fire({
+                title: 'Error',
+                text: 'Credenciales incorrectas. Por favor, intente nuevamente.',
+                icon: 'error'
+            });
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Ocurrió un error al verificar las credenciales.');
+        Swal.fire({
+            title: 'Error',
+            text: 'Ocurrió un error al verificar las credenciales.',
+            icon: 'error'
+        });
     });
-}
-
-function aplicarFiltros() {
-    const formData = new FormData(document.getElementById('formFiltros'));
-    const filtros = {};
-    let filtrosActivos = [];
-
-    // Recopilar tipos de movimiento seleccionados
-    const tiposMovimiento = formData.getAll('tipo_movimiento[]');
-    if (tiposMovimiento.length > 0) {
-        filtros.tipos = tiposMovimiento;
-        filtrosActivos.push(`Tipos: ${tiposMovimiento.join(', ')}`);
-    }
-
-    // Recopilar estados seleccionados
-    const estados = formData.getAll('estado[]');
-    if (estados.length > 0) {
-        filtros.estados = estados;
-        filtrosActivos.push(`Estados: ${estados.join(', ')}`);
-    }
-
-    // Recopilar fechas
-    const fechaInicio = formData.get('fecha_inicio');
-    const fechaFin = formData.get('fecha_fin');
-    if (fechaInicio || fechaFin) {
-        filtros.fechaInicio = fechaInicio;
-        filtros.fechaFin = fechaFin;
-        filtrosActivos.push(`Fechas: ${fechaInicio || 'Inicio'} - ${fechaFin || 'Fin'}`);
-    }
-
-    // Aplicar filtros a la tabla
-    const tabla = document.getElementById('tablaMovimientos');
-    const filas = tabla.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
-    let contadorResultados = 0;
-
-    for (let fila of filas) {
-        let mostrarFila = true;
-
-        // Filtrar por tipo de movimiento
-        if (filtros.tipos && filtros.tipos.length > 0) {
-            const tipoMovimiento = fila.cells[2].textContent.trim();
-            if (!filtros.tipos.some(tipo => tipoMovimiento.includes(tipo))) {
-                mostrarFila = false;
-            }
-        }
-
-        // Filtrar por estado
-        if (mostrarFila && filtros.estados && filtros.estados.length > 0) {
-            const esInactivo = fila.classList.contains('inactive-movement');
-            const esAjustado = fila.classList.contains('adjustment-movement');
-            const estado = esInactivo ? 'inactivo' : (esAjustado ? 'ajustado' : 'activo');
-            if (!filtros.estados.includes(estado)) {
-                mostrarFila = false;
-            }
-        }
-
-        // Filtrar por fecha
-        if (mostrarFila && (fechaInicio || fechaFin)) {
-            const fecha = new Date(fila.cells[0].textContent.trim());
-            if (fechaInicio && new Date(fechaInicio) > fecha) {
-                mostrarFila = false;
-            }
-            if (fechaFin && new Date(fechaFin) < fecha) {
-                mostrarFila = false;
-            }
-        }
-
-        fila.style.display = mostrarFila ? '' : 'none';
-        if (mostrarFila) contadorResultados++;
-    }
-
-    // Actualizar mensajes y contador
-    document.getElementById('contador-resultados').textContent = contadorResultados;
-    document.getElementById('filtros-activos').style.display = filtrosActivos.length > 0 ? 'block' : 'none';
-    document.getElementById('texto-filtros-activos').textContent = filtrosActivos.join(' | ');
-    document.getElementById('sin-resultados').style.display = contadorResultados === 0 ? 'block' : 'none';
-
-    // Reset to first page when applying filters
-    const currentUrl = new URL(window.location.href);
-    currentUrl.searchParams.set('pagina', '1');
-    
-    // Add filter parameters to URL
-    if (tiposMovimiento.length > 0) currentUrl.searchParams.set('tipos', tiposMovimiento.join(','));
-    if (estados.length > 0) currentUrl.searchParams.set('estados', estados.join(','));
-    if (fechaInicio) currentUrl.searchParams.set('fecha_inicio', fechaInicio);
-    if (fechaFin) currentUrl.searchParams.set('fecha_fin', fechaFin);
-    
-    // Mantener el término de búsqueda si existe
-    const busquedaActual = document.getElementById('busqueda').value;
-    if (busquedaActual) {
-        currentUrl.searchParams.set('busqueda', busquedaActual);
-    }
-    
-    window.history.pushState({}, '', currentUrl);
-
-    $('#filtrosModal').modal('hide');
-}
-
-function limpiarFiltros() {
-    document.getElementById('formFiltros').reset();
-    document.getElementById('busqueda').value = '';
-    
-    // Redirigir a la página sin filtros
-    const currentUrl = new URL(window.location.href);
-    currentUrl.searchParams.delete('tipos');
-    currentUrl.searchParams.delete('estados');
-    currentUrl.searchParams.delete('fecha_inicio');
-    currentUrl.searchParams.delete('fecha_fin');
-    currentUrl.searchParams.delete('busqueda');
-    currentUrl.searchParams.set('pagina', '1');
-    window.location.href = currentUrl.toString();
 }
 </script>
 

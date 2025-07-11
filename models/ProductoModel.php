@@ -16,26 +16,97 @@ class ProductoModel
         return $this->errors;
     }
 
-    public function obtenerTodosProductos($soloActivos = true)
+    public function obtenerTodosProductos($soloActivos = true, $pagina = 1, $porPagina = 10, $filtros = [])
     {
-        $query = "SELECT p.*, c.nombre as categoria, e.nombre as estatus, tc.nombre as tipo_categoria
-              FROM producto p
-              JOIN categorias c ON p.id_categoria = c.id
-              JOIN estatus e ON p.id_estatus = e.id
-              JOIN tipos_categoria tc ON c.id_tipo_categoria = tc.id";
+        try {
+            error_log('Iniciando obtenerTodosProductos');
+            $condiciones = [];
+            $params = [];
 
-        if ($soloActivos) {
-            $query .= " WHERE p.id_estatus = 1";
+            // Construir la consulta base
+            $baseQuery = "FROM producto p
+                         JOIN categorias c ON p.id_categoria = c.id
+                         JOIN estatus e ON p.id_estatus = e.id
+                         JOIN tipos_categoria tc ON c.id_tipo_categoria = tc.id";
+
+            // Aplicar filtros
+            if ($soloActivos) {
+                $condiciones[] = "p.id_estatus = 1";
+                $condiciones[] = "c.id_estatus = 1";
+                error_log('Aplicando filtro de productos y categorías activas');
+            }
+
+            // Agregar condiciones a la consulta
+            $whereClause = '';
+            if (!empty($condiciones)) {
+                $whereClause = " WHERE " . implode(" AND ", $condiciones);
+            }
+
+            // Contar total de registros para paginación
+            $queryCount = "SELECT COUNT(*) as total " . $baseQuery . $whereClause;
+            $stmtCount = $this->db->prepare($queryCount);
+            $stmtCount->execute($params);
+            $totalRegistros = $stmtCount->fetch(PDO::FETCH_ASSOC)['total'];
+
+            // Calcular total de páginas
+            $totalPaginas = ceil($totalRegistros / $porPagina);
+            $pagina = max(1, min($pagina, $totalPaginas)); // Asegurar que la página esté en rango válido
+            $offset = ($pagina - 1) * $porPagina;
+
+            // Obtener los registros paginados
+            $query = "SELECT p.*, c.nombre as categoria, e.nombre as estatus, tc.nombre as tipo_categoria "
+                   . $baseQuery . $whereClause . "
+                   LIMIT :offset, :porPagina";
+            
+            error_log('Query a ejecutar: ' . $query);
+            $stmt = $this->db->prepare($query);
+            $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+            $stmt->bindParam(':porPagina', $porPagina, PDO::PARAM_INT);
+            $stmt->execute();
+            $productos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            error_log('Productos encontrados: ' . count($productos));
+            
+            return [
+                'productos' => $productos,
+                'total_registros' => $totalRegistros,
+                'pagina_actual' => $pagina,
+                'por_pagina' => $porPagina,
+                'total_paginas' => $totalPaginas
+            ];
+        } catch (PDOException $e) {
+            error_log('Error en obtenerTodosProductos: ' . $e->getMessage());
+            $this->errors[] = "Error al obtener productos: " . $e->getMessage();
+            return false;
         }
-
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function obtenerProductosActivos()
     {
-        return $this->obtenerTodosProductos(true);
+        try {
+            $query = "SELECT p.*, c.nombre as categoria, e.nombre as estatus, tc.nombre as tipo_categoria 
+                     FROM producto p
+                     JOIN categorias c ON p.id_categoria = c.id
+                     JOIN estatus e ON p.id_estatus = e.id
+                     JOIN tipos_categoria tc ON c.id_tipo_categoria = tc.id
+                     WHERE p.id_estatus = 1 AND c.id_estatus = 1
+                     ORDER BY p.descripcion ASC";
+            
+            $stmt = $this->db->prepare($query);
+            $stmt->execute();
+            $productos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            error_log('Productos activos encontrados: ' . count($productos));
+            
+            // Log de productos para debugging
+            foreach ($productos as $producto) {
+                error_log("Producto: {$producto['descripcion']} - ID: {$producto['id']} - Estatus: {$producto['id_estatus']}");
+            }
+            
+            return $productos;
+        } catch (PDOException $e) {
+            error_log('Error en obtenerProductosActivos: ' . $e->getMessage());
+            $this->errors[] = "Error al obtener productos: " . $e->getMessage();
+            return [];
+        }
     }
 
 

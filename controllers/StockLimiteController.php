@@ -15,12 +15,21 @@ class StockLimiteController
     public function index()
     {
         $this->checkSession();
-        $limites = $this->model->obtenerTodosLimites();
+        
+        // Obtener parámetros de paginación
+        $pagina = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
+        $por_pagina = 10;
+
+        // Obtener datos paginados
+        $datos = $this->model->obtenerTodosLimites($pagina, $por_pagina);
         $productosSinLimite = $this->model->obtenerProductosSinLimite();
         
         $this->loadView('stock_limite/index', [
-            'limites' => $limites,
-            'productosSinLimite' => $productosSinLimite
+            'limites' => $datos['limites'],
+            'productosSinLimite' => $productosSinLimite,
+            'pagina_actual' => $datos['pagina_actual'],
+            'total_paginas' => $datos['total_paginas'],
+            'total_registros' => $datos['total_registros']
         ]);
     }
 

@@ -12,11 +12,20 @@ class ProductoProveedorController
     public function index()
     {
         $this->checkSession();
-        $relaciones = $this->model->obtenerTodasRelaciones();
+        
+        // Obtener parámetros de paginación
+        $pagina = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
+        $por_pagina = 10;
+        
+        $resultado = $this->model->obtenerTodasRelaciones($pagina, $por_pagina);
         $estatus = $this->model->obtenerEstatus();
+        
         $this->loadView('producto_proveedor/index', [
-            'relaciones' => $relaciones,
-            'estatus' => $estatus
+            'relaciones' => $resultado['datos'],
+            'estatus' => $estatus,
+            'pagina_actual' => $resultado['pagina_actual'],
+            'total_paginas' => $resultado['total_paginas'],
+            'total_registros' => $resultado['total_registros']
         ]);
     }
 

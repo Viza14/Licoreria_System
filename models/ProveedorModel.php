@@ -24,15 +24,37 @@ class ProveedorModel
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function obtenerTodosProveedores()
+    public function obtenerTodosProveedores($pagina = 1, $por_pagina = 10)
     {
+        // Calcular el offset
+        $offset = ($pagina - 1) * $por_pagina;
+
+        // Obtener el total de registros
+        $queryTotal = "SELECT COUNT(*) as total FROM proveedores";
+        $stmtTotal = $this->db->prepare($queryTotal);
+        $stmtTotal->execute();
+        $total = $stmtTotal->fetch(PDO::FETCH_ASSOC)['total'];
+
+        // Calcular el total de páginas
+        $total_paginas = ceil($total / $por_pagina);
+
+        // Consulta principal con paginación
         $query = "SELECT p.*, e.nombre as estatus, sc.nombre as nombre_simbolo 
                   FROM proveedores p
                   JOIN estatus e ON p.id_estatus = e.id
-                  JOIN simbolos_cedula sc ON p.id_simbolo_cedula = sc.id";
+                  JOIN simbolos_cedula sc ON p.id_simbolo_cedula = sc.id
+                  LIMIT :limit OFFSET :offset";
         $stmt = $this->db->prepare($query);
+        $stmt->bindValue(':limit', $por_pagina, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return [
+            'proveedores' => $stmt->fetchAll(PDO::FETCH_ASSOC),
+            'total_registros' => $total,
+            'total_paginas' => $total_paginas,
+            'pagina_actual' => $pagina
+        ];
     }
 
     public function obtenerProveedorPorCedula($cedula)

@@ -15,7 +15,8 @@ if (!isset($_SESSION['user_id'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Sistema de Gestión para Licorería">
     <meta name="author" content="TuNombre">
-    <title>Licorería DashGum | <?php echo $pageTitle ?? 'Dashboard'; ?></title>
+    <link rel="icon" type="image/png" href="<?php echo BASE_URL; ?>assets/img/botella2.png">
+    <title>Licorería<?php echo $pageTitle ?? 'El Manguito C.A'; ?></title>
     <!-- Bootstrap core CSS -->
     <link href="<?php echo BASE_URL; ?>assets/css/bootstrap.css" rel="stylesheet">
     <!--external css-->
@@ -37,6 +38,27 @@ if (!isset($_SESSION['user_id'])) {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+    // Función para descargar la factura automáticamente
+    function descargarFactura(factura_path) {
+        if (factura_path) {
+            const link = document.createElement('a');
+            link.href = '<?php echo BASE_URL; ?>' + factura_path;
+            link.download = factura_path.split('/').pop();
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    }
+
+    // Verificar si hay una factura para descargar cuando la página se carga
+    document.addEventListener('DOMContentLoaded', function() {
+        <?php if (isset($_SESSION['mensaje']) && isset($_SESSION['mensaje']['factura_path'])): ?>
+            descargarFactura('<?php echo $_SESSION['mensaje']['factura_path']; ?>');
+            <?php unset($_SESSION['mensaje']['factura_path']); ?>
+        <?php endif; ?>
+    });
+    </script>
     <style>
         body {
             font-family: 'Roboto', sans-serif;
@@ -113,7 +135,7 @@ if (!isset($_SESSION['user_id'])) {
                 <div class="fa fa-bars tooltips" data-placement="right" data-original-title="Toggle Navigation"></div>
             </div>
             <!--logo start-->
-            <a class="logo"><b>LICORERÍA <span>La Manguita C.A</span></b></a>
+            <a class="logo"><b>LICORERÍA <span>El Manguito C.A</span></b></a>
             <!--logo end-->
             <div class="nav notify-row" id="top_menu">
                 <!--  notification start -->

@@ -40,6 +40,12 @@
                             </div>
                         </div>
 
+                        <?php if (isset($filtros_activos) && !empty($filtros_activos)): ?>
+                            <div class="alert alert-info">
+                                <strong>Filtros activos:</strong> <?= implode(', ', $filtros_activos) ?>
+                            </div>
+                        <?php endif; ?>
+
                         <table id="tablaProductos" class="table table-striped table-advance table-hover">
                             <thead>
                                 <tr>
@@ -88,6 +94,36 @@
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
+
+                        <?php if (isset($total_paginas) && $total_paginas > 1): ?>
+                            <div class="text-center">
+                                <ul class="pagination">
+                                    <?php if ($pagina_actual > 1): ?>
+                                        <li>
+                                            <a href="<?= BASE_URL ?>index.php?action=productos&method=index&pagina=<?= ($pagina_actual-1) ?>&por_pagina=<?= $por_pagina ?><?= isset($termino_busqueda) ? '&busqueda=' . urlencode($termino_busqueda) : '' ?>">
+                                                <i class="fa fa-angle-left"></i>
+                                            </a>
+                                        </li>
+                                    <?php endif; ?>
+
+                                    <?php for ($i = 1; $i <= $total_paginas; $i++): ?>
+                                        <li class="<?= $i === $pagina_actual ? 'active' : '' ?>">
+                                            <a href="<?= BASE_URL ?>index.php?action=productos&method=index&pagina=<?= $i ?>&por_pagina=<?= $por_pagina ?><?= isset($termino_busqueda) ? '&busqueda=' . urlencode($termino_busqueda) : '' ?>">
+                                                <?= $i ?>
+                                            </a>
+                                        </li>
+                                    <?php endfor; ?>
+
+                                    <?php if ($pagina_actual < $total_paginas): ?>
+                                        <li>
+                                            <a href="<?= BASE_URL ?>index.php?action=productos&method=index&pagina=<?= ($pagina_actual+1) ?>&por_pagina=<?= $por_pagina ?><?= isset($termino_busqueda) ? '&busqueda=' . urlencode($termino_busqueda) : '' ?>">
+                                                <i class="fa fa-angle-right"></i>
+                                            </a>
+                                        </li>
+                                    <?php endif; ?>
+                                </ul>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </section>
             </div>
@@ -111,6 +147,15 @@
                             <option value="">Todas las categorías</option>
                             <?php foreach ($categorias as $categoria): ?>
                                 <option value="<?= $categoria['nombre'] ?>"><?= $categoria['nombre'] ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo:</label>
+                        <select class="form-control" id="filtroTipo">
+                            <option value="">Todos los tipos</option>
+                            <?php foreach ($tipos as $tipo): ?>
+                                <option value="<?= $tipo['nombre'] ?>"><?= $tipo['nombre'] ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -149,8 +194,11 @@
             $('#tablaProductos tbody tr').each(function() {
                 const descripcion = $(this).find('td:eq(0)').text().toLowerCase();
                 const categoria = $(this).find('td:eq(1)').text().toLowerCase();
+                const tipo = $(this).find('td:eq(2)').text().toLowerCase();
 
-                const match = descripcion.includes(searchValue) || categoria.includes(searchValue);
+                const match = descripcion.includes(searchValue) ||
+                    categoria.includes(searchValue) ||
+                    tipo.includes(searchValue);
 
                 if (match) {
                     $(this).show();
@@ -171,17 +219,20 @@
         // Filtros avanzados
         $('#aplicarFiltros').click(function() {
             const categoria = $('#filtroCategoria').val().toLowerCase();
+            const tipo = $('#filtroTipo').val().toLowerCase();
             const estatus = $('#filtroEstatus').val().toLowerCase();
             let resultados = 0;
 
             $('#tablaProductos tbody tr').each(function() {
                 const categoriaProducto = $(this).find('td:eq(1)').text().toLowerCase();
+                const tipoProducto = $(this).find('td:eq(2)').text().toLowerCase();
                 const estatusProducto = $(this).find('td:eq(5)').text().toLowerCase();
 
                 const matchCategoria = categoria === '' || categoriaProducto.includes(categoria);
+                const matchTipo = tipo === '' || tipoProducto.includes(tipo);
                 const matchEstatus = estatus === '' || estatusProducto.includes(estatus);
 
-                if (matchCategoria && matchEstatus) {
+                if (matchCategoria && matchTipo && matchEstatus) {
                     $(this).show();
                     resultados++;
                 } else {
@@ -202,8 +253,22 @@
         $('#limpiarFiltros').click(function() {
             $('#formFiltros')[0].reset();
             $('#tablaProductos tbody tr').show();
+            $('#busqueda').val('');
             sinResultados.hide();
         });
+
+        // Si hay parámetros de filtro en la URL, aplicarlos automáticamente
+        const urlParams = new URLSearchParams(window.location.search);
+        const categoriaParam = urlParams.get('categoria');
+        const tipoParam = urlParams.get('tipo');
+        const estatusParam = urlParams.get('estatus');
+
+        if (categoriaParam || tipoParam || estatusParam) {
+            if (categoriaParam) $('#filtroCategoria').val(categoriaParam);
+            if (tipoParam) $('#filtroTipo').val(tipoParam);
+            if (estatusParam) $('#filtroEstatus').val(estatusParam);
+            $('#aplicarFiltros').click();
+        }
     });
 
     function cambiarEstado(id, estatusActual) {

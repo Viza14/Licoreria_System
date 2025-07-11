@@ -96,21 +96,44 @@ class MovimientoInventarioController
     {
         $this->checkSession();
 
+        // Procesar paginación
+        $pagina = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
+        $por_pagina = 10; // Número de registros por página
+
+        // Procesar filtros
         $filtros = [];
+        
+        // Obtener filtros de POST o GET
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $filtros = [
                 'fecha_inicio' => $_POST['fecha_inicio'] ?? null,
                 'fecha_fin' => $_POST['fecha_fin'] ?? null,
-                'id_producto' => $_POST['id_producto'] ?? null
+                'categoria' => $_POST['categoria'] ?? null
+            ];
+        } else {
+            $filtros = [
+                'fecha_inicio' => $_GET['fecha_inicio'] ?? null,
+                'fecha_fin' => $_GET['fecha_fin'] ?? null,
+                'categoria' => $_GET['categoria'] ?? null
             ];
         }
 
-        $resumen = $this->model->obtenerResumenMovimientos($filtros);
-        $productos = $this->productoModel->obtenerTodosProductos();
+        // Obtener datos para el resumen
+        $resumen_general = $this->model->obtenerResumenGeneral($filtros);
+        $resultado = $this->model->obtenerResumenProductos($filtros, $pagina, $por_pagina);
+
+        // Obtener categorías para el filtro
+        require_once ROOT_PATH . 'models/CategoriaModel.php';
+        $categoriaModel = new CategoriaModel();
+        $categorias = $categoriaModel->obtenerCategoriasActivas();
 
         $this->loadView('movimientos_inventario/resumen', [
-            'resumen' => $resumen,
-            'productos' => $productos,
+            'resumen_general' => $resumen_general,
+            'productos' => $resultado['productos'],
+            'total_productos' => $resultado['total'],
+            'pagina_actual' => $resultado['pagina_actual'],
+            'total_paginas' => $resultado['total_paginas'],
+            'categorias' => $categorias,
             'filtros' => $filtros
         ]);
     }

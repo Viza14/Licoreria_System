@@ -16,15 +16,34 @@ class CategoriaModel
         return $this->errors;
     }
 
-    public function obtenerTodasCategorias()
+    public function obtenerTodasCategorias($pagina = 1, $por_pagina = 10)
     {
+        // Calcular el offset
+        $offset = ($pagina - 1) * $por_pagina;
+
+        // Consulta para obtener el total de registros
+        $queryTotal = "SELECT COUNT(*) as total FROM categorias";
+        $stmtTotal = $this->db->prepare($queryTotal);
+        $stmtTotal->execute();
+        $total = $stmtTotal->fetch(PDO::FETCH_ASSOC)['total'];
+
+        // Consulta principal con paginación
         $query = "SELECT c.*, t.nombre as tipo_categoria, e.nombre as estatus 
               FROM categorias c
               JOIN tipos_categoria t ON c.id_tipo_categoria = t.id
-              JOIN estatus e ON c.id_estatus = e.id";  // ← Correcto: usa c.id_estatus
+              JOIN estatus e ON c.id_estatus = e.id
+              LIMIT :limit OFFSET :offset";
         $stmt = $this->db->prepare($query);
+        $stmt->bindValue(':limit', $por_pagina, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return [
+            'categorias' => $stmt->fetchAll(PDO::FETCH_ASSOC),
+            'total_registros' => $total,
+            'total_paginas' => ceil($total / $por_pagina),
+            'pagina_actual' => $pagina
+        ];
     }
 
     public function obtenerCategoriaPorId($id)
@@ -116,5 +135,17 @@ class CategoriaModel
             $this->errors[] = $e->getMessage();
             return false;
         }
+    }
+
+    public function obtenerCategoriasActivas()
+    {
+        $query = "SELECT c.*, t.nombre as tipo_categoria 
+                  FROM categorias c
+                  JOIN tipos_categoria t ON c.id_tipo_categoria = t.id
+                  WHERE c.id_estatus = 1
+                  ORDER BY c.nombre";
+        $stmt = $this->db->prepare($query);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }

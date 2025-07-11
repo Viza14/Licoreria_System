@@ -4,12 +4,12 @@
     /* ==================== SIDEBAR ==================== */
     #sidebar {
         background: #1d2a58;
-        transition: all 0.3s ease;
+        transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
         will-change: margin-left;
     }
 
     #main-content {
-        transition: margin-left 0.3s ease;
+        transition: margin-left 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         will-change: margin-left;
     }
 

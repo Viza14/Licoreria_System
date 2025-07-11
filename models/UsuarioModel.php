@@ -69,16 +69,38 @@ class UsuarioModel
     }
 
     // En UsuarioModel.php
-    public function obtenerTodosUsuarios()
+    public function obtenerTodosUsuarios($pagina = 1, $por_pagina = 10)
     {
+        // Calcular el offset
+        $offset = ($pagina - 1) * $por_pagina;
+
+        // Obtener el total de registros
+        $queryTotal = "SELECT COUNT(*) as total FROM usuarios";
+        $stmtTotal = $this->db->prepare($queryTotal);
+        $stmtTotal->execute();
+        $total = $stmtTotal->fetch(PDO::FETCH_ASSOC)['total'];
+
+        // Calcular el total de páginas
+        $total_paginas = ceil($total / $por_pagina);
+
+        // Consulta principal con paginación
         $query = "SELECT u.*, r.nombre as rol, e.nombre as estatus, sc.nombre as nombre_simbolo 
               FROM usuarios u
               JOIN roles r ON u.id_rol = r.id
               JOIN estatus e ON u.id_estatus = e.id
-              JOIN simbolos_cedula sc ON u.id_simbolo_cedula = sc.id";
+              JOIN simbolos_cedula sc ON u.id_simbolo_cedula = sc.id
+              LIMIT :limit OFFSET :offset";
         $stmt = $this->db->prepare($query);
+        $stmt->bindValue(':limit', $por_pagina, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return [
+            'usuarios' => $stmt->fetchAll(PDO::FETCH_ASSOC),
+            'total_registros' => $total,
+            'total_paginas' => $total_paginas,
+            'pagina_actual' => $pagina
+        ];
     }
 
     public function obtenerUsuarioPorId($id)

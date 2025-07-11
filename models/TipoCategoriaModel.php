@@ -16,14 +16,33 @@ class TipoCategoriaModel
         return $this->errors;
     }
 
-    public function obtenerTodosTiposCategoria()
+    public function obtenerTodosTiposCategoria($pagina = 1, $por_pagina = 10)
     {
+        // Calcular el offset
+        $offset = ($pagina - 1) * $por_pagina;
+
+        // Consulta para obtener el total de registros
+        $queryTotal = "SELECT COUNT(*) as total FROM tipos_categoria";
+        $stmtTotal = $this->db->prepare($queryTotal);
+        $stmtTotal->execute();
+        $total = $stmtTotal->fetch(PDO::FETCH_ASSOC)['total'];
+
+        // Consulta principal con paginación
         $query = "SELECT t.*, e.nombre as estatus 
                  FROM tipos_categoria t
-                 JOIN estatus e ON t.id_estatus = e.id";
+                 JOIN estatus e ON t.id_estatus = e.id
+                 LIMIT :limit OFFSET :offset";
         $stmt = $this->db->prepare($query);
+        $stmt->bindValue(':limit', $por_pagina, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return [
+            'tipos' => $stmt->fetchAll(PDO::FETCH_ASSOC),
+            'total_registros' => $total,
+            'total_paginas' => ceil($total / $por_pagina),
+            'pagina_actual' => $pagina
+        ];
     }
 
     public function obtenerTipoCategoriaPorId($id)

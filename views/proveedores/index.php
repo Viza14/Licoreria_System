@@ -79,6 +79,39 @@
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
+
+                        <?php if ($total_paginas > 1): ?>
+                        <div class="text-center">
+                            <nav aria-label="Page navigation">
+                                <ul class="pagination">
+                                    <?php if ($pagina_actual > 1): ?>
+                                    <li>
+                                        <a href="<?= BASE_URL ?>index.php?action=proveedores&pagina=<?= $pagina_actual - 1 ?>" aria-label="Previous">
+                                            <span aria-hidden="true">&laquo;</span>
+                                        </a>
+                                    </li>
+                                    <?php endif; ?>
+
+                                    <?php for ($i = 1; $i <= $total_paginas; $i++): ?>
+                                    <li class="<?= $i == $pagina_actual ? 'active' : '' ?>">
+                                        <a href="<?= BASE_URL ?>index.php?action=proveedores&pagina=<?= $i ?>"><?= $i ?></a>
+                                    </li>
+                                    <?php endfor; ?>
+
+                                    <?php if ($pagina_actual < $total_paginas): ?>
+                                    <li>
+                                        <a href="<?= BASE_URL ?>index.php?action=proveedores&pagina=<?= $pagina_actual + 1 ?>" aria-label="Next">
+                                            <span aria-hidden="true">&raquo;</span>
+                                        </a>
+                                    </li>
+                                    <?php endif; ?>
+                                </ul>
+                            </nav>
+                            <div class="text-muted">
+                                Mostrando <?= count($proveedores) ?> de <?= $total_registros ?> registros
+                            </div>
+                        </div>
+                        <?php endif; ?>
                     </div>
                 </section>
             </div>

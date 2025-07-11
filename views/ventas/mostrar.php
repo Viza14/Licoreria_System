@@ -118,9 +118,6 @@
                                 <a href="<?= BASE_URL ?>index.php?action=reportes" class="btn btn-default">
                                     <i class="fa fa-arrow-left"></i> Volver
                                 </a>
-                                <button class="btn btn-primary" onclick="window.print()">
-                                    <i class="fa fa-print"></i> Imprimir
-                                </button>
                             </div>
                         </div>
                     </div>

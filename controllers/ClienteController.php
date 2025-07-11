@@ -59,12 +59,25 @@ class ClienteController
     {
         $this->checkSession();
         try {
-            $clientes = $this->model->obtenerTodosClientes();
-            if ($clientes === false) {
+            $pagina = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
+            $porPagina = isset($_GET['por_pagina']) ? (int)$_GET['por_pagina'] : 10;
+
+            $filtros = [];
+            if (isset($_GET['busqueda'])) {
+                $filtros['busqueda'] = $_GET['busqueda'];
+            }
+
+            $resultado = $this->model->obtenerTodosClientes($pagina, $porPagina, $filtros);
+            if ($resultado === false) {
                 throw new Exception('Error al obtener la lista de clientes');
             }
             $this->loadView('clientes/index', [
-                'clientes' => $clientes,
+                'clientes' => $resultado['data'],
+                'total' => $resultado['total'],
+                'pagina_actual' => $resultado['pagina_actual'],
+                'por_pagina' => $resultado['por_pagina'], 
+                'total_paginas' => $resultado['total_paginas'],
+                'filtros_activos' => $filtros,
                 'pageTitle' => 'Gestión de Clientes',
                 'user_rol' => $_SESSION['user_rol'] ?? null
             ]);

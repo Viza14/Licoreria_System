@@ -43,18 +43,59 @@ class ClienteModel
         return $result['count'] > 0;
     }
 
-    public function obtenerTodosClientes()
+    public function obtenerTodosClientes($pagina = 1, $porPagina = 10, $filtros = [])
     {
         try {
             if (!$this->db) {
                 throw new Exception('Error de conexión a la base de datos');
             }
 
-            $query = "SELECT c.*, e.nombre as estatus, sc.nombre as nombre_simbolo 
-                      FROM clientes c
-                      JOIN estatus e ON c.id_estatus = e.id
-                      JOIN simbolos_cedula sc ON c.id_simbolo_cedula = sc.id";
+            // Calculate offset
+            $offset = ($pagina - 1) * $porPagina;
+
+            // Base query for both count and data
+            $baseQuery = "FROM clientes c
+                         JOIN estatus e ON c.id_estatus = e.id
+                         JOIN simbolos_cedula sc ON c.id_simbolo_cedula = sc.id";
+
+            // Build WHERE clause based on filters
+            $whereConditions = [];
+            $params = [];
+
+            if (!empty($filtros['busqueda'])) {
+                $whereConditions[] = "(c.nombres LIKE ? OR 
+                                      c.apellidos LIKE ? OR 
+                                      c.cedula LIKE ? OR
+                                      c.telefono LIKE ? OR
+                                      c.direccion LIKE ?)";
+                $searchTerm = '%' . $filtros['busqueda'] . '%';
+                $params = array_fill(0, 5, $searchTerm);
+            }
+
+            $whereClause = !empty($whereConditions) ? " WHERE " . implode(' AND ', $whereConditions) : "";
+
+            // Get total records for pagination
+            $queryTotal = "SELECT COUNT(*) as total " . $baseQuery . $whereClause;
+            $stmtTotal = $this->db->prepare($queryTotal);
+            foreach ($params as $i => $param) {
+                $stmtTotal->bindValue($i + 1, $param);
+            }
+            $stmtTotal->execute();
+            $total = $stmtTotal->fetch(PDO::FETCH_ASSOC)['total'];
+
+            // Get paginated records
+            $query = "SELECT c.*, e.nombre as estatus, sc.nombre as nombre_simbolo,
+                      COALESCE((SELECT SUM(v.monto_total) FROM ventas v WHERE v.cedula_cliente = c.cedula AND v.id_estatus = 1), 0) as total_ventas
+                      " . $baseQuery . $whereClause . "
+                      ORDER BY c.nombres, c.apellidos
+                      LIMIT ? OFFSET ?";
+
             $stmt = $this->db->prepare($query);
+            foreach ($params as $i => $param) {
+                $stmt->bindValue($i + 1, $param);
+            }
+            $stmt->bindValue(count($params) + 1, $porPagina, PDO::PARAM_INT);
+            $stmt->bindValue(count($params) + 2, $offset, PDO::PARAM_INT);
             $stmt->execute();
             $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -62,7 +103,13 @@ class ClienteModel
                 throw new Exception('Error al obtener los datos de clientes');
             }
 
-            return $result;
+            return [
+                'data' => $result,
+                'total' => $total,
+                'pagina_actual' => $pagina,
+                'por_pagina' => $porPagina,
+                'total_paginas' => ceil($total / $porPagina)
+            ];
         } catch (PDOException $e) {
             $this->errors[] = "Error de base de datos: " . $e->getMessage();
             error_log("Error en obtenerTodosClientes: " . $e->getMessage());

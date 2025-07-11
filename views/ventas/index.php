@@ -32,7 +32,29 @@
                         <div class="form-group">
                             <div class="input-group">
                                 <span class="input-group-addon"><i class="fa fa-search"></i></span>
-                                <input type="text" id="busqueda" class="form-control" placeholder="Buscar por cliente, fecha...">
+                                <input type="text" id="busqueda" class="form-control" placeholder="Buscar por cliente, fecha..." value="<?= isset($_GET['busqueda']) ? htmlspecialchars($_GET['busqueda']) : '' ?>">
+                            </div>
+                        </div>
+
+                        <div id="filtros-activos" class="alert alert-info" style="<?= (!empty($filtros_activos) || isset($_GET['busqueda']) || isset($_GET['fecha_inicio']) || isset($_GET['fecha_fin']) || isset($_GET['vendedor'])) ? 'display: block;' : 'display: none;' ?> margin-bottom: 10px;">
+                            <i class="fa fa-filter"></i> Filtros activos: <span id="texto-filtros-activos"><?php
+                                $filtros_texto = [];
+                                if (isset($_GET['busqueda']) && !empty($_GET['busqueda'])) {
+                                    $filtros_texto[] = 'Búsqueda: "' . htmlspecialchars($_GET['busqueda']) . '"';
+                                }
+                                if (isset($_GET['fecha_inicio']) && !empty($_GET['fecha_inicio'])) {
+                                    $filtros_texto[] = 'Desde: ' . date('d/m/Y', strtotime($_GET['fecha_inicio']));
+                                }
+                                if (isset($_GET['fecha_fin']) && !empty($_GET['fecha_fin'])) {
+                                    $filtros_texto[] = 'Hasta: ' . date('d/m/Y', strtotime($_GET['fecha_fin']));
+                                }
+                                if (isset($_GET['vendedor']) && !empty($_GET['vendedor'])) {
+                                    $filtros_texto[] = 'Vendedor: ' . htmlspecialchars($_GET['vendedor']);
+                                }
+                                echo implode(' | ', $filtros_texto);
+                            ?></span>
+                            <div class="pull-right">
+                                <strong><i class="fa fa-list"></i> Resultados encontrados: <span id="contador-resultados"><?= count($ventas) ?></span></strong>
                             </div>
                         </div>
 
@@ -69,6 +91,36 @@
                             </tbody>
                         </table>
                     </div>
+
+                        <?php if (isset($total_paginas) && $total_paginas > 1): ?>
+                            <div class="text-center">
+                                <ul class="pagination">
+                                    <?php if ($pagina_actual > 1): ?>
+                                        <li>
+                                            <a href="<?= BASE_URL ?>index.php?action=ventas&method=index&pagina=<?= ($pagina_actual-1) ?>&por_pagina=<?= $por_pagina ?><?= isset($termino_busqueda) ? '&busqueda=' . urlencode($termino_busqueda) : '' ?>">
+                                                <i class="fa fa-angle-left"></i>
+                                            </a>
+                                        </li>
+                                    <?php endif; ?>
+
+                                    <?php for ($i = 1; $i <= $total_paginas; $i++): ?>
+                                        <li class="<?= $i === $pagina_actual ? 'active' : '' ?>">
+                                            <a href="<?= BASE_URL ?>index.php?action=ventas&method=index&pagina=<?= $i ?>&por_pagina=<?= $por_pagina ?><?= isset($termino_busqueda) ? '&busqueda=' . urlencode($termino_busqueda) : '' ?>">
+                                                <?= $i ?>
+                                            </a>
+                                        </li>
+                                    <?php endfor; ?>
+
+                                    <?php if ($pagina_actual < $total_paginas): ?>
+                                        <li>
+                                            <a href="<?= BASE_URL ?>index.php?action=ventas&method=index&pagina=<?= ($pagina_actual+1) ?>&por_pagina=<?= $por_pagina ?><?= isset($termino_busqueda) ? '&busqueda=' . urlencode($termino_busqueda) : '' ?>">
+                                                <i class="fa fa-angle-right"></i>
+                                            </a>
+                                        </li>
+                                    <?php endif; ?>
+                                </ul>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </section>
             </div>
@@ -119,34 +171,52 @@
 <!-- Scripts para manejar la búsqueda, filtros y SweetAlert -->
 <script>
     $(document).ready(function() {
-        const sinResultados = $('<div id="sin-resultados" class="alert alert-warning text-center" style="display: none;">' +
-            '<i class="fa fa-exclamation-circle"></i> No se encontraron ventas que coincidan con la búsqueda</div>');
-        $('.panel-body').append(sinResultados);
-
-        // Búsqueda en tiempo real
+        // Búsqueda en tiempo real sin recargar la página
         $('#busqueda').on('input', function() {
             const searchValue = $(this).val().trim().toLowerCase();
-            let resultados = 0;
-
+            let encontrados = 0;
+            
             $('#tablaVentas tbody tr').each(function() {
                 const cliente = $(this).find('td:eq(2)').text().toLowerCase();
                 const fecha = $(this).find('td:eq(1)').text().toLowerCase();
+                const vendedor = $(this).find('td:eq(4)').text().toLowerCase();
                 const id = $(this).find('td:eq(0)').text().toLowerCase();
-
-                const match = cliente.includes(searchValue) || fecha.includes(searchValue) || id.includes(searchValue);
-
-                if (match) {
+                
+                if (cliente.includes(searchValue) || 
+                    fecha.includes(searchValue) || 
+                    vendedor.includes(searchValue) ||
+                    id.includes(searchValue)) {
                     $(this).show();
-                    resultados++;
+                    encontrados++;
                 } else {
                     $(this).hide();
                 }
             });
-
-            if (resultados === 0 && searchValue.length > 0) {
-                sinResultados.show();
+            
+            // Actualizar contador de resultados
+            $('#contador-resultados').text(encontrados);
+            
+            // Mostrar u ocultar mensaje de sin resultados
+            if (encontrados === 0) {
+                if (!$('#sin-resultados').length) {
+                    const sinResultados = $('<div id="sin-resultados" class="alert alert-warning text-center">' +
+                        '<i class="fa fa-exclamation-circle"></i> No se encontraron ventas que coincidan con la búsqueda</div>');
+                    $('#tablaVentas').before(sinResultados);
+                } else {
+                    $('#sin-resultados').show();
+                }
             } else {
-                sinResultados.hide();
+                $('#sin-resultados').hide();
+            }
+            
+            // Actualizar filtros activos
+            if (searchValue) {
+                $('#filtros-activos').show();
+                const filtrosTexto = [];
+                filtrosTexto.push('Búsqueda: "' + searchValue + '"');
+                $('#texto-filtros-activos').html(filtrosTexto.join(' | '));
+            } else if (!$('#filtroFechaInicio').val() && !$('#filtroFechaFin').val() && !$('#filtroVendedor').val()) {
+                $('#filtros-activos').hide();
             }
         });
 
@@ -154,40 +224,30 @@
         $('#aplicarFiltros').click(function() {
             const fechaInicio = $('#filtroFechaInicio').val();
             const fechaFin = $('#filtroFechaFin').val();
-            const vendedor = $('#filtroVendedor').val().toLowerCase();
-            let resultados = 0;
-
-            $('#tablaVentas tbody tr').each(function() {
-                const fechaVenta = new Date($(this).find('td:eq(1)').text().split(' ')[0].split('/').reverse().join('-'));
-                const vendedorVenta = $(this).find('td:eq(4)').text().toLowerCase();
-
-                const matchFecha = (!fechaInicio || !fechaFin || (fechaVenta >= new Date(fechaInicio) && fechaVenta <= new Date(fechaFin)));
-                const matchVendedor = !vendedor || vendedorVenta.includes(vendedor);
-
-                if (matchFecha && matchVendedor) {
-                    $(this).show();
-                    resultados++;
-                } else {
-                    $(this).hide();
-                }
-            });
-
-            if (resultados === 0) {
-                sinResultados.show();
-            } else {
-                sinResultados.hide();
-            }
-
-            $('#filtrosModal').modal('hide');
+            const vendedor = $('#filtroVendedor').val();
+            
+            const currentUrl = new URL(window.location.href);
+            
+            if (fechaInicio) currentUrl.searchParams.set('fecha_inicio', fechaInicio);
+            else currentUrl.searchParams.delete('fecha_inicio');
+            
+            if (fechaFin) currentUrl.searchParams.set('fecha_fin', fechaFin);
+            else currentUrl.searchParams.delete('fecha_fin');
+            
+            if (vendedor) currentUrl.searchParams.set('vendedor', vendedor);
+            else currentUrl.searchParams.delete('vendedor');
+            
+            currentUrl.searchParams.set('pagina', '1');
+            window.location.href = currentUrl.toString();
         });
 
         $('#limpiarFiltros').click(function() {
-            $('#formFiltros')[0].reset();
-            $('#tablaVentas tbody tr').show();
-            sinResultados.hide();
+            const currentUrl = new URL(window.location.href);
+            ['fecha_inicio', 'fecha_fin', 'vendedor', 'busqueda'].forEach(param => {
+                currentUrl.searchParams.delete(param);
+            });
+            window.location.href = currentUrl.toString();
         });
-
-
     });
 </script>
 <!--main content end-->

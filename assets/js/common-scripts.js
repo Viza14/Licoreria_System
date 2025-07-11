@@ -49,28 +49,23 @@ var Script = function () {
     });
 
     $('.fa-bars').click(function () {
-        if ($('#sidebar > ul').is(":visible") === true) {
-            $('#sidebar').css({
-                'margin-left': '-210px'
-            });
-            setTimeout(function() {
-                $('#main-content').css({
-                    'margin-left': '0px'
-                });
-                $('#sidebar > ul').hide();
-                $("#container").addClass("sidebar-closed");
-            }, 300);
+        var $sidebar = $('#sidebar');
+        var $mainContent = $('#main-content');
+        var $sidebarUl = $('#sidebar > ul');
+        var $container = $('#container');
+        var animationDuration = 100;
+        
+        if ($sidebarUl.is(':visible')) {
+            $sidebar.css('margin-left', '-210px');
+            $mainContent.css('margin-left', '0px');
+            $sidebarUl.fadeOut(animationDuration);
+            $container.addClass('sidebar-closed');
         } else {
-            $('#sidebar').css({
-                'margin-left': '0'
+            $sidebar.css('margin-left', '0');
+            $sidebarUl.hide().fadeIn(animationDuration, function() {
+                $mainContent.css('margin-left', '210px');
+                $container.removeClass('sidebar-closed');
             });
-            $('#sidebar > ul').show();
-            setTimeout(function() {
-                $('#main-content').css({
-                    'margin-left': '210px'
-                });
-                $("#container").removeClass("sidebar-closed");
-            }, 50);
         }
     });
 

@@ -16,20 +16,84 @@ class VentaModel
         return $this->errors;
     }
 
-    public function obtenerTodasVentas()
+    public function obtenerTodasVentas($pagina = 1, $por_pagina = 10, $busqueda = '', $filtros = [])
     {
+        $params = [];
+        $offset = ($pagina - 1) * $por_pagina;
+
+        // Consulta base para obtener el total de registros
+        $queryCount = "SELECT COUNT(*) as total FROM ventas v
+                       JOIN clientes c ON v.cedula_cliente = c.cedula
+                       JOIN usuarios u ON v.id_usuario = u.id
+                       WHERE v.id_estatus = 1";
+
+        // Consulta base para obtener los registros
         $query = "SELECT v.*, 
                   CONCAT(c.nombres, ' ', c.apellidos) as cliente,
                   CONCAT(u.nombres, ' ', u.apellidos) as usuario
                   FROM ventas v
                   JOIN clientes c ON v.cedula_cliente = c.cedula
                   JOIN usuarios u ON v.id_usuario = u.id
-                  WHERE v.id_estatus = 1
-                  ORDER BY v.fecha DESC, v.id DESC";
-        
+                  WHERE v.id_estatus = 1";
+
+        // Aplicar búsqueda si existe
+        if (!empty($busqueda)) {
+            $searchTerm = "%" . $busqueda . "%";
+            $whereClause = " AND (CONCAT(c.nombres, ' ', c.apellidos) LIKE :busqueda
+                               OR v.id LIKE :busqueda
+                               OR DATE_FORMAT(v.fecha, '%d/%m/%Y') LIKE :busqueda
+                               OR CONCAT(u.nombres, ' ', u.apellidos) LIKE :busqueda)";
+            $query .= $whereClause;
+            $queryCount .= $whereClause;
+            $params[':busqueda'] = $searchTerm;
+        }
+
+        // Aplicar filtros adicionales
+        if (!empty($filtros)) {
+            if (!empty($filtros['fecha_inicio'])) {
+                $query .= " AND v.fecha >= :fecha_inicio";
+                $queryCount .= " AND v.fecha >= :fecha_inicio";
+                $params[':fecha_inicio'] = $filtros['fecha_inicio'];
+            }
+            if (!empty($filtros['fecha_fin'])) {
+                $query .= " AND v.fecha <= :fecha_fin";
+                $queryCount .= " AND v.fecha <= :fecha_fin";
+                $params[':fecha_fin'] = $filtros['fecha_fin'];
+            }
+            if (!empty($filtros['vendedor'])) {
+                $query .= " AND CONCAT(u.nombres, ' ', u.apellidos) = :vendedor";
+                $queryCount .= " AND CONCAT(u.nombres, ' ', u.apellidos) = :vendedor";
+                $params[':vendedor'] = $filtros['vendedor'];
+            }
+        }
+
+        // Obtener total de registros
+        $stmtCount = $this->db->prepare($queryCount);
+        $stmtCount->execute($params);
+        $total = $stmtCount->fetch(PDO::FETCH_ASSOC)['total'];
+
+        // Agregar ordenamiento y paginación
+        $query .= " ORDER BY v.fecha DESC, v.id DESC LIMIT :offset, :por_pagina";
+        $params[':offset'] = $offset;
+        $params[':por_pagina'] = $por_pagina;
+
         $stmt = $this->db->prepare($query);
+        foreach ($params as $param => $value) {
+            if ($param == ':offset' || $param == ':por_pagina') {
+                $stmt->bindValue($param, $value, PDO::PARAM_INT);
+            } else {
+                $stmt->bindValue($param, $value);
+            }
+        }
         $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return [
+            'ventas' => $stmt->fetchAll(PDO::FETCH_ASSOC),
+            'total_registros' => $total,
+            'pagina_actual' => $pagina,
+            'por_pagina' => $por_pagina,
+            'total_paginas' => ceil($total / $por_pagina)
+        ];
     }
 
     public function obtenerVentaPorId($id) {
@@ -71,10 +135,20 @@ class VentaModel
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function obtenerPagosVenta($id_venta)
+    {
+        $query = "SELECT * FROM pagos_venta WHERE id_venta = :id_venta ORDER BY fecha_pago ASC";
+        $stmt = $this->db->prepare($query);
+        $stmt->bindParam(":id_venta", $id_venta);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function registrarVenta($data)
     {
         try {
             $this->db->beginTransaction();
+            $this->errors = []; // Limpiar errores anteriores
 
             // Validate total payments match total amount
             $total_pagos = 0;
@@ -89,6 +163,30 @@ class VentaModel
             
             if (abs($total_pagos - $total_productos) > 0.01) {
                 throw new Exception("El total de los pagos no coincide con el monto total de la venta");
+            }
+
+            // Validar referencias únicas para pagos móvil y tarjeta
+            $referencias_usadas = [];
+            foreach ($data['pagos'] as $pago) {
+                if ($pago['forma_pago'] !== 'EFECTIVO' && !empty($pago['referencia_pago'])) {
+                    // Verificar si la referencia ya existe en la base de datos
+                    $query = "SELECT COUNT(*) as count FROM pagos_venta WHERE referencia_pago = :referencia_pago AND forma_pago = :forma_pago";
+                    $stmt = $this->db->prepare($query);
+                    $stmt->bindParam(":referencia_pago", $pago['referencia_pago']);
+                    $stmt->bindParam(":forma_pago", $pago['forma_pago']);
+                    $stmt->execute();
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                    if ($result['count'] > 0) {
+                        throw new Exception("La referencia " . $pago['referencia_pago'] . " ya existe para el método de pago " . $pago['forma_pago']);
+                    }
+
+                    // Verificar si la referencia ya se usó en esta misma venta
+                    if (in_array($pago['referencia_pago'], $referencias_usadas)) {
+                        throw new Exception("No se pueden usar referencias repetidas en la misma venta");
+                    }
+                    $referencias_usadas[] = $pago['referencia_pago'];
+                }
             }
 
             $fecha = isset($data['fecha']) ? $data['fecha'] : date('Y-m-d H:i:s');
@@ -171,6 +269,10 @@ class VentaModel
             $this->db->rollBack();
             $this->errors[] = "Error al registrar venta: " . $e->getMessage();
             return false;
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            $this->errors[] = $e->getMessage();
+            return false;
         }
     }
 
@@ -183,6 +285,36 @@ class VentaModel
             $venta_actual = $this->obtenerVentaPorId($id);
             if (!$venta_actual || $venta_actual['id_estatus'] != 1) {
                 throw new Exception("Venta no encontrada o no editable");
+            }
+
+            // Validar referencias únicas para pagos móvil y tarjeta
+            $referencias_usadas = [];
+            foreach ($data['pagos'] as $pago) {
+                if ($pago['forma_pago'] !== 'EFECTIVO' && !empty($pago['referencia_pago'])) {
+                    // Verificar si la referencia ya existe en la base de datos (excluyendo la venta actual)
+                    $query = "SELECT COUNT(*) as count FROM pagos_venta pv 
+                              JOIN ventas v ON pv.id_venta = v.id 
+                              WHERE pv.referencia_pago = :referencia_pago 
+                              AND pv.forma_pago = :forma_pago 
+                              AND v.id_estatus = 1 
+                              AND v.id != :id_venta";
+                    $stmt = $this->db->prepare($query);
+                    $stmt->bindParam(":referencia_pago", $pago['referencia_pago']);
+                    $stmt->bindParam(":forma_pago", $pago['forma_pago']);
+                    $stmt->bindParam(":id_venta", $id);
+                    $stmt->execute();
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                    if ($result['count'] > 0) {
+                        throw new Exception("La referencia " . $pago['referencia_pago'] . " ya existe para el método de pago " . $pago['forma_pago']);
+                    }
+
+                    // Verificar si la referencia ya se usó en esta misma venta
+                    if (in_array($pago['referencia_pago'], $referencias_usadas)) {
+                        throw new Exception("No se pueden usar referencias repetidas en la misma venta");
+                    }
+                    $referencias_usadas[] = $pago['referencia_pago'];
+                }
             }
 
             // Mark current sale as inactive

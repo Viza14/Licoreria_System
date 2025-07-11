@@ -12,11 +12,21 @@ class CategoriaController
     public function index()
     {
         $this->checkSession();
-        $categorias = $this->model->obtenerTodasCategorias();
+        
+        // Obtener parámetros de paginación
+        $pagina = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
+        $por_pagina = 10;
+
+        // Obtener datos paginados
+        $resultado = $this->model->obtenerTodasCategorias($pagina, $por_pagina);
         $tipos = $this->model->obtenerTiposCategoria();
+        
         $this->loadView('categorias/index', [
-            'categorias' => $categorias,
-            'tipos' => $tipos
+            'categorias' => $resultado['categorias'],
+            'tipos' => $tipos,
+            'pagina_actual' => $resultado['pagina_actual'],
+            'total_paginas' => $resultado['total_paginas'],
+            'total_registros' => $resultado['total_registros']
         ]);
     }
 

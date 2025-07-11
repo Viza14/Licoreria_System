@@ -29,6 +29,10 @@ class ReporteController
     {
         $this->checkSession();
         
+        // Obtener parámetros de paginación
+        $pagina = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
+        $por_pagina = 10;
+        
         $filtros = [];
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $filtros = [
@@ -36,17 +40,26 @@ class ReporteController
                 'id_tipo_categoria' => $_POST['id_tipo_categoria'] ?? null,
                 'estado_stock' => $_POST['estado_stock'] ?? null
             ];
+            // Redirigir a GET con los filtros
+            $queryString = http_build_query(['filtros' => $filtros]);
+            header("Location: " . BASE_URL . "index.php?action=reportes&method=inventario&" . $queryString);
+            exit();
+        } elseif (isset($_GET['filtros'])) {
+            $filtros = $_GET['filtros'];
         }
         
-        $reporte = $this->model->generarReporteInventario($filtros);
+        $resultado = $this->model->generarReporteInventario($filtros, $pagina, $por_pagina);
         $categorias = $this->productoModel->obtenerCategorias();
         $tiposCategoria = $this->productoModel->obtenerTiposCategoria();
         
         $this->loadView('reportes/inventario', [
-            'reporte' => $reporte,
+            'reporte' => $resultado['datos'],
             'categorias' => $categorias,
             'tiposCategoria' => $tiposCategoria,
-            'filtros' => $filtros
+            'filtros' => $filtros,
+            'pagina_actual' => $resultado['pagina_actual'],
+            'total_paginas' => $resultado['total_paginas'],
+            'total_registros' => $resultado['total_registros']
         ]);
     }
 
@@ -55,21 +68,34 @@ class ReporteController
         $this->checkSession();
         
         $filtros = [];
+        $pagina = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
+        $por_pagina = 10;
+
+        // Obtener filtros de POST o GET
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $filtros = [
                 'fecha_inicio' => $_POST['fecha_inicio'] ?? null,
                 'fecha_fin' => $_POST['fecha_fin'] ?? null,
                 'id_producto' => $_POST['id_producto'] ?? null
             ];
+            // Redirigir a GET con los filtros
+            $queryString = http_build_query(['filtros' => $filtros]);
+            header("Location: " . BASE_URL . "index.php?action=reportes&method=detalleVentas&" . $queryString);
+            exit();
+        } elseif (isset($_GET['filtros'])) {
+            $filtros = $_GET['filtros'];
         }
         
-        $reporte = $this->model->generarDetalleVentas($filtros);
+        $resultado = $this->model->generarDetalleVentas($filtros, $pagina, $por_pagina);
         $productos = $this->productoModel->obtenerProductosActivos();
         
         $this->loadView('reportes/detalle_ventas', [
-            'reporte' => $reporte,
+            'reporte' => $resultado['datos'],
             'productos' => $productos,
-            'filtros' => $filtros
+            'filtros' => $filtros,
+            'pagina_actual' => $resultado['pagina_actual'],
+            'total_paginas' => $resultado['total_paginas'],
+            'total_registros' => $resultado['total_registros']
         ]);
     }
 

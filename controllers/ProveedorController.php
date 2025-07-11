@@ -11,8 +11,20 @@ class ProveedorController
     public function index()
     {
         $this->checkSession();
-        $proveedores = $this->model->obtenerTodosProveedores();
-        $this->loadView('proveedores/index', ['proveedores' => $proveedores]);
+        
+        // Obtener parámetros de paginación
+        $pagina = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
+        $por_pagina = 10;
+
+        // Obtener proveedores paginados
+        $resultado = $this->model->obtenerTodosProveedores($pagina, $por_pagina);
+        
+        $this->loadView('proveedores/index', [
+            'proveedores' => $resultado['proveedores'],
+            'pagina_actual' => $resultado['pagina_actual'],
+            'total_paginas' => $resultado['total_paginas'],
+            'total_registros' => $resultado['total_registros']
+        ]);
     }
 
     public function cambiarEstado($cedula)

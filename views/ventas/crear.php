@@ -1,6 +1,29 @@
 <!--main content start-->
 <section id="main-content">
     <section class="wrapper">
+        <?php if (isset($_SESSION['mensaje'])): ?>
+        <script>
+            Swal.fire({
+                title: '<?= $_SESSION['mensaje']['title'] ?>',
+                text: '<?= $_SESSION['mensaje']['text'] ?>',
+                icon: '<?= $_SESSION['mensaje']['icon'] ?>',
+                timer: 3000,
+                timerProgressBar: true
+            });
+        </script>
+        <?php unset($_SESSION['mensaje']); endif; ?>
+        
+        <?php if (isset($_SESSION['error'])): ?>
+        <script>
+            Swal.fire({
+                title: '<?= $_SESSION['error']['title'] ?>',
+                text: '<?= $_SESSION['error']['text'] ?>',
+                icon: '<?= $_SESSION['error']['icon'] ?>',
+                timer: 3000,
+                timerProgressBar: true
+            });
+        </script>
+        <?php unset($_SESSION['error']); endif; ?>
         <!--breadcrumbs start-->
         <div class="row">
             <div class="col-lg-12">
@@ -370,6 +393,25 @@
         // Client search functionality
         const clientes = <?php echo json_encode($clientes); ?>;
         const productos = <?php echo json_encode($productos); ?>;
+        
+        // Verificación y normalización inicial de productos
+        if (!Array.isArray(productos)) {
+            console.error('Error: productos no es un array', productos);
+        } else {
+            console.log('Total de productos cargados:', productos.length);
+            productos.forEach(producto => {
+                if (!producto.descripcion) {
+                    console.error('Producto sin descripción:', producto);
+                }
+                console.log('Producto:', {
+                    id: producto.id,
+                    descripcion: producto.descripcion,
+                    descripcion_normalizada: producto.descripcion?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
+                    categoria: producto.categoria,
+                    estatus: producto.estatus
+                });
+            });
+        }
 
         $('#buscar_cliente').on('input', function() {
             const busqueda = $(this).val().toLowerCase();
@@ -417,14 +459,47 @@
             const resultados = $('#resultados_productos');
             resultados.empty();
 
+            console.log('Iniciando búsqueda de productos...');
+            console.log('Término de búsqueda:', busqueda);
+            console.log('Total de productos disponibles:', productos.length);
+
             if (busqueda.length < 2) {
+                console.log('Búsqueda muy corta, ocultando resultados');
                 resultados.hide();
                 return;
             }
 
-            const productosFiltrados = productos.filter(producto =>
-                producto.descripcion.toLowerCase().includes(busqueda)
-            );
+            if (!Array.isArray(productos)) {
+                console.error('Error: productos no es un array', productos);
+                return;
+            }
+
+            const productosFiltrados = productos.filter(producto => {
+                if (!producto || !producto.descripcion) {
+                    console.error('Producto inválido:', producto);
+                    return false;
+                }
+
+                const descripcionNormalizada = producto.descripcion.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                const busquedaNormalizada = busqueda.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                const coincide = descripcionNormalizada.includes(busquedaNormalizada);
+
+                console.log('Comparando:', {
+                    original: producto.descripcion,
+                    normalizada: descripcionNormalizada,
+                    busqueda: busquedaNormalizada,
+                    coincide: coincide
+                });
+
+                return coincide;
+            });
+
+            console.log('Resultados de la búsqueda:', {
+                termino: busqueda,
+                total_productos: productos.length,
+                coincidencias: productosFiltrados.length,
+                productos_encontrados: productosFiltrados.map(p => p.descripcion)
+            });
 
             if (productosFiltrados.length > 0) {
                 productosFiltrados.forEach(producto => {
@@ -701,31 +776,5 @@
         });
     });
 
-    // Mostrar mensajes de sesión con SweetAlert
-    <?php if (isset($_SESSION['mensaje'])): ?>
-    <script>
-        Swal.fire({
-            title: '<?= $_SESSION['mensaje']['title'] ?>',
-            text: '<?= $_SESSION['mensaje']['text'] ?>',
-            icon: '<?= $_SESSION['mensaje']['icon'] ?>',
-            timer: 3000,
-            timerProgressBar: true
-        });
-    </script>
-    <?php unset($_SESSION['mensaje']); ?>
-    <?php endif; ?>
-    
-    <?php if (isset($_SESSION['error'])): ?>
-    <script>
-        Swal.fire({
-            title: '<?= $_SESSION['error']['title'] ?>',
-            text: '<?= $_SESSION['error']['text'] ?>',
-            icon: '<?= $_SESSION['error']['icon'] ?>',
-            timer: 3000,
-            timerProgressBar: true
-        });
-    </script>
-    <?php unset($_SESSION['error']); ?>
-    <?php endif; ?>
     </script>
 </section>
