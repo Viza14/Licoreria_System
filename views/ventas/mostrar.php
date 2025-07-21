@@ -114,13 +114,16 @@
                         </div>
 
                         <div class="row">
-                            <?php if ($_SESSION['user_rol'] != 2): ?>
-                                <div class="col-md-12">
+                            <div class="col-md-12">
+                                <a href="<?= BASE_URL ?>facturas/factura_<?= $venta['id'] ?>.pdf" class="btn btn-primary" target="_blank">
+                                    <i class="fa fa-download"></i> Descargar Factura
+                                </a>
+                                <?php if ($_SESSION['user_rol'] != 2): ?>
                                     <a href="<?= BASE_URL ?>index.php?action=reportes" class="btn btn-default">
                                         <i class="fa fa-arrow-left"></i> Volver
                                     </a>
-                                </div>
-                            <?php endif; ?>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </div>
                 </section>

@@ -258,7 +258,17 @@
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label>Monto</label>
-                                <input type="number" class="form-control monto-pago" name="montos_pago[]" step="0.01" required>
+                                <div class="input-group">
+                                    <input type="number" class="form-control monto-pago" name="montos_pago[]" step="0.01" required>
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-info seleccionar-productos" title="Seleccionar productos para esta forma de pago">
+                                            <i class="fa fa-list"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-success usar-monto-restante" title="Completar monto restante">
+                                            <i class="fa fa-level-up"></i>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-3 referencia-container" style="display: none;">
@@ -278,6 +288,127 @@
             `;
             $('#formas_pago_container').append(template);
         }
+
+        // Evento para usar el monto restante
+        $(document).on('click', '.usar-monto-restante', function() {
+            const montoRestante = actualizarMontoRestante();
+            if (montoRestante > 0) {
+                $(this).closest('.forma-pago-item').find('.monto-pago').val(montoRestante.toFixed(2));
+                actualizarMontoRestante();
+            }
+        });
+
+        // Evento para seleccionar productos específicos
+        $(document).on('click', '.seleccionar-productos', function() {
+            const $formaPagoItem = $(this).closest('.forma-pago-item');
+            const $montoPago = $formaPagoItem.find('.monto-pago');
+
+            let productosHtml = '';
+            productosAgregados.forEach((producto, index) => {
+                productosHtml += `
+                    <div class="form-group mb-3 producto-item-container">
+                        <div class="d-flex align-items-center">
+                            <input type="checkbox" class="form-check-input producto-seleccionado mr-2" 
+                                   id="producto${index}" data-index="${index}" 
+                                   data-precio="${producto.precio}" 
+                                   data-cantidad-total="${producto.cantidad}">
+                            <label class="form-check-label flex-grow-1" for="producto${index}">
+                                ${producto.descripcion} - ${producto.cantidad} x ${producto.precio.toFixed(2)} Bs = ${producto.subtotal.toFixed(2)} Bs
+                            </label>
+                        </div>
+                        <div class="cantidad-container mt-2" style="display: none;">
+                            <label>Cantidad a pagar (máx. ${producto.cantidad}):</label>
+                            <input type="number" class="form-control cantidad-a-pagar" 
+                                   min="1" max="${producto.cantidad}" value="1"
+                                   oninput="this.value = this.value > ${producto.cantidad} ? ${producto.cantidad} : Math.abs(this.value)">
+                        </div>
+                    </div>`;
+            });
+
+            Swal.fire({
+                title: 'Seleccionar Productos',
+                html: `
+                    <div style="text-align: left; max-height: 300px; overflow-y: auto;">
+                        ${productosHtml}
+                    </div>
+                    <div class="mt-3">
+                        <strong>Total seleccionado: </strong>
+                        <span id="totalSeleccionado">0.00 Bs</span>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Aplicar',
+                cancelButtonText: 'Cancelar',
+                didOpen: () => {
+                    // Mostrar/ocultar campo de cantidad cuando se selecciona un producto
+                    $('.producto-seleccionado').on('change', function() {
+                        const $container = $(this).closest('.producto-item-container');
+                        const $cantidadContainer = $container.find('.cantidad-container');
+                        
+                        if ($(this).is(':checked')) {
+                            $cantidadContainer.show();
+                        } else {
+                            $cantidadContainer.hide();
+                        }
+                        
+                        calcularTotalSeleccionado();
+                    });
+
+                    // Recalcular total cuando cambia la cantidad
+                    $('.cantidad-a-pagar').on('input', function() {
+                        const $container = $(this).closest('.producto-item-container');
+                        const $checkbox = $container.find('.producto-seleccionado');
+                        
+                        if ($checkbox.is(':checked')) {
+                            calcularTotalSeleccionado();
+                        }
+                    });
+
+                    function calcularTotalSeleccionado() {
+                        let totalSeleccionado = 0;
+                        $('.producto-seleccionado:checked').each(function() {
+                            const $container = $(this).closest('.producto-item-container');
+                            const cantidad = parseInt($container.find('.cantidad-a-pagar').val()) || 0;
+                            const precio = parseFloat($(this).data('precio'));
+                            totalSeleccionado += cantidad * precio;
+                        });
+                        $('#totalSeleccionado').text(totalSeleccionado.toFixed(2) + ' Bs');
+                    }
+                },
+                preConfirm: () => {
+                    let total = 0;
+                    let detalleProductos = [];
+                    
+                    $('.producto-seleccionado:checked').each(function() {
+                        const $container = $(this).closest('.producto-item-container');
+                        const cantidad = parseInt($container.find('.cantidad-a-pagar').val()) || 0;
+                        const precio = parseFloat($(this).data('precio'));
+                        const cantidadTotal = parseInt($(this).data('cantidad-total'));
+                        const index = $(this).data('index');
+                        
+                        if (cantidad > cantidadTotal) {
+                            Swal.showValidationMessage(`La cantidad seleccionada excede el total disponible para ${productosAgregados[index].descripcion}`);
+                            return false;
+                        }
+                        
+                        total += cantidad * precio;
+                        detalleProductos.push({
+                            descripcion: productosAgregados[index].descripcion,
+                            cantidad: cantidad,
+                            precio: precio,
+                            subtotal: cantidad * precio
+                        });
+                    });
+                    
+                    return { total, detalleProductos };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $montoPago.val(result.value.total.toFixed(2));
+                    actualizarMontoRestante();
+                }
+            });
+        });
 
         $('#agregarFormaPago').click(function() {
             crearFormaPago();
