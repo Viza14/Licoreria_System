@@ -36,6 +36,33 @@ class ProductoModel
                 error_log('Aplicando filtro de productos y categorías activas');
             }
 
+            // Filtro de búsqueda
+            if (!empty($filtros['busqueda'])) {
+                $busqueda = '%' . $filtros['busqueda'] . '%';
+                $condiciones[] = "(LOWER(CONVERT(p.descripcion USING utf8)) LIKE LOWER(:busqueda) OR 
+                                  LOWER(CONVERT(c.nombre USING utf8)) LIKE LOWER(:busqueda) OR 
+                                  LOWER(CONVERT(tc.nombre USING utf8)) LIKE LOWER(:busqueda))";
+                $params[':busqueda'] = $busqueda;
+            }
+
+            // Filtro de categoría
+            if (!empty($filtros['categoria'])) {
+                $condiciones[] = "LOWER(CONVERT(c.nombre USING utf8)) = LOWER(:categoria)";
+                $params[':categoria'] = $filtros['categoria'];
+            }
+
+            // Filtro de tipo
+            if (!empty($filtros['tipo'])) {
+                $condiciones[] = "LOWER(CONVERT(tc.nombre USING utf8)) = LOWER(:tipo)";
+                $params[':tipo'] = $filtros['tipo'];
+            }
+
+            // Filtro de estatus
+            if (!empty($filtros['estatus'])) {
+                $condiciones[] = "LOWER(CONVERT(e.nombre USING utf8)) = LOWER(:estatus)";
+                $params[':estatus'] = $filtros['estatus'];
+            }
+
             // Agregar condiciones a la consulta
             $whereClause = '';
             if (!empty($condiciones)) {
@@ -45,7 +72,10 @@ class ProductoModel
             // Contar total de registros para paginación
             $queryCount = "SELECT COUNT(*) as total " . $baseQuery . $whereClause;
             $stmtCount = $this->db->prepare($queryCount);
-            $stmtCount->execute($params);
+            foreach ($params as $key => $value) {
+                $stmtCount->bindValue($key, $value);
+            }
+            $stmtCount->execute();
             $totalRegistros = $stmtCount->fetch(PDO::FETCH_ASSOC)['total'];
 
             // Calcular total de páginas
@@ -56,12 +86,16 @@ class ProductoModel
             // Obtener los registros paginados
             $query = "SELECT p.*, c.nombre as categoria, e.nombre as estatus, tc.nombre as tipo_categoria "
                    . $baseQuery . $whereClause . "
+                   ORDER BY p.descripcion ASC
                    LIMIT :offset, :porPagina";
             
             error_log('Query a ejecutar: ' . $query);
             $stmt = $this->db->prepare($query);
-            $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
-            $stmt->bindParam(':porPagina', $porPagina, PDO::PARAM_INT);
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+            $stmt->bindValue(':porPagina', $porPagina, PDO::PARAM_INT);
             $stmt->execute();
             $productos = $stmt->fetchAll(PDO::FETCH_ASSOC);
             error_log('Productos encontrados: ' . count($productos));

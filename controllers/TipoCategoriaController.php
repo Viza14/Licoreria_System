@@ -9,17 +9,44 @@ class TipoCategoriaController
         $this->model = new TipoCategoriaModel();
     }
 
+    private function normalizarTexto($texto)
+    {
+        if (!$texto) return null;
+        return strtolower(trim(str_replace(['á','é','í','ó','ú','ñ','ü','Á','É','Í','Ó','Ú','Ñ','Ü'], 
+                                         ['a','e','i','o','u','n','u','a','e','i','o','u','n','u'], 
+                                         $texto)));
+    }
+
     public function index()
     {
         $this->checkSession();
         
-        // Obtener parámetros de paginación
+        // Obtener parámetros de paginación y filtros
         $pagina = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
         $por_pagina = 10;
 
-        // Obtener datos paginados
-        $resultado = $this->model->obtenerTodosTiposCategoria($pagina, $por_pagina);
+        // Preparar filtros normalizados
+        $filtros = [
+            'busqueda' => isset($_GET['busqueda']) ? $this->normalizarTexto($_GET['busqueda']) : null,
+            'estatus' => isset($_GET['estatus']) ? $this->normalizarTexto($_GET['estatus']) : null
+        ];
+
+        // Obtener datos paginados con filtros
+        $resultado = $this->model->obtenerTodosTiposCategoria($pagina, $por_pagina, $filtros);
         
+        // Si es una solicitud AJAX, devolver JSON
+        if (isset($_GET['ajax']) && $_GET['ajax'] === 'true') {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'tipos' => $resultado['tipos'],
+                'pagina_actual' => $resultado['pagina_actual'],
+                'total_paginas' => $resultado['total_paginas'],
+                'total_registros' => $resultado['total_registros']
+            ]);
+            exit;
+        }
+
+        // Si no es AJAX, cargar la vista normal
         $this->loadView('tipos_categoria/index', [
             'tipos' => $resultado['tipos'],
             'pagina_actual' => $resultado['pagina_actual'],
@@ -34,7 +61,6 @@ class TipoCategoriaController
         $this->loadView('tipos_categoria/crear');
     }
 
-    // En TipoCategoriaController.php - método guardar()
     public function guardar()
     {
         $this->checkSession();
@@ -98,7 +124,6 @@ class TipoCategoriaController
         $this->loadView('tipos_categoria/editar', ['tipo' => $tipo]);
     }
 
-    // En TipoCategoriaController.php - método actualizar()
     public function actualizar($id)
     {
         $this->checkSession();

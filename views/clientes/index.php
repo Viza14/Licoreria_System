@@ -160,103 +160,167 @@
 
 <!-- Scripts para manejar la búsqueda, filtros y SweetAlert -->
 <script>
+    // Variables globales necesarias
+    const BASE_URL = '<?= BASE_URL ?>';
+    const SESSION_USER_ROL = <?= $_SESSION['user_rol'] ?? 'null' ?>;
+
     $(document).ready(function() {
         // Message when no results found
         const sinResultados = $('<div id="sin-resultados" class="alert alert-warning text-center" style="display: none;">' +
             '<i class="fa fa-exclamation-circle"></i> No se encontraron clientes que coincidan con la búsqueda</div>');
         $('.panel-body').append(sinResultados);
 
-        // Real-time search
-        $('#busqueda').on('input', function() {
-            const searchValue = $(this).val().trim().toLowerCase();
-            let resultados = 0;
+        function actualizarPaginacion(totalPaginas, paginaActual) {
+            const paginacion = $('.pagination');
+            paginacion.empty();
 
-            $('#tablaClientes tbody tr').each(function() {
-                const cedula = $(this).find('td:eq(0)').text().toLowerCase();
-                const nombres = $(this).find('td:eq(1)').text().toLowerCase();
-                const telefono = $(this).find('td:eq(2)').text().toLowerCase();
-                const direccion = $(this).find('td:eq(3)').text().toLowerCase();
+            // Botón anterior
+            if (paginaActual > 1) {
+                paginacion.append(`
+                    <li>
+                        <a href="#" data-pagina="${paginaActual - 1}">
+                            <i class="fa fa-angle-left"></i>
+                        </a>
+                    </li>
+                `);
+            }
 
-                const match = cedula.includes(searchValue) ||
-                    nombres.includes(searchValue) ||
-                    telefono.includes(searchValue) ||
-                    direccion.includes(searchValue);
+            // Números de página
+            for (let i = 1; i <= totalPaginas; i++) {
+                paginacion.append(`
+                    <li class="${i === paginaActual ? 'active' : ''}">
+                        <a href="#" data-pagina="${i}">${i}</a>
+                    </li>
+                `);
+            }
 
-                if (match) {
-                    $(this).show();
-                    resultados++;
-                } else {
-                    $(this).hide();
+            // Botón siguiente
+            if (paginaActual < totalPaginas) {
+                paginacion.append(`
+                    <li>
+                        <a href="#" data-pagina="${paginaActual + 1}">
+                            <i class="fa fa-angle-right"></i>
+                        </a>
+                    </li>
+                `);
+            }
+        }
+
+        function cargarClientes(pagina = 1, forzarPagina = false) {
+            const busqueda = $('#busqueda').val().trim() || null;
+            const estatus = $('#filtroEstatus').val() || null;
+            const compras = $('#filtroCompras').val() || null;
+
+            // Reiniciar a la primera página cuando se realiza una búsqueda o se aplican filtros
+            // a menos que se fuerce una página específica
+            if (!forzarPagina && (busqueda || estatus || compras)) {
+                pagina = 1;
+            }
+
+            $.ajax({
+                url: BASE_URL + 'index.php?action=clientes&method=index',
+                method: 'GET',
+                data: {
+                    ajax: true,
+                    pagina: pagina,
+                    busqueda: busqueda,
+                    estatus: estatus,
+                    compras: compras
+                },
+                success: function(response) {
+                    const tbody = $('#tablaClientes tbody');
+                    tbody.empty();
+
+                    if (response.clientes && response.clientes.length > 0) {
+                        response.clientes.forEach(function(cliente) {
+                            const row = `
+                                <tr>
+                                    <td>${cliente.nombre_simbolo}-${cliente.cedula}</td>
+                                    <td>${cliente.nombres} ${cliente.apellidos}</td>
+                                    <td>${cliente.telefono}</td>
+                                    <td>${cliente.direccion}</td>
+                                    <td>${parseFloat(cliente.total_ventas || 0).toFixed(2)} Bs</td>
+                                    <td>
+                                        <span class="label label-${cliente.id_estatus == 1 ? 'success' : 'danger'}">
+                                            ${cliente.estatus}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="${BASE_URL}index.php?action=clientes&method=mostrar&cedula=${cliente.cedula}" 
+                                               class="btn btn-success btn-xs" title="Ver detalles">
+                                                <i class="fa fa-eye"></i>
+                                            </a>
+                                            ${SESSION_USER_ROL != 2 ? `
+                                                <a href="${BASE_URL}index.php?action=clientes&method=editar&cedula=${cliente.cedula}" 
+                                                   class="btn btn-primary btn-xs" title="Editar">
+                                                    <i class="fa fa-edit"></i>
+                                                </a>
+                                                <button class="btn btn-${cliente.id_estatus == 1 ? 'danger' : 'success'} btn-xs cambiar-estado" 
+                                                        title="${cliente.id_estatus == 1 ? 'Desactivar' : 'Activar'}"
+                                                        data-cedula="${cliente.cedula}">
+                                                    <i class="fa fa-power-off"></i>
+                                                </button>
+                                            ` : ''}
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                            tbody.append(row);
+                        });
+
+                        actualizarPaginacion(response.total_paginas, response.pagina_actual);
+                        $('#sin-resultados').hide();
+                    } else {
+                        $('#sin-resultados').show();
+                    }
+                },
+                error: function() {
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'Error al cargar los clientes',
+                        icon: 'error'
+                    });
                 }
             });
+        }
 
-            if (resultados === 0 && searchValue.length > 0) {
-                sinResultados.show();
-            } else {
-                sinResultados.hide();
-            }
+        // Evento de búsqueda con debounce
+        let timeoutId;
+        $('#busqueda').on('input', function() {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => cargarClientes(1, false), 300);
         });
 
-        // Advanced filters
+        // Eventos de filtros
         $('#aplicarFiltros').click(function() {
-            const estatus = $('#filtroEstatus').val().toLowerCase();
-            const compras = $('#filtroCompras').val();
-            let resultados = 0;
-
-            $('#tablaClientes tbody tr').each(function() {
-                const estatusCliente = $(this).find('td:eq(5)').text().toLowerCase();
-                const comprasCliente = parseFloat($(this).find('td:eq(4)').text());
-
-                let matchEstatus = true;
-                let matchCompras = true;
-
-                if (estatus !== '') {
-                    matchEstatus = estatusCliente.includes(estatus);
-                }
-
-                if (compras !== '') {
-                    switch(compras) {
-                        case 'mayor':
-                            matchCompras = comprasCliente > 1000;
-                            break;
-                        case 'medio':
-                            matchCompras = comprasCliente >= 500 && comprasCliente <= 1000;
-                            break;
-                        case 'menor':
-                            matchCompras = comprasCliente < 500 && comprasCliente > 0;
-                            break;
-                        case 'cero':
-                            matchCompras = comprasCliente === 0;
-                            break;
-                    }
-                }
-
-                if (matchEstatus && matchCompras) {
-                    $(this).show();
-                    resultados++;
-                } else {
-                    $(this).hide();
-                }
-            });
-
-            if (resultados === 0) {
-                sinResultados.show();
-            } else {
-                sinResultados.hide();
-            }
-
+            cargarClientes(1, false);
             $('#filtrosModal').modal('hide');
         });
 
         $('#limpiarFiltros').click(function() {
-            $('#formFiltros')[0].reset();
-            $('#tablaClientes tbody tr').show();
-            sinResultados.hide();
+            $('#filtroEstatus').val('');
+            $('#filtroCompras').val('');
             $('#busqueda').val('');
+            cargarClientes(1, false);
+            $('#filtrosModal').modal('hide');
         });
 
+        // Evento de paginación
+        $(document).on('click', '.pagination a', function(e) {
+            e.preventDefault();
+            const pagina = $(this).data('pagina');
+            cargarClientes(pagina, true);
+        });
+
+
+        // Cargar datos iniciales con los filtros que puedan estar en la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const paginaInicial = urlParams.get('pagina') || 1;
+        cargarClientes(parseInt(paginaInicial), true);
+
         // Change client status
-        $('.cambiar-estado').click(function() {
+        $(document).on('click', '.cambiar-estado', function() {
             const cedula = $(this).data('cedula');
             const nuevoEstado = $(this).attr('title') === 'Activar' ? 1 : 2;
             const mensaje = nuevoEstado === 1 ? 'activar' : 'desactivar';
@@ -272,7 +336,7 @@
                 cancelButtonText: 'Cancelar'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    window.location.href = `${baseUrl}index.php?action=clientes&method=cambiarEstado&cedula=${cedula}&estado=${nuevoEstado}`;
+                    window.location.href = `${BASE_URL}index.php?action=clientes&method=cambiarEstado&cedula=${cedula}&estado=${nuevoEstado}`;
                 }
             });
         });

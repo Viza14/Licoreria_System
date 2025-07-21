@@ -16,33 +16,78 @@ class TipoCategoriaModel
         return $this->errors;
     }
 
-    public function obtenerTodosTiposCategoria($pagina = 1, $por_pagina = 10)
+    public function obtenerTodosTiposCategoria($pagina = 1, $por_pagina = 10, $filtros = [])
     {
-        // Calcular el offset
-        $offset = ($pagina - 1) * $por_pagina;
+        try {
+            // Construir la consulta base
+            $whereConditions = [];
+            $params = [];
 
-        // Consulta para obtener el total de registros
-        $queryTotal = "SELECT COUNT(*) as total FROM tipos_categoria";
-        $stmtTotal = $this->db->prepare($queryTotal);
-        $stmtTotal->execute();
-        $total = $stmtTotal->fetch(PDO::FETCH_ASSOC)['total'];
+            // Aplicar filtros
+            if (!empty($filtros['busqueda'])) {
+                $whereConditions[] = "LOWER(CONVERT(t.nombre USING utf8)) LIKE :busqueda";
+                $params[':busqueda'] = "%{$filtros['busqueda']}%";
+            }
 
-        // Consulta principal con paginación
-        $query = "SELECT t.*, e.nombre as estatus 
-                 FROM tipos_categoria t
-                 JOIN estatus e ON t.id_estatus = e.id
-                 LIMIT :limit OFFSET :offset";
-        $stmt = $this->db->prepare($query);
-        $stmt->bindValue(':limit', $por_pagina, PDO::PARAM_INT);
-        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-        $stmt->execute();
+            if (!empty($filtros['estatus'])) {
+                $whereConditions[] = "LOWER(CONVERT(e.nombre USING utf8)) = :estatus";
+                $params[':estatus'] = $filtros['estatus'];
+            }
 
-        return [
-            'tipos' => $stmt->fetchAll(PDO::FETCH_ASSOC),
-            'total_registros' => $total,
-            'total_paginas' => ceil($total / $por_pagina),
-            'pagina_actual' => $pagina
-        ];
+            // Construir la cláusula WHERE
+            $whereClause = '';
+            if (!empty($whereConditions)) {
+                $whereClause = 'WHERE ' . implode(' AND ', $whereConditions);
+            }
+
+            // Calcular el offset
+            $offset = ($pagina - 1) * $por_pagina;
+
+            // Consulta para obtener el total de registros con filtros
+            $queryTotal = "SELECT COUNT(*) as total 
+                          FROM tipos_categoria t
+                          JOIN estatus e ON t.id_estatus = e.id
+                          $whereClause";
+            $stmtTotal = $this->db->prepare($queryTotal);
+            foreach ($params as $param => $value) {
+                $stmtTotal->bindValue($param, $value);
+            }
+            $stmtTotal->execute();
+            $total = $stmtTotal->fetch(PDO::FETCH_ASSOC)['total'];
+
+            // Consulta principal con paginación y filtros
+            $query = "SELECT t.*, e.nombre as estatus 
+                      FROM tipos_categoria t
+                      JOIN estatus e ON t.id_estatus = e.id
+                      $whereClause
+                      LIMIT :limit OFFSET :offset";
+            $stmt = $this->db->prepare($query);
+
+            // Vincular parámetros de filtros
+            foreach ($params as $param => $value) {
+                $stmt->bindValue($param, $value);
+            }
+
+            // Vincular parámetros de paginación
+            $stmt->bindValue(':limit', $por_pagina, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+            $stmt->execute();
+
+            return [
+                'tipos' => $stmt->fetchAll(PDO::FETCH_ASSOC),
+                'total_registros' => $total,
+                'total_paginas' => ceil($total / $por_pagina),
+                'pagina_actual' => $pagina
+            ];
+        } catch (PDOException $e) {
+            $this->errors[] = "Error de base de datos: " . $e->getMessage();
+            return [
+                'tipos' => [],
+                'total_registros' => 0,
+                'total_paginas' => 0,
+                'pagina_actual' => $pagina
+            ];
+        }
     }
 
     public function obtenerTipoCategoriaPorId($id)
@@ -104,7 +149,6 @@ class TipoCategoriaModel
         }
     }
 
-    // En TipoCategoriaModel.php
     public function existeTipoCategoria($nombre, $id = null)
     {
         try {

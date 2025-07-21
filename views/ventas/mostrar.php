@@ -114,11 +114,13 @@
                         </div>
 
                         <div class="row">
-                            <div class="col-md-12">
-                                <a href="<?= BASE_URL ?>index.php?action=reportes" class="btn btn-default">
-                                    <i class="fa fa-arrow-left"></i> Volver
-                                </a>
-                            </div>
+                            <?php if ($_SESSION['user_rol'] != 2): ?>
+                                <div class="col-md-12">
+                                    <a href="<?= BASE_URL ?>index.php?action=reportes" class="btn btn-default">
+                                        <i class="fa fa-arrow-left"></i> Volver
+                                    </a>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </section>

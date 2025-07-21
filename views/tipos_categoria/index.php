@@ -31,87 +31,30 @@
                         </div>
                     </header>
                     <div class="panel-body">
-                        <?php if (empty($tipos)): ?>
-                            <div class="alert alert-info">
-                                <i class="fa fa-info-circle"></i> No hay tipos de categoría registrados
-                            </div>
-                        <?php else: ?>
-                            <div class="form-group">
-                                <div class="input-group">
-                                    <span class="input-group-addon"><i class="fa fa-search"></i></span>
-                                    <input type="text" id="busqueda" class="form-control" placeholder="Buscar por nombre o estatus...">
-                                </div>
-                            </div>
-
-                            <table id="tablaTipos" class="table table-striped table-advance table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Nombre</th>
-                                        <th>Estatus</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($tipos as $tipo): ?>
-                                        <tr>
-                                            <td><?= htmlspecialchars($tipo['id']); ?></td>
-                                            <td><?= htmlspecialchars($tipo['nombre']); ?></td>
-                                            <td>
-                                                <span class="label label-<?= $tipo['id_estatus'] == 1 ? 'success' : 'danger'; ?>">
-                                                    <?= htmlspecialchars($tipo['estatus']); ?>
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <div class="btn-group">
-                                                    <a href="<?= BASE_URL ?>index.php?action=tipos-categoria&method=mostrar&id=<?= $tipo['id']; ?>"
-                                                        class="btn btn-success btn-xs" title="Ver">
-                                                        <i class="fa fa-eye"></i>
-                                                    </a>
-                                                    <a href="<?= BASE_URL ?>index.php?action=tipos-categoria&method=editar&id=<?= $tipo['id']; ?>"
-                                                        class="btn btn-primary btn-xs" title="Editar">
-                                                        <i class="fa fa-pencil"></i>
-                                                    </a>
-                                                    <button onclick="cambiarEstado(<?= $tipo['id']; ?>, <?= $tipo['id_estatus']; ?>)"
-                                                        class="btn btn-<?= $tipo['id_estatus'] == 1 ? 'danger' : 'success'; ?> btn-xs"
-                                                        title="<?= $tipo['id_estatus'] == 1 ? 'Desactivar' : 'Activar'; ?>">
-                                                        <i class="fa fa-power-off"></i>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                        </table>
-
-                        <!-- Controles de paginación -->
-                        <?php if ($total_paginas > 1): ?>
-                        <div class="text-center">
-                            <ul class="pagination">
-                                <?php if ($pagina_actual > 1): ?>
-                                    <li>
-                                        <a href="<?= BASE_URL ?>index.php?action=tipos-categoria&pagina=<?= $pagina_actual - 1 ?>">&laquo; Anterior</a>
-                                    </li>
-                                <?php endif; ?>
-
-                                <?php for ($i = 1; $i <= $total_paginas; $i++): ?>
-                                    <li class="<?= $i == $pagina_actual ? 'active' : '' ?>">
-                                        <a href="<?= BASE_URL ?>index.php?action=tipos-categoria&pagina=<?= $i ?>"><?= $i ?></a>
-                                    </li>
-                                <?php endfor; ?>
-
-                                <?php if ($pagina_actual < $total_paginas): ?>
-                                    <li>
-                                        <a href="<?= BASE_URL ?>index.php?action=tipos-categoria&pagina=<?= $pagina_actual + 1 ?>">Siguiente &raquo;</a>
-                                    </li>
-                                <?php endif; ?>
-                            </ul>
-                            <div class="text-muted">
-                                Mostrando <?= count($tipos) ?> de <?= $total_registros ?> registros
+                        <div class="form-group">
+                            <div class="input-group">
+                                <span class="input-group-addon"><i class="fa fa-search"></i></span>
+                                <input type="text" id="busqueda" class="form-control" placeholder="Buscar por nombre o estatus...">
                             </div>
                         </div>
-                        <?php endif; ?>
-                        <?php endif; ?>
+
+                        <table id="tablaTipos" class="table table-striped table-advance table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nombre</th>
+                                    <th>Estatus</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+
+                        <div class="text-center">
+                            <ul class="pagination">
+                            </ul>
+                        </div>
                     </div>
                 </section>
             </div>
@@ -148,82 +91,190 @@
     </div>
 </div>
 
-
 <!-- Scripts para manejar la búsqueda, filtros y SweetAlert -->
 <script>
+    // Variables globales necesarias
+    const BASE_URL = '<?= BASE_URL ?>';
+
     $(document).ready(function() {
-        // Mensaje cuando no hay resultados
+        // Message when no results found
         const sinResultados = $('<div id="sin-resultados" class="alert alert-warning text-center" style="display: none;">' +
-            '<i class="fa fa-exclamation-circle"></i> No se encontraron tipos de categoría que coincidan con los filtros</div>');
+            '<i class="fa fa-exclamation-circle"></i> No se encontraron tipos de categoría que coincidan con la búsqueda</div>');
         $('.panel-body').append(sinResultados);
 
-        // Búsqueda en tiempo real
-        $('#busqueda').on('input', function() {
-            const searchValue = $(this).val().trim().toLowerCase();
-            let resultados = 0;
+        function actualizarPaginacion(totalPaginas, paginaActual) {
+            const paginacion = $('.pagination');
+            paginacion.empty();
 
-            $('#tablaTipos tbody tr').each(function() {
-                const nombre = $(this).find('td:eq(1)').text().toLowerCase();
-                const estatus = $(this).find('td:eq(2)').text().toLowerCase();
+            // Botón anterior
+            if (paginaActual > 1) {
+                paginacion.append(`
+                    <li>
+                        <a href="#" data-pagina="${paginaActual - 1}">
+                            <i class="fa fa-angle-left"></i>
+                        </a>
+                    </li>
+                `);
+            }
 
-                const match = nombre.includes(searchValue) || estatus.includes(searchValue);
+            // Números de página
+            for (let i = 1; i <= totalPaginas; i++) {
+                paginacion.append(`
+                    <li class="${i === paginaActual ? 'active' : ''}">
+                        <a href="#" data-pagina="${i}">${i}</a>
+                    </li>
+                `);
+            }
 
-                if (match) {
-                    $(this).show();
-                    resultados++;
-                } else {
-                    $(this).hide();
+            // Botón siguiente
+            if (paginaActual < totalPaginas) {
+                paginacion.append(`
+                    <li>
+                        <a href="#" data-pagina="${paginaActual + 1}">
+                            <i class="fa fa-angle-right"></i>
+                        </a>
+                    </li>
+                `);
+            }
+        }
+
+        function cargarTipos(pagina = 1, forzarPagina = false) {
+            const busqueda = $('#busqueda').val().trim() || null;
+            const estatus = $('#filtroEstatus').val() || null;
+
+            // Función para normalizar texto (eliminar acentos y convertir a minúsculas)
+            const normalizarTexto = (texto) => {
+                if (!texto) return null;
+                return texto.toLowerCase()
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "");
+            };
+
+            // Reiniciar a la primera página cuando se realiza una búsqueda o se aplican filtros
+            // a menos que se fuerce una página específica
+            if (!forzarPagina && (busqueda || estatus)) {
+                pagina = 1;
+            }
+
+            $.ajax({
+                url: BASE_URL + 'index.php?action=tipos-categoria&method=index',
+                method: 'GET',
+                data: {
+                    ajax: true,
+                    pagina: pagina,
+                    busqueda: normalizarTexto(busqueda),
+                    estatus: normalizarTexto(estatus)
+                },
+                success: function(response) {
+                    const tbody = $('#tablaTipos tbody');
+                    tbody.empty();
+
+                    if (response.tipos && response.tipos.length > 0) {
+                        response.tipos.forEach(function(tipo) {
+                            const row = `
+                                <tr>
+                                    <td>${tipo.id}</td>
+                                    <td>${tipo.nombre}</td>
+                                    <td>
+                                        <span class="label label-${tipo.estatus == 'Activo' ? 'success' : 'danger'}">
+                                            ${tipo.estatus}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="${BASE_URL}index.php?action=tipos-categoria&method=mostrar&id=${tipo.id}" 
+                                               class="btn btn-success btn-xs" title="Ver">
+                                                <i class="fa fa-eye"></i>
+                                            </a>
+                                            <a href="${BASE_URL}index.php?action=tipos-categoria&method=editar&id=${tipo.id}" 
+                                               class="btn btn-primary btn-xs" title="Editar">
+                                                <i class="fa fa-pencil"></i>
+                                            </a>
+                                            <button onclick="cambiarEstado(${tipo.id}, '${tipo.estatus}')" 
+                                                    class="btn btn-${tipo.id_estatus == 1 ? 'danger' : 'success'} btn-xs"
+                                                    title="${tipo.id_estatus == 1 ? 'Desactivar' : 'Activar'}">
+                                                <i class="fa fa-power-off"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                            tbody.append(row);
+                        });
+
+                        actualizarPaginacion(response.total_paginas, response.pagina_actual);
+                        $('#sin-resultados').hide();
+                    } else {
+                        $('#sin-resultados').show();
+                    }
+                },
+                error: function() {
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'Error al cargar los tipos de categoría',
+                        icon: 'error'
+                    });
                 }
             });
+        }
 
-            // Mostrar mensaje si no hay resultados
-            if (resultados === 0 && searchValue.length > 0) {
-                sinResultados.show();
-            } else {
-                sinResultados.hide();
-            }
+        // Evento de búsqueda con debounce
+        let timeoutId;
+        $('#busqueda').on('input', function() {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => cargarTipos(1, false), 300);
         });
 
-        // Filtros avanzados
+        // Eventos de filtros
         $('#aplicarFiltros').click(function() {
-            const estatus = $('#filtroEstatus').val().toLowerCase();
-            let resultados = 0;
-
-            $('#tablaTipos tbody tr').each(function() {
-                const estatusTipo = $(this).find('td:eq(2)').text().toLowerCase();
-
-                const matchEstatus = estatus === '' || estatusTipo.includes(estatus);
-
-                if (matchEstatus) {
-                    $(this).show();
-                    resultados++;
-                } else {
-                    $(this).hide();
-                }
-            });
-
-            // Mostrar mensaje si no hay resultados
-            if (resultados === 0) {
-                sinResultados.show();
-            } else {
-                sinResultados.hide();
-            }
-
+            cargarTipos(1, false);
             $('#filtrosModal').modal('hide');
         });
 
         $('#limpiarFiltros').click(function() {
-            $('#formFiltros')[0].reset();
-            $('#tablaTipos tbody tr').show();
-            $('#busqueda').val(''); // Limpiar también la búsqueda
-            sinResultados.hide();
+            $('#filtroEstatus').val('');
+            $('#busqueda').val('');
+            cargarTipos(1, false);
+            $('#filtrosModal').modal('hide');
         });
+
+        // Evento de paginación
+        $(document).on('click', '.pagination a', function(e) {
+            e.preventDefault();
+            const pagina = $(this).data('pagina');
+            cargarTipos(pagina, true);
+        });
+
+        // Cargar datos iniciales con los filtros que puedan estar en la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const paginaInicial = urlParams.get('pagina') || 1;
+        cargarTipos(parseInt(paginaInicial), true);
+
+        // Mostrar mensajes de sesión con SweetAlert
+        <?php if (isset($_SESSION['mensaje'])): ?>
+            Swal.fire({
+                title: '<?= $_SESSION["mensaje"]["title"] ?>',
+                text: '<?= $_SESSION["mensaje"]["text"] ?>',
+                icon: '<?= $_SESSION["mensaje"]["icon"] ?>',
+                timer: 3000
+            });
+        <?php unset($_SESSION['mensaje']);
+        endif; ?>
+
+        <?php if (isset($_SESSION['error'])): ?>
+            Swal.fire({
+                title: '<?= $_SESSION["error"]["title"] ?>',
+                text: '<?= $_SESSION["error"]["text"] ?>',
+                icon: '<?= $_SESSION["error"]["icon"] ?>'
+            });
+        <?php unset($_SESSION['error']);
+        endif; ?>
     });
 
     function cambiarEstado(id, estatusActual) {
         Swal.fire({
             title: '¿Cambiar estado?',
-            text: `El tipo de categoría pasará a estar ${estatusActual === 1 ? 'Inactivo' : 'Activo'}`,
+            text: `El tipo de categoría pasará a estar ${estatusActual === 'Activo' ? 'Inactivo' : 'Activo'}`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#3085d6',
@@ -232,30 +283,9 @@
             cancelButtonText: 'Cancelar'
         }).then((result) => {
             if (result.isConfirmed) {
-                window.location.href = '<?= BASE_URL ?>index.php?action=tipos-categoria&method=cambiarEstado&id=' + id;
+                window.location.href = BASE_URL + 'index.php?action=tipos-categoria&method=cambiarEstado&id=' + id;
             }
         });
     }
-
-    // Mostrar mensajes de sesión con SweetAlert
-    <?php if (isset($_SESSION['mensaje'])): ?>
-        Swal.fire({
-            title: '<?= $_SESSION['mensaje']['title'] ?>',
-            text: '<?= $_SESSION['mensaje']['text'] ?>',
-            icon: '<?= $_SESSION['mensaje']['icon'] ?>',
-            timer: 3000,
-            timerProgressBar: true
-        });
-        <?php unset($_SESSION['mensaje']); ?>
-    <?php endif; ?>
-
-    <?php if (isset($_SESSION['error'])): ?>
-        Swal.fire({
-            title: '<?= $_SESSION['error']['title'] ?>',
-            text: '<?= $_SESSION['error']['text'] ?>',
-            icon: '<?= $_SESSION['error']['icon'] ?>'
-        });
-        <?php unset($_SESSION['error']); ?>
-    <?php endif; ?>
 </script>
 <!--main content end-->

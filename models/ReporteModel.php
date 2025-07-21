@@ -53,6 +53,17 @@ class ReporteModel
 
             $params = [];
 
+            // Aplicar búsqueda si existe
+            if (!empty($filtros['busqueda'])) {
+                $queryCount .= " AND (LOWER(CONVERT(p.descripcion USING utf8)) LIKE :busqueda 
+                                  OR LOWER(CONVERT(c.nombre USING utf8)) LIKE :busqueda 
+                                  OR LOWER(CONVERT(tc.nombre USING utf8)) LIKE :busqueda)";
+                $query .= " AND (LOWER(CONVERT(p.descripcion USING utf8)) LIKE :busqueda 
+                            OR LOWER(CONVERT(c.nombre USING utf8)) LIKE :busqueda 
+                            OR LOWER(CONVERT(tc.nombre USING utf8)) LIKE :busqueda)";
+                $params[':busqueda'] = '%' . $filtros['busqueda'] . '%';
+            }
+
             // Aplicar filtros a ambas queries
             if (!empty($filtros['id_categoria'])) {
                 $queryCount .= " AND p.id_categoria = :id_categoria";

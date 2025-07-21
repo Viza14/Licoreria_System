@@ -33,34 +33,69 @@ class ReporteController
         $pagina = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
         $por_pagina = 10;
         
-        $filtros = [];
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $filtros = [
-                'id_categoria' => $_POST['id_categoria'] ?? null,
-                'id_tipo_categoria' => $_POST['id_tipo_categoria'] ?? null,
-                'estado_stock' => $_POST['estado_stock'] ?? null
-            ];
-            // Redirigir a GET con los filtros
-            $queryString = http_build_query(['filtros' => $filtros]);
-            header("Location: " . BASE_URL . "index.php?action=reportes&method=inventario&" . $queryString);
-            exit();
-        } elseif (isset($_GET['filtros'])) {
-            $filtros = $_GET['filtros'];
+        // Función para normalizar texto (eliminar acentos y convertir a minúsculas)
+        function normalizarTexto($texto) {
+            if (!$texto) return null;
+            return strtolower(trim(
+                str_replace(
+                    ['á', 'é', 'í', 'ó', 'ú', 'ü', 'ñ', 'Á', 'É', 'Í', 'Ó', 'Ú', 'Ü', 'Ñ'],
+                    ['a', 'e', 'i', 'o', 'u', 'u', 'n', 'A', 'E', 'I', 'O', 'U', 'U', 'N'],
+                    $texto
+                )
+            ));
         }
         
-        $resultado = $this->model->generarReporteInventario($filtros, $pagina, $por_pagina);
-        $categorias = $this->productoModel->obtenerCategorias();
-        $tiposCategoria = $this->productoModel->obtenerTiposCategoria();
-        
-        $this->loadView('reportes/inventario', [
-            'reporte' => $resultado['datos'],
-            'categorias' => $categorias,
-            'tiposCategoria' => $tiposCategoria,
-            'filtros' => $filtros,
-            'pagina_actual' => $resultado['pagina_actual'],
-            'total_paginas' => $resultado['total_paginas'],
-            'total_registros' => $resultado['total_registros']
-        ]);
+        $filtros = [];
+        if (isset($_GET['ajax']) && $_GET['ajax'] === 'true') {
+            // Procesar búsqueda y filtros para solicitudes AJAX
+            $filtros = [
+                'busqueda' => isset($_GET['busqueda']) ? normalizarTexto($_GET['busqueda']) : null,
+                'id_categoria' => $_GET['id_categoria'] ?? null,
+                'id_tipo_categoria' => $_GET['id_tipo_categoria'] ?? null,
+                'estado_stock' => $_GET['estado_stock'] ?? null
+            ];
+            
+            $resultado = $this->model->generarReporteInventario($filtros, $pagina, $por_pagina);
+            
+            // Devolver respuesta JSON
+            header('Content-Type: application/json');
+            echo json_encode([
+                'reporte' => $resultado['datos'],
+                'pagina_actual' => $resultado['pagina_actual'],
+                'total_paginas' => $resultado['total_paginas'],
+                'total_registros' => $resultado['total_registros']
+            ]);
+            exit();
+        } else {
+            // Procesar filtros para solicitudes normales
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $filtros = [
+                    'id_categoria' => $_POST['id_categoria'] ?? null,
+                    'id_tipo_categoria' => $_POST['id_tipo_categoria'] ?? null,
+                    'estado_stock' => $_POST['estado_stock'] ?? null
+                ];
+                // Redirigir a GET con los filtros
+                $queryString = http_build_query(['filtros' => $filtros]);
+                header("Location: " . BASE_URL . "index.php?action=reportes&method=inventario&" . $queryString);
+                exit();
+            } elseif (isset($_GET['filtros'])) {
+                $filtros = $_GET['filtros'];
+            }
+            
+            $resultado = $this->model->generarReporteInventario($filtros, $pagina, $por_pagina);
+            $categorias = $this->productoModel->obtenerCategorias();
+            $tiposCategoria = $this->productoModel->obtenerTiposCategoria();
+            
+            $this->loadView('reportes/inventario', [
+                'reporte' => $resultado['datos'],
+                'categorias' => $categorias,
+                'tiposCategoria' => $tiposCategoria,
+                'filtros' => $filtros,
+                'pagina_actual' => $resultado['pagina_actual'],
+                'total_paginas' => $resultado['total_paginas'],
+                'total_registros' => $resultado['total_registros']
+            ]);
+        }
     }
 
     public function detalleVentas()

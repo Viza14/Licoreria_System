@@ -12,13 +12,47 @@ class ProveedorController
     {
         $this->checkSession();
         
-        // Obtener parámetros de paginación
+        // Obtener parámetros de paginación y búsqueda
         $pagina = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
         $por_pagina = 10;
+        $busqueda = isset($_GET['busqueda']) ? $_GET['busqueda'] : null;
+        $tipo_documento = isset($_GET['tipo_documento']) ? $_GET['tipo_documento'] : null;
+        $estatus = isset($_GET['estatus']) ? $_GET['estatus'] : null;
 
-        // Obtener proveedores paginados
-        $resultado = $this->model->obtenerTodosProveedores($pagina, $por_pagina);
+        // Función para normalizar texto (eliminar acentos y convertir a minúsculas)
+        function normalizarTexto($texto) {
+            if (!$texto) return null;
+            return mb_strtolower(
+                str_replace(
+                    ['á', 'é', 'í', 'ó', 'ú', 'ü', 'ñ', 'Á', 'É', 'Í', 'Ó', 'Ú', 'Ü', 'Ñ'],
+                    ['a', 'e', 'i', 'o', 'u', 'u', 'n', 'A', 'E', 'I', 'O', 'U', 'U', 'N'],
+                    $texto
+                )
+            );
+        }
+
+        // Preparar filtros normalizados
+        $filtros = [
+            'busqueda' => normalizarTexto($busqueda),
+            'tipo_documento' => normalizarTexto($tipo_documento),
+            'estatus' => normalizarTexto($estatus)
+        ];
+
+        // Obtener proveedores paginados con filtros
+        $resultado = $this->model->obtenerTodosProveedores($pagina, $por_pagina, $filtros);
         
+        // Si es una solicitud AJAX, devolver JSON
+        if (isset($_GET['ajax']) && $_GET['ajax'] === 'true') {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'proveedores' => $resultado['proveedores'],
+                'pagina_actual' => $resultado['pagina_actual'],
+                'total_paginas' => $resultado['total_paginas']
+            ]);
+            exit;
+        }
+
+        // Si no es AJAX, cargar la vista normal
         $this->loadView('proveedores/index', [
             'proveedores' => $resultado['proveedores'],
             'pagina_actual' => $resultado['pagina_actual'],

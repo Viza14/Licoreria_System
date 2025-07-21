@@ -16,12 +16,41 @@ class ProductoProveedorModel
         return $this->errors;
     }
 
-    public function obtenerTodasRelaciones($pagina = 1, $por_pagina = 10)
+    public function obtenerTodasRelaciones($pagina = 1, $por_pagina = 10, $filtros = [])
     {
         try {
-            // Obtener el total de registros
-            $queryCount = "SELECT COUNT(*) FROM proveedor_producto";
+            $condiciones = [];
+            $params = [];
+
+            // Aplicar filtros si existen
+            if (!empty($filtros['busqueda'])) {
+                $condiciones[] = "(LOWER(CONVERT(p.descripcion USING utf8)) LIKE :busqueda OR 
+                                  LOWER(CONVERT(pr.nombre USING utf8)) LIKE :busqueda OR
+                                  LOWER(CONVERT(CONCAT(sc.nombre, '-', pr.cedula) USING utf8)) LIKE :busqueda)";
+                $params[':busqueda'] = "%{$filtros['busqueda']}%";
+            }
+
+            if (!empty($filtros['estatus'])) {
+                $condiciones[] = "LOWER(CONVERT(e.nombre USING utf8)) = :estatus";
+                $params[':estatus'] = $filtros['estatus'];
+            }
+
+            // Construir la cláusula WHERE
+            $whereClause = !empty($condiciones) ? "WHERE " . implode(" AND ", $condiciones) : "";
+
+            // Obtener el total de registros con los filtros aplicados
+            $queryCount = "SELECT COUNT(*) 
+                          FROM proveedor_producto pp
+                          JOIN producto p ON pp.id_producto = p.id
+                          JOIN proveedores pr ON pp.cedula_proveedor = pr.cedula
+                          JOIN simbolos_cedula sc ON pr.id_simbolo_cedula = sc.id
+                          JOIN estatus e ON pp.id_estatus = e.id
+                          $whereClause";
+
             $stmtCount = $this->db->prepare($queryCount);
+            foreach ($params as $param => $value) {
+                $stmtCount->bindValue($param, $value);
+            }
             $stmtCount->execute();
             $total_registros = $stmtCount->fetchColumn();
             
@@ -34,17 +63,22 @@ class ProductoProveedorModel
             // Calcular el offset
             $offset = ($pagina - 1) * $por_pagina;
             
-            // Consulta principal con paginación
+            // Consulta principal con paginación y filtros
             $query = "SELECT pp.*, p.descripcion as producto, pr.nombre as proveedor, 
-                      sc.nombre as simbolo_proveedor, e.nombre as estatus
+                      sc.nombre as simbolo_proveedor, pr.cedula as cedula_proveedor, e.nombre as estatus
                       FROM proveedor_producto pp
                       JOIN producto p ON pp.id_producto = p.id
                       JOIN proveedores pr ON pp.cedula_proveedor = pr.cedula
                       JOIN simbolos_cedula sc ON pr.id_simbolo_cedula = sc.id
                       JOIN estatus e ON pp.id_estatus = e.id
+                      $whereClause
+                      ORDER BY pp.id DESC
                       LIMIT :limit OFFSET :offset";
             
             $stmt = $this->db->prepare($query);
+            foreach ($params as $param => $value) {
+                $stmt->bindValue($param, $value);
+            }
             $stmt->bindValue(':limit', $por_pagina, PDO::PARAM_INT);
             $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
             $stmt->execute();

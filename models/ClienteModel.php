@@ -50,9 +50,6 @@ class ClienteModel
                 throw new Exception('Error de conexión a la base de datos');
             }
 
-            // Calculate offset
-            $offset = ($pagina - 1) * $porPagina;
-
             // Base query for both count and data
             $baseQuery = "FROM clientes c
                          JOIN estatus e ON c.id_estatus = e.id
@@ -62,14 +59,40 @@ class ClienteModel
             $whereConditions = [];
             $params = [];
 
-            if (!empty($filtros['busqueda'])) {
-                $whereConditions[] = "(c.nombres LIKE ? OR 
-                                      c.apellidos LIKE ? OR 
-                                      c.cedula LIKE ? OR
-                                      c.telefono LIKE ? OR
-                                      c.direccion LIKE ?)";
+            // Búsqueda general
+            if (isset($filtros['busqueda']) && $filtros['busqueda'] !== null) {
+                $whereConditions[] = "(LOWER(c.nombres) COLLATE utf8_general_ci LIKE LOWER(?) OR 
+                                      LOWER(c.apellidos) COLLATE utf8_general_ci LIKE LOWER(?) OR 
+                                      LOWER(c.cedula) COLLATE utf8_general_ci LIKE LOWER(?) OR
+                                      LOWER(c.telefono) COLLATE utf8_general_ci LIKE LOWER(?) OR
+                                      LOWER(c.direccion) COLLATE utf8_general_ci LIKE LOWER(?))";
                 $searchTerm = '%' . $filtros['busqueda'] . '%';
-                $params = array_fill(0, 5, $searchTerm);
+                $params = array_merge($params, array_fill(0, 5, $searchTerm));
+            }
+
+            // Filtro por estatus
+            if (isset($filtros['estatus']) && $filtros['estatus'] !== null) {
+                $whereConditions[] = "LOWER(e.nombre) COLLATE utf8_general_ci = LOWER(?)";
+                $params[] = $filtros['estatus'];
+            }
+
+            // Filtro por rango de compras
+            if (isset($filtros['compras']) && $filtros['compras'] !== null) {
+                $ventasQuery = "(SELECT COALESCE(SUM(v.monto_total), 0) FROM ventas v WHERE v.cedula_cliente = c.cedula AND v.id_estatus = 1)";
+                switch($filtros['compras']) {
+                    case 'mayor':
+                        $whereConditions[] = "$ventasQuery > 1000";
+                        break;
+                    case 'medio':
+                        $whereConditions[] = "$ventasQuery BETWEEN 500 AND 1000";
+                        break;
+                    case 'menor':
+                        $whereConditions[] = "$ventasQuery < 500 AND $ventasQuery > 0";
+                        break;
+                    case 'cero':
+                        $whereConditions[] = "$ventasQuery = 0";
+                        break;
+                }
             }
 
             $whereClause = !empty($whereConditions) ? " WHERE " . implode(' AND ', $whereConditions) : "";
@@ -83,6 +106,9 @@ class ClienteModel
             $stmtTotal->execute();
             $total = $stmtTotal->fetch(PDO::FETCH_ASSOC)['total'];
 
+            // Calculate offset
+            $offset = ($pagina - 1) * $porPagina;
+
             // Get paginated records
             $query = "SELECT c.*, e.nombre as estatus, sc.nombre as nombre_simbolo,
                       COALESCE((SELECT SUM(v.monto_total) FROM ventas v WHERE v.cedula_cliente = c.cedula AND v.id_estatus = 1), 0) as total_ventas
@@ -94,8 +120,9 @@ class ClienteModel
             foreach ($params as $i => $param) {
                 $stmt->bindValue($i + 1, $param);
             }
-            $stmt->bindValue(count($params) + 1, $porPagina, PDO::PARAM_INT);
-            $stmt->bindValue(count($params) + 2, $offset, PDO::PARAM_INT);
+            $paramCount = count($params);
+            $stmt->bindValue($paramCount + 1, $porPagina, PDO::PARAM_INT);
+            $stmt->bindValue($paramCount + 2, $offset, PDO::PARAM_INT);
             $stmt->execute();
             $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

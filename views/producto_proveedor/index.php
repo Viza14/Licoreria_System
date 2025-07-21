@@ -47,69 +47,13 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($relaciones as $relacion): ?>
-                                    <tr>
-                                        <td><?= $relacion['producto']; ?></td>
-                                        <td><?= $relacion['simbolo_proveedor'] . '-' . $relacion['cedula_proveedor'] . ' - ' . $relacion['proveedor']; ?></td>
-                                        <td><?= number_format($relacion['precio_compra'], 2); ?></td>
-                                        <td>
-                                            <span class="label label-<?= $relacion['id_estatus'] == 1 ? 'success' : 'danger'; ?>">
-                                                <?= $relacion['estatus']; ?>
-                                            </span>
-                                        </td>
-                                        <td><?= date('d/m/Y H:i', strtotime($relacion['fecha_actualizacion'])); ?></td>
-                                        <td>
-                                            <div class="btn-group">
-                                                <a href="<?= BASE_URL ?>index.php?action=producto-proveedor&method=mostrar&id=<?= $relacion['id']; ?>"
-                                                    class="btn btn-success btn-xs" title="Ver">
-                                                    <i class="fa fa-eye"></i>
-                                                </a>
-                                                <a href="<?= BASE_URL ?>index.php?action=producto-proveedor&method=editar&id=<?= $relacion['id']; ?>"
-                                                    class="btn btn-primary btn-xs" title="Editar">
-                                                    <i class="fa fa-pencil"></i>
-                                                </a>
-                                                <button onclick="cambiarEstado(<?= $relacion['id']; ?>, '<?= $relacion['estatus']; ?>')"
-                                                    class="btn btn-<?= $relacion['id_estatus'] == 1 ? 'danger' : 'success'; ?> btn-xs"
-                                                    title="<?= $relacion['id_estatus'] == 1 ? 'Desactivar' : 'Activar'; ?>">
-                                                    <i class="fa fa-power-off"></i>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
                             </tbody>
                         </table>
 
-                        <?php if ($total_paginas > 1): ?>
                         <div class="text-center">
-                            <div class="mb-2">
-                                Mostrando <?= count($relaciones) ?> de <?= $total_registros ?> registros
-                            </div>
-                            <ul class="pagination justify-content-center">
-                                <?php if ($pagina_actual > 1): ?>
-                                    <li class="page-item">
-                                        <a class="page-link" href="?action=producto-proveedor&pagina=<?= $pagina_actual - 1 ?>">
-                                            <i class="fa fa-angle-left"></i> Anterior
-                                        </a>
-                                    </li>
-                                <?php endif; ?>
-
-                                <?php for ($i = 1; $i <= $total_paginas; $i++): ?>
-                                    <li class="page-item <?= $i === $pagina_actual ? 'active' : '' ?>">
-                                        <a class="page-link" href="?action=producto-proveedor&pagina=<?= $i ?>"><?= $i ?></a>
-                                    </li>
-                                <?php endfor; ?>
-
-                                <?php if ($pagina_actual < $total_paginas): ?>
-                                    <li class="page-item">
-                                        <a class="page-link" href="?action=producto-proveedor&pagina=<?= $pagina_actual + 1 ?>">
-                                            Siguiente <i class="fa fa-angle-right"></i>
-                                        </a>
-                                    </li>
-                                <?php endif; ?>
+                            <ul class="pagination">
                             </ul>
                         </div>
-                        <?php endif; ?>
                     </div>
                 </section>
             </div>
@@ -131,9 +75,8 @@
                         <label>Estatus:</label>
                         <select class="form-control" id="filtroEstatus">
                             <option value="">Todos los estatus</option>
-                            <?php foreach ($estatus as $e): ?>
-                                <option value="<?= $e['nombre'] ?>"><?= $e['nombre'] ?></option>
-                            <?php endforeach; ?>
+                            <option value="Activo">Activo</option>
+                            <option value="Inactivo">Inactivo</option>
                         </select>
                     </div>
                 </form>
@@ -149,72 +92,184 @@
 
 <!-- Scripts para manejar la búsqueda, filtros y SweetAlert -->
 <script>
+    // Variables globales necesarias
+    const BASE_URL = '<?= BASE_URL ?>';
+
     $(document).ready(function() {
-        // Mensaje cuando no hay resultados
+        // Message when no results found
         const sinResultados = $('<div id="sin-resultados" class="alert alert-warning text-center" style="display: none;">' +
             '<i class="fa fa-exclamation-circle"></i> No se encontraron relaciones que coincidan con la búsqueda</div>');
         $('.panel-body').append(sinResultados);
 
-        // Búsqueda en tiempo real
-        $('#busqueda').on('input', function() {
-            const searchValue = $(this).val().trim().toLowerCase();
-            let resultados = 0;
+        function actualizarPaginacion(totalPaginas, paginaActual) {
+            const paginacion = $('.pagination');
+            paginacion.empty();
 
-            $('#tablaRelaciones tbody tr').each(function() {
-                const producto = $(this).find('td:eq(0)').text().toLowerCase();
-                const proveedor = $(this).find('td:eq(1)').text().toLowerCase();
+            // Botón anterior
+            if (paginaActual > 1) {
+                paginacion.append(`
+                    <li>
+                        <a href="#" data-pagina="${paginaActual - 1}">
+                            <i class="fa fa-angle-left"></i>
+                        </a>
+                    </li>
+                `);
+            }
 
-                const match = producto.includes(searchValue) || proveedor.includes(searchValue);
+            // Números de página
+            for (let i = 1; i <= totalPaginas; i++) {
+                paginacion.append(`
+                    <li class="${i === paginaActual ? 'active' : ''}">
+                        <a href="#" data-pagina="${i}">${i}</a>
+                    </li>
+                `);
+            }
 
-                if (match) {
-                    $(this).show();
-                    resultados++;
-                } else {
-                    $(this).hide();
+            // Botón siguiente
+            if (paginaActual < totalPaginas) {
+                paginacion.append(`
+                    <li>
+                        <a href="#" data-pagina="${paginaActual + 1}">
+                            <i class="fa fa-angle-right"></i>
+                        </a>
+                    </li>
+                `);
+            }
+        }
+
+        function cargarRelaciones(pagina = 1, forzarPagina = false) {
+            const busqueda = $('#busqueda').val().trim() || null;
+            const estatus = $('#filtroEstatus').val() || null;
+
+            // Función para normalizar texto (eliminar acentos y convertir a minúsculas)
+            const normalizarTexto = (texto) => {
+                if (!texto) return null;
+                return texto.toLowerCase()
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "");
+            };
+
+            // Reiniciar a la primera página cuando se realiza una búsqueda o se aplican filtros
+            // a menos que se fuerce una página específica
+            if (!forzarPagina && (busqueda || estatus)) {
+                pagina = 1;
+            }
+
+            $.ajax({
+                url: BASE_URL + 'index.php?action=producto-proveedor&method=index',
+                method: 'GET',
+                data: {
+                    ajax: true,
+                    pagina: pagina,
+                    busqueda: normalizarTexto(busqueda),
+                    estatus: normalizarTexto(estatus)
+                },
+                success: function(response) {
+                    const tbody = $('#tablaRelaciones tbody');
+                    tbody.empty();
+
+                    if (response.relaciones && response.relaciones.length > 0) {
+                        response.relaciones.forEach(function(relacion) {
+                            const row = `
+                                <tr>
+                                    <td>${relacion.producto}</td>
+                                    <td>${relacion.simbolo_proveedor}-${relacion.cedula_proveedor} - ${relacion.proveedor}</td>
+                                    <td>${parseFloat(relacion.precio_compra).toFixed(2)}</td>
+                                    <td>
+                                        <span class="label label-${relacion.id_estatus == 1 ? 'success' : 'danger'}">
+                                            ${relacion.estatus}
+                                        </span>
+                                    </td>
+                                    <td>${new Date(relacion.fecha_actualizacion).toLocaleString('es-ES', {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'})}</td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="${BASE_URL}index.php?action=producto-proveedor&method=mostrar&id=${relacion.id}" 
+                                               class="btn btn-success btn-xs" title="Ver">
+                                                <i class="fa fa-eye"></i>
+                                            </a>
+                                            <a href="${BASE_URL}index.php?action=producto-proveedor&method=editar&id=${relacion.id}" 
+                                               class="btn btn-primary btn-xs" title="Editar">
+                                                <i class="fa fa-pencil"></i>
+                                            </a>
+                                            <button onclick="cambiarEstado(${relacion.id}, '${relacion.estatus}')" 
+                                                    class="btn btn-${relacion.id_estatus == 1 ? 'danger' : 'success'} btn-xs"
+                                                    title="${relacion.id_estatus == 1 ? 'Desactivar' : 'Activar'}">
+                                                <i class="fa fa-power-off"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                            tbody.append(row);
+                        });
+
+                        actualizarPaginacion(response.total_paginas, response.pagina_actual);
+                        $('#sin-resultados').hide();
+                    } else {
+                        $('#sin-resultados').show();
+                    }
+                },
+                error: function() {
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'Error al cargar las relaciones producto-proveedor',
+                        icon: 'error'
+                    });
                 }
             });
+        }
 
-            // Mostrar mensaje si no hay resultados
-            if (resultados === 0 && searchValue.length > 0) {
-                sinResultados.show();
-            } else {
-                sinResultados.hide();
-            }
+        // Evento de búsqueda con debounce
+        let timeoutId;
+        $('#busqueda').on('input', function() {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => cargarRelaciones(1, false), 300);
         });
 
-        // Filtros avanzados
+        // Eventos de filtros
         $('#aplicarFiltros').click(function() {
-            const estatus = $('#filtroEstatus').val().toLowerCase();
-            let resultados = 0;
-
-            $('#tablaRelaciones tbody tr').each(function() {
-                const estatusRelacion = $(this).find('td:eq(3)').text().toLowerCase();
-
-                const matchEstatus = estatus === '' || estatusRelacion.includes(estatus);
-
-                if (matchEstatus) {
-                    $(this).show();
-                    resultados++;
-                } else {
-                    $(this).hide();
-                }
-            });
-
-            // Mostrar mensaje si no hay resultados
-            if (resultados === 0) {
-                sinResultados.show();
-            } else {
-                sinResultados.hide();
-            }
-
+            cargarRelaciones(1, false);
             $('#filtrosModal').modal('hide');
         });
 
         $('#limpiarFiltros').click(function() {
-            $('#formFiltros')[0].reset();
-            $('#tablaRelaciones tbody tr').show();
-            sinResultados.hide();
+            $('#filtroEstatus').val('');
+            $('#busqueda').val('');
+            cargarRelaciones(1, false);
+            $('#filtrosModal').modal('hide');
         });
+
+        // Evento de paginación
+        $(document).on('click', '.pagination a', function(e) {
+            e.preventDefault();
+            const pagina = $(this).data('pagina');
+            cargarRelaciones(pagina, true);
+        });
+
+        // Cargar datos iniciales con los filtros que puedan estar en la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const paginaInicial = urlParams.get('pagina') || 1;
+        cargarRelaciones(parseInt(paginaInicial), true);
+
+        // Mostrar mensajes de sesión con SweetAlert
+        <?php if (isset($_SESSION['mensaje'])): ?>
+            Swal.fire({
+                title: '<?= $_SESSION["mensaje"]["title"] ?>',
+                text: '<?= $_SESSION["mensaje"]["text"] ?>',
+                icon: '<?= $_SESSION["mensaje"]["icon"] ?>',
+                timer: 3000
+            });
+        <?php unset($_SESSION['mensaje']);
+        endif; ?>
+
+        <?php if (isset($_SESSION['error'])): ?>
+            Swal.fire({
+                title: '<?= $_SESSION["error"]["title"] ?>',
+                text: '<?= $_SESSION["error"]["text"] ?>',
+                icon: '<?= $_SESSION["error"]["icon"] ?>'
+            });
+        <?php unset($_SESSION['error']);
+        endif; ?>
     });
 
     function cambiarEstado(id, estatusActual) {
@@ -229,29 +284,9 @@
             cancelButtonText: 'Cancelar'
         }).then((result) => {
             if (result.isConfirmed) {
-                window.location.href = '<?= BASE_URL ?>index.php?action=producto-proveedor&method=cambiarEstado&id=' + id;
+                window.location.href = BASE_URL + 'index.php?action=producto-proveedor&method=cambiarEstado&id=' + id;
             }
         });
     }
-
-    // Mostrar mensajes de sesión con SweetAlert
-    <?php if (isset($_SESSION['mensaje'])): ?>
-        Swal.fire({
-            title: '<?= $_SESSION['mensaje']['title'] ?>',
-            text: '<?= $_SESSION['mensaje']['text'] ?>',
-            icon: '<?= $_SESSION['mensaje']['icon'] ?>',
-            timer: 3000
-        });
-    <?php unset($_SESSION['mensaje']);
-    endif; ?>
-
-    <?php if (isset($_SESSION['error'])): ?>
-        Swal.fire({
-            title: '<?= $_SESSION['error']['title'] ?>',
-            text: '<?= $_SESSION['error']['text'] ?>',
-            icon: '<?= $_SESSION['error']['icon'] ?>'
-        });
-    <?php unset($_SESSION['error']);
-    endif; ?>
 </script>
 <!--main content end-->

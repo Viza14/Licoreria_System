@@ -16,24 +16,64 @@ class CategoriaModel
         return $this->errors;
     }
 
-    public function obtenerTodasCategorias($pagina = 1, $por_pagina = 10)
+    public function obtenerTodasCategorias($pagina = 1, $por_pagina = 10, $filtros = [])
     {
+        // Preparar la consulta base
+        $whereConditions = [];
+        $params = [];
+
+        // Aplicar filtros
+        if (!empty($filtros['busqueda'])) {
+            $whereConditions[] = "(LOWER(CONVERT(c.nombre USING utf8)) LIKE :busqueda OR 
+                                  LOWER(CONVERT(t.nombre USING utf8)) LIKE :busqueda)";
+            $params[':busqueda'] = "%{$filtros['busqueda']}%";
+        }
+
+        if (!empty($filtros['tipo'])) {
+            $whereConditions[] = "LOWER(CONVERT(t.nombre USING utf8)) = :tipo";
+            $params[':tipo'] = $filtros['tipo'];
+        }
+
+        if (!empty($filtros['estatus'])) {
+            $whereConditions[] = "LOWER(CONVERT(e.nombre USING utf8)) = :estatus";
+            $params[':estatus'] = $filtros['estatus'];
+        }
+
+        // Construir la cláusula WHERE
+        $whereClause = '';
+        if (!empty($whereConditions)) {
+            $whereClause = 'WHERE ' . implode(' AND ', $whereConditions);
+        }
+
         // Calcular el offset
         $offset = ($pagina - 1) * $por_pagina;
 
-        // Consulta para obtener el total de registros
-        $queryTotal = "SELECT COUNT(*) as total FROM categorias";
+        // Consulta para obtener el total de registros con filtros
+        $queryTotal = "SELECT COUNT(*) as total 
+                       FROM categorias c
+                       JOIN tipos_categoria t ON c.id_tipo_categoria = t.id
+                       JOIN estatus e ON c.id_estatus = e.id
+                       $whereClause";
         $stmtTotal = $this->db->prepare($queryTotal);
+        foreach ($params as $key => $value) {
+            $stmtTotal->bindValue($key, $value);
+        }
         $stmtTotal->execute();
         $total = $stmtTotal->fetch(PDO::FETCH_ASSOC)['total'];
 
-        // Consulta principal con paginación
+        // Consulta principal con paginación y filtros
         $query = "SELECT c.*, t.nombre as tipo_categoria, e.nombre as estatus 
-              FROM categorias c
-              JOIN tipos_categoria t ON c.id_tipo_categoria = t.id
-              JOIN estatus e ON c.id_estatus = e.id
-              LIMIT :limit OFFSET :offset";
+                  FROM categorias c
+                  JOIN tipos_categoria t ON c.id_tipo_categoria = t.id
+                  JOIN estatus e ON c.id_estatus = e.id
+                  $whereClause
+                  ORDER BY c.id DESC
+                  LIMIT :limit OFFSET :offset";
+
         $stmt = $this->db->prepare($query);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
         $stmt->bindValue(':limit', $por_pagina, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->execute();
@@ -113,7 +153,6 @@ class CategoriaModel
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // En CategoriaModel.php
     public function existeCategoria($nombre, $id = null)
     {
         try {

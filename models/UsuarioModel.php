@@ -69,13 +69,16 @@ class UsuarioModel
     }
 
     // En UsuarioModel.php
-    public function obtenerTodosUsuarios($pagina = 1, $por_pagina = 10)
+    public function obtenerTodosUsuarios($pagina = 1, $por_pagina = 10, $soloActivos = false)
     {
         // Calcular el offset
         $offset = ($pagina - 1) * $por_pagina;
 
         // Obtener el total de registros
         $queryTotal = "SELECT COUNT(*) as total FROM usuarios";
+        if ($soloActivos) {
+            $queryTotal .= " WHERE id_estatus = 1";
+        }
         $stmtTotal = $this->db->prepare($queryTotal);
         $stmtTotal->execute();
         $total = $stmtTotal->fetch(PDO::FETCH_ASSOC)['total'];
@@ -88,8 +91,11 @@ class UsuarioModel
               FROM usuarios u
               JOIN roles r ON u.id_rol = r.id
               JOIN estatus e ON u.id_estatus = e.id
-              JOIN simbolos_cedula sc ON u.id_simbolo_cedula = sc.id
-              LIMIT :limit OFFSET :offset";
+              JOIN simbolos_cedula sc ON u.id_simbolo_cedula = sc.id";
+        if ($soloActivos) {
+            $query .= " WHERE u.id_estatus = 1";
+        }
+        $query .= " LIMIT :limit OFFSET :offset";
         $stmt = $this->db->prepare($query);
         $stmt->bindValue(':limit', $por_pagina, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);

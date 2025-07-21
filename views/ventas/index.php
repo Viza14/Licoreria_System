@@ -151,8 +151,8 @@
                         <select class="form-control" id="filtroVendedor">
                             <option value="">Todos los vendedores</option>
                             <?php foreach ($usuarios as $usuario): ?>
-                                <option value="<?= $usuario['nombres'] . ' ' . $usuario['apellidos'] ?>">
-                                    <?= $usuario['nombres'] . ' ' . $usuario['apellidos'] ?>
+                                <option value="<?= htmlspecialchars($usuario['user']) ?>" <?= isset($_GET['vendedor']) && $_GET['vendedor'] === $usuario['user'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($usuario['nombres'] . ' ' . $usuario['apellidos']) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>

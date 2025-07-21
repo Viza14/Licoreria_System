@@ -24,37 +24,80 @@ class ProveedorModel
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function obtenerTodosProveedores($pagina = 1, $por_pagina = 10)
+    public function obtenerTodosProveedores($pagina = 1, $por_pagina = 10, $filtros = [])
     {
-        // Calcular el offset
-        $offset = ($pagina - 1) * $por_pagina;
+        try {
+            // Construir la consulta base
+            $queryBase = "FROM proveedores p
+                         JOIN estatus e ON p.id_estatus = e.id
+                         JOIN simbolos_cedula sc ON p.id_simbolo_cedula = sc.id";
+            $whereConditions = [];
+            $params = [];
 
-        // Obtener el total de registros
-        $queryTotal = "SELECT COUNT(*) as total FROM proveedores";
-        $stmtTotal = $this->db->prepare($queryTotal);
-        $stmtTotal->execute();
-        $total = $stmtTotal->fetch(PDO::FETCH_ASSOC)['total'];
+            // Aplicar filtros
+            if (!empty($filtros['busqueda'])) {
+                $whereConditions[] = "(
+                    LOWER(CONVERT(CONCAT(sc.nombre, '-', p.cedula) USING utf8)) LIKE :busqueda OR
+                    LOWER(CONVERT(p.nombre USING utf8)) LIKE :busqueda OR
+                    LOWER(CONVERT(p.telefono USING utf8)) LIKE :busqueda
+                )";
+                $params[':busqueda'] = "%{$filtros['busqueda']}%";
+            }
 
-        // Calcular el total de páginas
-        $total_paginas = ceil($total / $por_pagina);
+            if (!empty($filtros['tipo_documento'])) {
+                $whereConditions[] = "LOWER(CONVERT(sc.nombre USING utf8)) = :tipo_documento";
+                $params[':tipo_documento'] = $filtros['tipo_documento'];
+            }
 
-        // Consulta principal con paginación
-        $query = "SELECT p.*, e.nombre as estatus, sc.nombre as nombre_simbolo 
-                  FROM proveedores p
-                  JOIN estatus e ON p.id_estatus = e.id
-                  JOIN simbolos_cedula sc ON p.id_simbolo_cedula = sc.id
-                  LIMIT :limit OFFSET :offset";
-        $stmt = $this->db->prepare($query);
-        $stmt->bindValue(':limit', $por_pagina, PDO::PARAM_INT);
-        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-        $stmt->execute();
+            if (!empty($filtros['estatus'])) {
+                $whereConditions[] = "LOWER(CONVERT(e.nombre USING utf8)) = :estatus";
+                $params[':estatus'] = $filtros['estatus'];
+            }
 
-        return [
-            'proveedores' => $stmt->fetchAll(PDO::FETCH_ASSOC),
-            'total_registros' => $total,
-            'total_paginas' => $total_paginas,
-            'pagina_actual' => $pagina
-        ];
+            // Construir la cláusula WHERE
+            $whereClause = !empty($whereConditions) ? "WHERE " . implode(" AND ", $whereConditions) : "";
+
+            // Obtener el total de registros con los filtros aplicados
+            $queryTotal = "SELECT COUNT(*) as total " . $queryBase . " " . $whereClause;
+            $stmtTotal = $this->db->prepare($queryTotal);
+            foreach ($params as $param => $value) {
+                $stmtTotal->bindValue($param, $value);
+            }
+            $stmtTotal->execute();
+            $total = $stmtTotal->fetch(PDO::FETCH_ASSOC)['total'];
+
+            // Calcular la paginación
+            $total_paginas = ceil($total / $por_pagina);
+            $offset = ($pagina - 1) * $por_pagina;
+
+            // Consulta principal con paginación
+            $query = "SELECT p.*, e.nombre as estatus, sc.nombre as nombre_simbolo " . 
+                     $queryBase . " " . $whereClause . 
+                     " ORDER BY p.cedula ASC LIMIT :limit OFFSET :offset";
+
+            $stmt = $this->db->prepare($query);
+            foreach ($params as $param => $value) {
+                $stmt->bindValue($param, $value);
+            }
+            $stmt->bindValue(':limit', $por_pagina, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+            $stmt->execute();
+
+            return [
+                'proveedores' => $stmt->fetchAll(PDO::FETCH_ASSOC),
+                'total_registros' => $total,
+                'total_paginas' => $total_paginas,
+                'pagina_actual' => $pagina
+            ];
+        } catch (PDOException $e) {
+            $this->errors[] = "Error en la consulta: " . $e->getMessage();
+            return [
+                'proveedores' => [],
+                'total_registros' => 0,
+                'total_paginas' => 0,
+                'pagina_actual' => $pagina
+            ];
+        }
     }
 
     public function obtenerProveedorPorCedula($cedula)

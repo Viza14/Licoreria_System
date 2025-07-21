@@ -19,7 +19,11 @@ class ClienteController
 
     private function redirect($action)
     {
-        header("Location: " . BASE_URL . "index.php?action=" . $action);
+        $url = BASE_URL . "index.php?action=" . explode('&', $action)[0];
+        if (strpos($action, '&') !== false) {
+            $url .= '&' . substr($action, strpos($action, '&') + 1);
+        }
+        header("Location: " . $url);
         exit();
     }
 
@@ -63,14 +67,44 @@ class ClienteController
             $porPagina = isset($_GET['por_pagina']) ? (int)$_GET['por_pagina'] : 10;
 
             $filtros = [];
-            if (isset($_GET['busqueda'])) {
-                $filtros['busqueda'] = $_GET['busqueda'];
+            
+            // Búsqueda general
+            if (isset($_GET['busqueda']) && trim($_GET['busqueda']) !== '') {
+                $filtros['busqueda'] = trim($_GET['busqueda']);
+            } else {
+                $filtros['busqueda'] = null;
+            }
+
+            // Filtros avanzados
+            if (isset($_GET['estatus']) && trim($_GET['estatus']) !== '') {
+                $filtros['estatus'] = trim($_GET['estatus']);
+            } else {
+                $filtros['estatus'] = null;
+            }
+            if (isset($_GET['compras']) && trim($_GET['compras']) !== '') {
+                $filtros['compras'] = trim($_GET['compras']);
+            } else {
+                $filtros['compras'] = null;
             }
 
             $resultado = $this->model->obtenerTodosClientes($pagina, $porPagina, $filtros);
             if ($resultado === false) {
                 throw new Exception('Error al obtener la lista de clientes');
             }
+
+            // Si es una petición AJAX, devolver JSON
+            if (isset($_GET['ajax'])) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'clientes' => $resultado['data'],
+                    'total' => $resultado['total'],
+                    'pagina_actual' => $resultado['pagina_actual'],
+                    'total_paginas' => $resultado['total_paginas']
+                ]);
+                exit;
+            }
+
+            // Si no es AJAX, cargar la vista normal
             $this->loadView('clientes/index', [
                 'clientes' => $resultado['data'],
                 'total' => $resultado['total'],
@@ -82,6 +116,13 @@ class ClienteController
                 'user_rol' => $_SESSION['user_rol'] ?? null
             ]);
         } catch (Exception $e) {
+            if (isset($_GET['ajax'])) {
+                header('Content-Type: application/json');
+                http_response_code(500);
+                echo json_encode(['error' => 'Error al cargar la lista de clientes']);
+                exit;
+            }
+
             error_log("Error en index: " . $e->getMessage());
             $_SESSION['error'] = [
                 'title' => 'Error',
@@ -216,7 +257,8 @@ class ClienteController
                     'text' => 'Cliente creado exitosamente',
                     'icon' => 'success'
                 ];
-                $this->redirect('clientes');
+                $pagina = isset($_GET['pagina']) ? '&pagina=' . $_GET['pagina'] : '';
+    $this->redirect('clientes' . $pagina);
             } else {
                 $_SESSION['error'] = [
                     'title' => 'Error',
@@ -330,7 +372,7 @@ public function cambiarEstado($cedula)
             'text' => 'No tiene permisos para realizar esta acción',
             'icon' => 'error'
         ];
-        $this->redirect('clientes');
+        $this->redirect('clientes' . (isset($_GET['pagina']) ? '&pagina=' . $_GET['pagina'] : ''));
         return;
     }
 
@@ -340,7 +382,7 @@ public function cambiarEstado($cedula)
             throw new Exception('Cliente no encontrado');
         }
 
-        $nuevoEstado = $cliente['id_estatus'] == 1 ? 2 : 1;
+        $nuevoEstado = isset($_GET['estado']) ? $_GET['estado'] : ($cliente['id_estatus'] == 1 ? 2 : 1);
         $estadoTexto = $nuevoEstado == 1 ? 'activado' : 'desactivado';
 
         if ($this->model->cambiarEstado($cedula, $nuevoEstado)) {
@@ -361,24 +403,13 @@ public function cambiarEstado($cedula)
         ];
     }
 
-    $this->redirect('clientes');
-    $estadoTexto = $nuevoEstado == 1 ? 'activado' : 'desactivado';
-
-    if ($this->model->cambiarEstado($cedula, $nuevoEstado)) {
-        $_SESSION['mensaje'] = [
-            'title' => 'Éxito',
-            'text' => "Cliente $estadoTexto correctamente",
-            'icon' => 'success'
-        ];
-    } else {
-        $_SESSION['error'] = [
-            'title' => 'Error',
-            'text' => 'Error al cambiar el estado: ' . implode(', ', $this->model->getErrors()),
-            'icon' => 'error'
-        ];
+    // Mantener los parámetros de paginación y filtros
+    $params = [];
+    if (isset($_GET['pagina'])) {
+        $params[] = 'pagina=' . $_GET['pagina'];
     }
-
-    $this->redirect('clientes');
+    $redirectUrl = 'clientes' . (!empty($params) ? '&' . implode('&', $params) : '');
+    $this->redirect($redirectUrl);
 }
 
    

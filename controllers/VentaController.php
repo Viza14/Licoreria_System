@@ -93,7 +93,7 @@ class VentaController
         $resultado = $this->model->obtenerTodasVentas($pagina, $por_pagina, $busqueda, $filtros);
         
         // Obtener usuarios para el filtro de vendedores
-        $usuarios = $this->usuarioModel->obtenerTodosUsuarios();
+        $usuarios = $this->usuarioModel->obtenerTodosUsuarios(1, 9999, true)['usuarios'];
         
         $this->loadView('ventas/index', [
             'ventas' => $resultado['ventas'],
@@ -138,6 +138,7 @@ class VentaController
 
     private function generarFactura($id_venta, $cliente, $fecha, $productos, $pagos)
     {
+        date_default_timezone_set('America/Caracas'); // Establecer zona horaria de Venezuela
         $pdf = new Factura();
         $pdf->AddPage();
         
@@ -145,15 +146,18 @@ class VentaController
         $_SESSION['pagos'] = $pagos;
         $_SESSION['usuario'] = ['nombre' => $_SESSION['user_nombre']];
         
-        $pdf->datosFactura($cliente, date('d/m/Y h:i A', strtotime($fecha)), $id_venta);
+        // Usar la fecha y hora actual del servidor
+        $fecha_actual = date('d/m/Y h:i A');
+        $pdf->datosFactura($cliente, $fecha_actual, $id_venta);
         $pdf->tablaProductos($productos);
         
         $filename = ROOT_PATH . 'facturas/factura_' . $id_venta . '.pdf';
         $pdf->Output('F', $filename);
         
-        // Clear payment and user info from session
+        // Clear payment, user and client info from session
         unset($_SESSION['pagos']);
         unset($_SESSION['usuario']);
+        unset($_SESSION['cliente']);
         
         return $filename;
     }
@@ -164,11 +168,12 @@ class VentaController
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
+                date_default_timezone_set('America/Caracas'); // Establecer zona horaria de Venezuela
                 $data = [
                     'cedula_cliente' => $_POST['cedula_cliente'],
                     'id_usuario' => $_SESSION['user_id'],
                     'productos' => $_POST['productos'],
-                    'fecha' => $_POST['fecha'],
+                    'fecha' => date('Y-m-d H:i:s'),  // Fecha y hora actual del servidor con zona horaria correcta
                     'pagos' => $this->procesarPagos($_POST)
                 ];
 
@@ -215,6 +220,12 @@ class VentaController
                     // Get client info
                     $cliente = $this->clienteModel->obtenerClientePorCedula($data['cedula_cliente']);
                     $nombre_cliente = $cliente['nombres'] . ' ' . $cliente['apellidos'];
+
+                    // Set client info in session for invoice
+                    $_SESSION['cliente'] = [
+                        'cedula' => $cliente['cedula'],
+                        'direccion' => $cliente['direccion']
+                    ];
 
                     // Generate invoice
                     $productos_factura = [];

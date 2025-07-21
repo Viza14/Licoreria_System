@@ -9,17 +9,44 @@ class ProductoProveedorController
         $this->model = new ProductoProveedorModel();
     }
 
+    private function normalizarTexto($texto)
+    {
+        if (!$texto) return null;
+        return strtolower(trim(str_replace(['á','é','í','ó','ú','ñ','ü','Á','É','Í','Ó','Ú','Ñ','Ü'], 
+                                         ['a','e','i','o','u','n','u','A','E','I','O','U','N','U'], 
+                                         $texto)));
+    }
+
     public function index()
     {
         $this->checkSession();
         
-        // Obtener parámetros de paginación
+        // Obtener parámetros de paginación y filtros
         $pagina = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
         $por_pagina = 10;
         
-        $resultado = $this->model->obtenerTodasRelaciones($pagina, $por_pagina);
-        $estatus = $this->model->obtenerEstatus();
+        // Preparar filtros normalizados
+        $filtros = [
+            'busqueda' => isset($_GET['busqueda']) ? $this->normalizarTexto($_GET['busqueda']) : null,
+            'estatus' => isset($_GET['estatus']) ? $this->normalizarTexto($_GET['estatus']) : null
+        ];
         
+        $resultado = $this->model->obtenerTodasRelaciones($pagina, $por_pagina, $filtros);
+        
+        // Si es una solicitud AJAX, devolver JSON
+        if (isset($_GET['ajax']) && $_GET['ajax'] === 'true') {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'relaciones' => $resultado['datos'],
+                'pagina_actual' => $resultado['pagina_actual'],
+                'total_paginas' => $resultado['total_paginas'],
+                'total_registros' => $resultado['total_registros']
+            ]);
+            exit;
+        }
+        
+        // Si no es AJAX, cargar la vista normal
+        $estatus = $this->model->obtenerEstatus();
         $this->loadView('producto_proveedor/index', [
             'relaciones' => $resultado['datos'],
             'estatus' => $estatus,
@@ -132,6 +159,7 @@ class ProductoProveedorController
         }
         $this->loadView('producto_proveedor/mostrar', ['relacion' => $relacion]);
     }
+
     public function cambiarEstado($id)
     {
         $this->checkSession();

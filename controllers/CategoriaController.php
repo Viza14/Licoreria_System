@@ -9,18 +9,47 @@ class CategoriaController
         $this->model = new CategoriaModel();
     }
 
+    private function normalizarTexto($texto)
+    {
+        if (!$texto) return null;
+        return strtolower(trim(str_replace(
+            ['á', 'é', 'í', 'ó', 'ú', 'ü', 'ñ', 'Á', 'É', 'Í', 'Ó', 'Ú', 'Ü', 'Ñ'],
+            ['a', 'e', 'i', 'o', 'u', 'u', 'n', 'a', 'e', 'i', 'o', 'u', 'u', 'n'],
+            $texto
+        )));
+    }
+
     public function index()
     {
         $this->checkSession();
         
-        // Obtener parámetros de paginación
+        // Obtener parámetros de paginación y búsqueda
         $pagina = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
         $por_pagina = 10;
 
+        // Preparar filtros normalizados
+        $filtros = [
+            'busqueda' => isset($_GET['busqueda']) ? $this->normalizarTexto($_GET['busqueda']) : null,
+            'tipo' => isset($_GET['tipo']) ? $this->normalizarTexto($_GET['tipo']) : null,
+            'estatus' => isset($_GET['estatus']) ? $this->normalizarTexto($_GET['estatus']) : null
+        ];
+
         // Obtener datos paginados
-        $resultado = $this->model->obtenerTodasCategorias($pagina, $por_pagina);
+        $resultado = $this->model->obtenerTodasCategorias($pagina, $por_pagina, $filtros);
         $tipos = $this->model->obtenerTiposCategoria();
         
+        // Si es una solicitud AJAX, devolver JSON
+        if (isset($_GET['ajax']) && $_GET['ajax'] === 'true') {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'categorias' => $resultado['categorias'],
+                'pagina_actual' => $resultado['pagina_actual'],
+                'total_paginas' => $resultado['total_paginas']
+            ]);
+            exit;
+        }
+
+        // Si no es AJAX, cargar la vista normal
         $this->loadView('categorias/index', [
             'categorias' => $resultado['categorias'],
             'tipos' => $tipos,
@@ -37,7 +66,6 @@ class CategoriaController
         $this->loadView('categorias/crear', ['tipos' => $tipos]);
     }
 
-    // En CategoriaController.php - método guardar()
     public function guardar()
     {
         $this->checkSession();
@@ -56,14 +84,13 @@ class CategoriaController
                 return;
             }
 
-            // Verificar si ya existe una categoría con el mismo nombre
             if ($this->model->existeCategoria($nombre)) {
                 $_SESSION['error'] = [
                     'title' => 'Error',
                     'text' => 'Ya existe una categoría con ese nombre',
                     'icon' => 'error'
                 ];
-                $_SESSION['form_data'] = $_POST; // Para mantener los datos del formulario
+                $_SESSION['form_data'] = $_POST;
                 $this->redirect('categorias&method=crear');
                 return;
             }
@@ -81,7 +108,7 @@ class CategoriaController
                     'text' => 'Error al crear la categoría: ' . implode(', ', $this->model->getErrors()),
                     'icon' => 'error'
                 ];
-                $_SESSION['form_data'] = $_POST; // Para mantener los datos del formulario
+                $_SESSION['form_data'] = $_POST;
                 $this->redirect('categorias&method=crear');
             }
         }
@@ -106,7 +133,6 @@ class CategoriaController
         ]);
     }
 
-    // En CategoriaController.php - método actualizar()
     public function actualizar($id)
     {
         $this->checkSession();
@@ -125,7 +151,6 @@ class CategoriaController
                 return;
             }
 
-            // Verificar si ya existe otra categoría con el mismo nombre
             if ($this->model->existeCategoria($nombre, $id)) {
                 $_SESSION['error'] = [
                     'title' => 'Error',
@@ -202,7 +227,6 @@ class CategoriaController
         $this->redirect('categorias');
     }
 
-    // Métodos auxiliares
     private function checkSession()
     {
         if (!isset($_SESSION['user_id'])) {

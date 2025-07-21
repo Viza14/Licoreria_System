@@ -61,8 +61,8 @@ class VentaModel
                 $params[':fecha_fin'] = $filtros['fecha_fin'];
             }
             if (!empty($filtros['vendedor'])) {
-                $query .= " AND CONCAT(u.nombres, ' ', u.apellidos) = :vendedor";
-                $queryCount .= " AND CONCAT(u.nombres, ' ', u.apellidos) = :vendedor";
+                $query .= " AND u.user = :vendedor";
+                $queryCount .= " AND u.user = :vendedor";
                 $params[':vendedor'] = $filtros['vendedor'];
             }
         }

@@ -662,6 +662,7 @@
         $(document).on('click', '.editar-cantidad', function() {
             const index = $(this).data('index');
             const producto = productosAgregados[index];
+            const stock = parseInt($('#id_producto').data('stock'));
                 
             Swal.fire({
                 title: 'Editar Cantidad',
@@ -669,6 +670,7 @@
                     <div class="form-group">
                         <label>Producto: ${producto.descripcion}</label>
                         <input type="number" id="nueva-cantidad" class="form-control" value="${producto.cantidad}" min="1">
+                        <small class="text-muted">Stock disponible: ${stock}</small>
                     </div>
                 `,
                 showCancelButton: true,
@@ -678,6 +680,10 @@
                     const nuevaCantidad = parseInt($('#nueva-cantidad').val());
                     if (nuevaCantidad < 1) {
                         Swal.showValidationMessage('La cantidad debe ser mayor a 0');
+                        return false;
+                    }
+                    if (nuevaCantidad > stock) {
+                        Swal.showValidationMessage('No hay suficiente stock disponible');
                         return false;
                     }
                     return nuevaCantidad;

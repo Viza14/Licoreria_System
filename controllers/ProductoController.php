@@ -19,33 +19,65 @@ class ProductoController
         $porPagina = isset($_GET['por_pagina']) ? (int)$_GET['por_pagina'] : 10;
         $termino_busqueda = isset($_GET['busqueda']) ? trim($_GET['busqueda']) : '';
 
+        // Función para normalizar texto
+        $normalizarTexto = function($texto) {
+            if (empty($texto)) return '';
+            return mb_strtolower(
+                trim(
+                    str_replace(
+                        ['á', 'é', 'í', 'ó', 'ú', 'ü', 'ñ', 'Á', 'É', 'Í', 'Ó', 'Ú', 'Ü', 'Ñ'],
+                        ['a', 'e', 'i', 'o', 'u', 'u', 'n', 'a', 'e', 'i', 'o', 'u', 'u', 'n'],
+                        $texto
+                    )
+                )
+            );
+        };
+
         // Preparar filtros
         $filtros = [];
         $filtros_activos = [];
 
         if (!empty($termino_busqueda)) {
-            $filtros['busqueda'] = $termino_busqueda;
+            $filtros['busqueda'] = $normalizarTexto($termino_busqueda);
             $filtros_activos[] = "Búsqueda: {$termino_busqueda}";
         }
 
         if (isset($_GET['categoria']) && !empty($_GET['categoria'])) {
-            $filtros['categoria'] = $_GET['categoria'];
+            $filtros['categoria'] = $normalizarTexto($_GET['categoria']);
             $filtros_activos[] = "Categoría: {$_GET['categoria']}";
         }
 
+        if (isset($_GET['tipo']) && !empty($_GET['tipo'])) {
+            $filtros['tipo'] = $normalizarTexto($_GET['tipo']);
+            $filtros_activos[] = "Tipo: {$_GET['tipo']}";
+        }
+
         if (isset($_GET['estatus']) && !empty($_GET['estatus'])) {
-            $filtros['estatus'] = $_GET['estatus'];
+            $filtros['estatus'] = $normalizarTexto($_GET['estatus']);
             $filtros_activos[] = "Estatus: {$_GET['estatus']}";
         }
 
         // Obtener productos paginados
         $resultado = $this->model->obtenerTodosProductos(false, $pagina, $porPagina, $filtros);
         $categorias = $this->model->obtenerCategorias();
+        $tipos = $this->model->obtenerTiposCategoria();
+
+        // Si es una solicitud AJAX, devolver JSON
+        if (isset($_GET['ajax']) && $_GET['ajax'] === 'true') {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'productos' => $resultado['productos'],
+                'total_paginas' => $resultado['total_paginas'],
+                'pagina_actual' => $resultado['pagina_actual']
+            ]);
+            exit;
+        }
 
         // Preparar datos para la vista
         $datos = [
             'productos' => $resultado['productos'],
             'categorias' => $categorias,
+            'tipos' => $tipos,
             'total_registros' => $resultado['total_registros'],
             'pagina_actual' => $resultado['pagina_actual'],
             'por_pagina' => $resultado['por_pagina'],
