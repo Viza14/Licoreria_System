@@ -298,32 +298,75 @@
             }
         });
 
+        // Variable global para rastrear productos asignados a formas de pago
+        let productosAsignadosPorFormaPago = {};
+
+        // Función para obtener cantidades disponibles de un producto
+        function obtenerCantidadDisponible(productoIndex) {
+            const producto = productosAgregados[productoIndex];
+            let cantidadAsignada = 0;
+            
+            // Sumar todas las cantidades asignadas a otras formas de pago
+            Object.values(productosAsignadosPorFormaPago).forEach(asignaciones => {
+                if (asignaciones[productoIndex]) {
+                    cantidadAsignada += asignaciones[productoIndex];
+                }
+            });
+            
+            return Math.max(0, producto.cantidad - cantidadAsignada);
+        }
+
         // Evento para seleccionar productos específicos
         $(document).on('click', '.seleccionar-productos', function() {
             const $formaPagoItem = $(this).closest('.forma-pago-item');
             const $montoPago = $formaPagoItem.find('.monto-pago');
+            const formaPagoIndex = $('.forma-pago-item').index($formaPagoItem);
 
             let productosHtml = '';
+            let hayProductosDisponibles = false;
+            
             productosAgregados.forEach((producto, index) => {
-                productosHtml += `
-                    <div class="form-group mb-3 producto-item-container">
-                        <div class="d-flex align-items-center">
-                            <input type="checkbox" class="form-check-input producto-seleccionado mr-2" 
-                                   id="producto${index}" data-index="${index}" 
-                                   data-precio="${producto.precio}" 
-                                   data-cantidad-total="${producto.cantidad}">
-                            <label class="form-check-label flex-grow-1" for="producto${index}">
-                                ${producto.descripcion} - ${producto.cantidad} x ${producto.precio.toFixed(2)} Bs = ${producto.subtotal.toFixed(2)} Bs
-                            </label>
-                        </div>
-                        <div class="cantidad-container mt-2" style="display: none;">
-                            <label>Cantidad a pagar (máx. ${producto.cantidad}):</label>
-                            <input type="number" class="form-control cantidad-a-pagar" 
-                                   min="1" max="${producto.cantidad}" value="1"
-                                   oninput="this.value = this.value > ${producto.cantidad} ? ${producto.cantidad} : Math.abs(this.value)">
-                        </div>
-                    </div>`;
+                const cantidadDisponible = obtenerCantidadDisponible(index);
+                
+                // Solo mostrar productos que tengan cantidad disponible
+                if (cantidadDisponible > 0) {
+                    hayProductosDisponibles = true;
+                    const cantidadActualAsignada = productosAsignadosPorFormaPago[formaPagoIndex]?.[index] || 0;
+                    const cantidadMaxima = cantidadDisponible + cantidadActualAsignada;
+                    
+                    productosHtml += `
+                        <div class="form-group mb-3 producto-item-container">
+                            <div class="d-flex align-items-center">
+                                <input type="checkbox" class="form-check-input producto-seleccionado mr-2" 
+                                       id="producto${index}" data-index="${index}" 
+                                       data-precio="${producto.precio}" 
+                                       data-cantidad-total="${producto.cantidad}"
+                                       data-cantidad-disponible="${cantidadMaxima}"
+                                       ${cantidadActualAsignada > 0 ? 'checked' : ''}>
+                                <label class="form-check-label flex-grow-1" for="producto${index}">
+                                    ${producto.descripcion} - Disponible: ${cantidadMaxima} x ${producto.precio.toFixed(2)} Bs
+                                    ${cantidadActualAsignada > 0 ? `<br><small class="text-info">(Ya asignado: ${cantidadActualAsignada})</small>` : ''}
+                                </label>
+                            </div>
+                            <div class="cantidad-container mt-2" style="display: ${cantidadActualAsignada > 0 ? 'block' : 'none'};">
+                                <label>Cantidad a pagar (máx. ${cantidadMaxima}):</label>
+                                <input type="number" class="form-control cantidad-a-pagar" 
+                                       min="1" max="${cantidadMaxima}" value="${cantidadActualAsignada || 1}"
+                                       oninput="this.value = this.value > ${cantidadMaxima} ? ${cantidadMaxima} : Math.abs(this.value)">
+                            </div>
+                        </div>`;
+                }
             });
+
+            if (!hayProductosDisponibles) {
+                Swal.fire({
+                    title: 'Sin productos disponibles',
+                    text: 'Todos los productos ya han sido asignados a otras formas de pago',
+                    icon: 'info',
+                    confirmButtonText: 'Entendido'
+                });
+                return;
+            }
 
             Swal.fire({
                 title: 'Seleccionar Productos',
@@ -374,24 +417,29 @@
                         });
                         $('#totalSeleccionado').text(totalSeleccionado.toFixed(2) + ' Bs');
                     }
+                    
+                    // Calcular total inicial
+                    calcularTotalSeleccionado();
                 },
                 preConfirm: () => {
                     let total = 0;
                     let detalleProductos = [];
+                    let nuevasAsignaciones = {};
                     
                     $('.producto-seleccionado:checked').each(function() {
                         const $container = $(this).closest('.producto-item-container');
                         const cantidad = parseInt($container.find('.cantidad-a-pagar').val()) || 0;
                         const precio = parseFloat($(this).data('precio'));
-                        const cantidadTotal = parseInt($(this).data('cantidad-total'));
+                        const cantidadDisponible = parseInt($(this).data('cantidad-disponible'));
                         const index = $(this).data('index');
                         
-                        if (cantidad > cantidadTotal) {
-                            Swal.showValidationMessage(`La cantidad seleccionada excede el total disponible para ${productosAgregados[index].descripcion}`);
+                        if (cantidad > cantidadDisponible) {
+                            Swal.showValidationMessage(`La cantidad seleccionada excede la disponible para ${productosAgregados[index].descripcion}`);
                             return false;
                         }
                         
                         total += cantidad * precio;
+                        nuevasAsignaciones[index] = cantidad;
                         detalleProductos.push({
                             descripcion: productosAgregados[index].descripcion,
                             cantidad: cantidad,
@@ -400,10 +448,13 @@
                         });
                     });
                     
-                    return { total, detalleProductos };
+                    return { total, detalleProductos, nuevasAsignaciones };
                 }
             }).then((result) => {
                 if (result.isConfirmed) {
+                    // Actualizar las asignaciones para esta forma de pago
+                    productosAsignadosPorFormaPago[formaPagoIndex] = result.value.nuevasAsignaciones;
+                    
                     $montoPago.val(result.value.total.toFixed(2));
                     actualizarMontoRestante();
                 }
@@ -429,7 +480,25 @@
         });
 
         $(document).on('click', '.eliminar-forma-pago', function() {
-            $(this).closest('.forma-pago-item').remove();
+            const $formaPagoItem = $(this).closest('.forma-pago-item');
+            const formaPagoIndex = $('.forma-pago-item').index($formaPagoItem);
+            
+            // Limpiar las asignaciones de productos para esta forma de pago
+            delete productosAsignadosPorFormaPago[formaPagoIndex];
+            
+            // Reindexar las asignaciones después de eliminar
+            const nuevasAsignaciones = {};
+            Object.keys(productosAsignadosPorFormaPago).forEach(index => {
+                const indexNum = parseInt(index);
+                if (indexNum > formaPagoIndex) {
+                    nuevasAsignaciones[indexNum - 1] = productosAsignadosPorFormaPago[index];
+                } else if (indexNum < formaPagoIndex) {
+                    nuevasAsignaciones[indexNum] = productosAsignadosPorFormaPago[index];
+                }
+            });
+            productosAsignadosPorFormaPago = nuevasAsignaciones;
+            
+            $formaPagoItem.remove();
             const montoRestante = actualizarMontoRestante();
             
             // Mostrar mensaje si no quedan formas de pago
@@ -446,6 +515,9 @@
 
         // Manejar cambio entre pago simple y partido
         $('#habilitarPagoPartido').change(function() {
+            // Limpiar todas las asignaciones de productos al cambiar el tipo de pago
+            productosAsignadosPorFormaPago = {};
+            
             if ($(this).is(':checked')) {
                 $('#pago_simple').hide();
                 $('#pago_partido').show();

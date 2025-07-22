@@ -1,4 +1,6 @@
 <?php
+require_once ROOT_PATH . 'lib/fpdf/factura.php';
+
 class MovimientoInventarioController
 {
     private $model;
@@ -368,13 +370,17 @@ class MovimientoInventarioController
             }
 
             // Modificar la venta
-            $resultado = $this->model->modificarVentaConAjuste($id_venta, $data);
+            $nuevo_id_venta = $this->model->modificarVentaConAjuste($id_venta, $data);
 
-            if ($resultado) {
+            if ($nuevo_id_venta) {
+                // Generar factura para la nueva venta
+                $this->generarFacturaModificacion($nuevo_id_venta, $data);
+                
                 $_SESSION['mensaje'] = [
                     'title' => 'Éxito',
-                    'text' => 'Venta modificada correctamente. Se ha registrado como ajuste de inventario.',
-                    'icon' => 'success'
+                    'text' => 'Venta modificada correctamente. Se ha registrado como ajuste de inventario y se ha generado la nueva factura.',
+                    'icon' => 'success',
+                    'factura_path' => 'facturas/factura_' . $nuevo_id_venta . '.pdf'
                 ];
                 $this->redirect('movimientos-inventario');
             } else {
@@ -414,5 +420,62 @@ class MovimientoInventarioController
         require ROOT_PATH . 'views/layouts/sidebar.php';
         require ROOT_PATH . 'views/' . $view . '.php';
         require ROOT_PATH . 'views/layouts/footer.php';
+    }
+
+    private function generarFacturaModificacion($id_venta, $data)
+    {
+        try {
+            date_default_timezone_set('America/Caracas'); // Establecer zona horaria de Venezuela
+            
+            // Obtener información del cliente
+            $cliente = $this->clienteModel->obtenerClientePorCedula($data['cedula_cliente']);
+            $nombre_cliente = $cliente['nombres'] . ' ' . $cliente['apellidos'];
+            
+            // Configurar información del cliente en sesión para la factura
+            $_SESSION['cliente'] = [
+                'cedula' => $cliente['cedula'],
+                'direccion' => $cliente['direccion']
+            ];
+            
+            // Configurar información de pagos y usuario en sesión para la factura
+            $_SESSION['pagos'] = $data['pagos'];
+            $_SESSION['usuario'] = ['nombre' => $_SESSION['user_nombre']];
+            
+            // Crear PDF
+            $pdf = new Factura();
+            $pdf->AddPage();
+            
+            // Usar la fecha y hora actual del servidor
+            $fecha_actual = date('d/m/Y h:i A');
+            $pdf->datosFactura($nombre_cliente, $fecha_actual, $id_venta);
+            
+            // Preparar productos para la factura
+            $productos_factura = [];
+            foreach ($data['productos'] as $producto) {
+                // Obtener descripción del producto
+                $producto_info = $this->productoModel->obtenerProductoPorId($producto['id_producto']);
+                $productos_factura[] = [
+                    'descripcion' => $producto_info['descripcion'],
+                    'cantidad' => $producto['cantidad'],
+                    'precio' => $producto['precio_unitario']
+                ];
+            }
+            
+            $pdf->tablaProductos($productos_factura);
+            
+            // Guardar factura
+            $filename = ROOT_PATH . 'facturas/factura_' . $id_venta . '.pdf';
+            $pdf->Output('F', $filename);
+            
+            // Limpiar información de sesión
+            unset($_SESSION['pagos']);
+            unset($_SESSION['usuario']);
+            unset($_SESSION['cliente']);
+            
+            return $filename;
+        } catch (Exception $e) {
+            error_log("Error al generar factura: " . $e->getMessage());
+            return false;
+        }
     }
 }

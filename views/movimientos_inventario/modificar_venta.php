@@ -1,3 +1,23 @@
+<?php
+// Validaciones de seguridad
+if (!isset($venta) || !$venta) {
+    echo '<div class="alert alert-danger">Error: No se encontraron datos de la venta.</div>';
+    return;
+}
+
+if (!isset($detalles) || !$detalles) {
+    echo '<div class="alert alert-danger">Error: No se encontraron detalles de la venta.</div>';
+    return;
+}
+
+if (!isset($productos) || !$productos) {
+    $productos = [];
+}
+
+if (!isset($clientes) || !$clientes) {
+    $clientes = [];
+}
+?>
 <!--main content start-->
 <section id="main-content">
     <section class="wrapper">
@@ -54,6 +74,33 @@
                             </div>
 
                             <hr>
+
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="form-group">
+                                        <label for="buscar_producto">Agregar Producto</label>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="buscar_producto" placeholder="Buscar producto..." autocomplete="off">
+                                            <input type="hidden" id="id_producto" name="id_producto">
+                                        </div>
+                                        <div id="resultados_productos" class="list-group" style="position: absolute; z-index: 1000; width: 95%;"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="form-group">
+                                        <label for="cantidad">Cantidad</label>
+                                        <input type="number" class="form-control" id="cantidad" min="1" value="1">
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="form-group">
+                                        <label>&nbsp;</label>
+                                        <button type="button" class="btn btn-primary form-control" id="agregarProducto" style="font-weight: bold;">
+                                            <i class="fa fa-plus"></i> Agregar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
 
                             <div class="row">
                                 <div class="col-md-12">
@@ -131,11 +178,21 @@
                                                             </div>
                                                         </div>
                                                         <div class="col-md-4">
-                                                            <div class="form-group">
-                                                                <label>Monto</label>
-                                                                <input type="number" class="form-control monto-pago" name="montos_pago[]" value="<?= $pago['monto'] ?>" step="0.01" required>
-                                                            </div>
-                                                        </div>
+                                            <div class="form-group">
+                                                <label>Monto</label>
+                                                <div class="input-group">
+                                                    <input type="number" class="form-control monto-pago" name="montos_pago[]" value="<?= $pago['monto'] ?>" step="0.01" required>
+                                                    <div class="input-group-append">
+                                                        <button type="button" class="btn btn-info seleccionar-productos" title="Seleccionar productos para esta forma de pago">
+                                                            <i class="fa fa-list"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-success usar-monto-restante" title="Completar monto restante">
+                                                            <i class="fa fa-level-up"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                                         <div class="col-md-3 referencia-container" style="<?= $pago['forma_pago'] == 'EFECTIVO' ? 'display: none;' : '' ?>">
                                                             <div class="form-group">
                                                                 <label>Referencia</label>
@@ -189,6 +246,24 @@
 
         // Inicialización correcta del total con manejo preciso de decimales
         let totalVentaActual = Number(Number("<?= str_replace(',', '.', $venta['monto_total']) ?>").toFixed(2)) || 0;
+
+        // Datos de clientes y productos para búsqueda
+        const clientes = <?php echo json_encode($clientes); ?>;
+        const productos = <?php echo json_encode($productos); ?>;
+
+        // Array para manejar productos agregados dinámicamente
+        let productosAgregados = [];
+
+        // Inicializar productos existentes en el array
+        <?php foreach ($detalles as $index => $detalle): ?>
+            productosAgregados.push({
+                id: '<?= $detalle['id_producto'] ?>',
+                descripcion: '<?= htmlspecialchars($detalle['producto']) ?>',
+                precio: <?= $detalle['precio_unitario'] ?>,
+                cantidad: <?= $detalle['cantidad'] ?>,
+                subtotal: <?= $detalle['monto'] ?>
+            });
+        <?php endforeach; ?>
 
         // Función para recalcular el total de la venta con manejo preciso de decimales
         function recalcularTotalVenta() {
@@ -287,14 +362,485 @@
             recalcularTotalVenta();
         });
 
+        // Evento para usar el monto restante
+        $(document).on('click', '.usar-monto-restante', function() {
+            const montoRestante = actualizarMontoRestante();
+            if (montoRestante > 0) {
+                $(this).closest('.forma-pago-item').find('.monto-pago').val(montoRestante.toFixed(2));
+                actualizarMontoRestante();
+            }
+        });
+
+        // Variable global para rastrear productos asignados a formas de pago
+        let productosAsignadosPorFormaPago = {};
+
+        // Función para obtener cantidades disponibles de un producto
+        function obtenerCantidadDisponible(productoIndex) {
+            const producto = productosAgregados[productoIndex];
+            let cantidadAsignada = 0;
+            
+            // Sumar todas las cantidades asignadas a otras formas de pago
+            Object.values(productosAsignadosPorFormaPago).forEach(asignaciones => {
+                if (asignaciones[productoIndex]) {
+                    cantidadAsignada += asignaciones[productoIndex];
+                }
+            });
+            
+            return Math.max(0, producto.cantidad - cantidadAsignada);
+        }
+
+        // Evento para seleccionar productos específicos
+        $(document).on('click', '.seleccionar-productos', function() {
+            const $formaPagoItem = $(this).closest('.forma-pago-item');
+            const $montoPago = $formaPagoItem.find('.monto-pago');
+            const formaPagoIndex = $('.forma-pago-item').index($formaPagoItem);
+
+            let productosHtml = '';
+            let hayProductosDisponibles = false;
+            
+            productosAgregados.forEach((producto, index) => {
+                const cantidadDisponible = obtenerCantidadDisponible(index);
+                
+                // Solo mostrar productos que tengan cantidad disponible
+                if (cantidadDisponible > 0) {
+                    hayProductosDisponibles = true;
+                    const cantidadActualAsignada = productosAsignadosPorFormaPago[formaPagoIndex]?.[index] || 0;
+                    const cantidadMaxima = cantidadDisponible + cantidadActualAsignada;
+                    
+                    productosHtml += `
+                        <div class="form-group mb-3 producto-item-container">
+                            <div class="d-flex align-items-center">
+                                <input type="checkbox" class="form-check-input producto-seleccionado mr-2" 
+                                       id="producto${index}" data-index="${index}" 
+                                       data-precio="${producto.precio}" 
+                                       data-cantidad-total="${producto.cantidad}"
+                                       data-cantidad-disponible="${cantidadMaxima}"
+                                       ${cantidadActualAsignada > 0 ? 'checked' : ''}>
+                                <label class="form-check-label flex-grow-1" for="producto${index}">
+                                    ${producto.descripcion} - Disponible: ${cantidadMaxima} x ${producto.precio.toFixed(2)} Bs
+                                    ${cantidadActualAsignada > 0 ? `<br><small class="text-info">(Ya asignado: ${cantidadActualAsignada})</small>` : ''}
+                                </label>
+                            </div>
+                            <div class="cantidad-container mt-2" style="display: ${cantidadActualAsignada > 0 ? 'block' : 'none'};">
+                                <label>Cantidad a pagar (máx. ${cantidadMaxima}):</label>
+                                <input type="number" class="form-control cantidad-a-pagar" 
+                                       min="1" max="${cantidadMaxima}" value="${cantidadActualAsignada || 1}"
+                                       oninput="this.value = this.value > ${cantidadMaxima} ? ${cantidadMaxima} : Math.abs(this.value)">
+                            </div>
+                        </div>`;
+                }
+            });
+
+            if (!hayProductosDisponibles) {
+                Swal.fire({
+                    title: 'Sin productos disponibles',
+                    text: 'Todos los productos ya han sido asignados a otras formas de pago',
+                    icon: 'info',
+                    confirmButtonText: 'Entendido'
+                });
+                return;
+            }
+
+            Swal.fire({
+                title: 'Seleccionar Productos',
+                html: `
+                    <div style="text-align: left; max-height: 300px; overflow-y: auto;">
+                        ${productosHtml}
+                    </div>
+                    <div class="mt-3">
+                        <strong>Total seleccionado: </strong>
+                        <span id="totalSeleccionado">0.00 Bs</span>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Aplicar',
+                cancelButtonText: 'Cancelar',
+                didOpen: () => {
+                    // Mostrar/ocultar campo de cantidad cuando se selecciona un producto
+                    $('.producto-seleccionado').on('change', function() {
+                        const $container = $(this).closest('.producto-item-container');
+                        const $cantidadContainer = $container.find('.cantidad-container');
+                        
+                        if ($(this).is(':checked')) {
+                            $cantidadContainer.show();
+                        } else {
+                            $cantidadContainer.hide();
+                        }
+                        
+                        calcularTotalSeleccionado();
+                    });
+
+                    // Recalcular total cuando cambia la cantidad
+                    $('.cantidad-a-pagar').on('input', function() {
+                        const $container = $(this).closest('.producto-item-container');
+                        const $checkbox = $container.find('.producto-seleccionado');
+                        
+                        if ($checkbox.is(':checked')) {
+                            calcularTotalSeleccionado();
+                        }
+                    });
+
+                    function calcularTotalSeleccionado() {
+                        let totalSeleccionado = 0;
+                        $('.producto-seleccionado:checked').each(function() {
+                            const $container = $(this).closest('.producto-item-container');
+                            const cantidad = parseInt($container.find('.cantidad-a-pagar').val()) || 0;
+                            const precio = parseFloat($(this).data('precio'));
+                            totalSeleccionado += cantidad * precio;
+                        });
+                        $('#totalSeleccionado').text(totalSeleccionado.toFixed(2) + ' Bs');
+                    }
+                    
+                    // Calcular total inicial
+                    calcularTotalSeleccionado();
+                },
+                preConfirm: () => {
+                    let total = 0;
+                    let detalleProductos = [];
+                    let nuevasAsignaciones = {};
+                    
+                    $('.producto-seleccionado:checked').each(function() {
+                        const $container = $(this).closest('.producto-item-container');
+                        const cantidad = parseInt($container.find('.cantidad-a-pagar').val()) || 0;
+                        const precio = parseFloat($(this).data('precio'));
+                        const cantidadDisponible = parseInt($(this).data('cantidad-disponible'));
+                        const index = $(this).data('index');
+                        
+                        if (cantidad > cantidadDisponible) {
+                            Swal.showValidationMessage(`La cantidad seleccionada excede la disponible para ${productosAgregados[index].descripcion}`);
+                            return false;
+                        }
+                        
+                        total += cantidad * precio;
+                        nuevasAsignaciones[index] = cantidad;
+                        detalleProductos.push({
+                            descripcion: productosAgregados[index].descripcion,
+                            cantidad: cantidad,
+                            precio: precio,
+                            subtotal: cantidad * precio
+                        });
+                    });
+                    
+                    return { total, detalleProductos, nuevasAsignaciones };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Actualizar las asignaciones para esta forma de pago
+                    productosAsignadosPorFormaPago[formaPagoIndex] = result.value.nuevasAsignaciones;
+                    
+                    $montoPago.val(result.value.total.toFixed(2));
+                    actualizarMontoRestante();
+                }
+            });
+        });
+
         // Inicializar los cálculos al cargar la página
         recalcularTotalVenta();
         actualizarMontoRestante();
 
+        // Funcionalidad de búsqueda de clientes
+        $('#buscar_cliente').on('input', function() {
+            const busqueda = $(this).val().toLowerCase();
+            const resultados = $('#resultados_busqueda');
+            resultados.empty();
+
+            if (busqueda.length < 2) {
+                resultados.hide();
+                return;
+            }
+
+            const clientesFiltrados = clientes.filter(cliente =>
+                cliente.nombres.toLowerCase().includes(busqueda) ||
+                cliente.apellidos.toLowerCase().includes(busqueda) ||
+                cliente.cedula.includes(busqueda)
+            );
+
+            if (clientesFiltrados.length > 0) {
+                clientesFiltrados.forEach(cliente => {
+                    resultados.append(`
+                        <a href="#" class="list-group-item cliente-item" 
+                           data-cedula="${cliente.cedula}"
+                           data-nombre="${cliente.nombres} ${cliente.apellidos}">
+                            ${cliente.nombres} ${cliente.apellidos} - ${cliente.cedula}
+                        </a>
+                    `);
+                });
+                resultados.show();
+            } else {
+                resultados.append(`
+                    <div class="list-group-item">
+                        No se encontraron clientes
+                    </div>
+                `);
+                resultados.show();
+            }
+        });
+
+        // Funcionalidad de búsqueda de productos
+        $('#buscar_producto').on('input', function() {
+            const busqueda = $(this).val().toLowerCase();
+            const resultados = $('#resultados_productos');
+            resultados.empty();
+
+            if (busqueda.length < 2) {
+                resultados.hide();
+                return;
+            }
+
+            const productosFiltrados = productos.filter(producto => {
+                if (!producto || !producto.descripcion) {
+                    return false;
+                }
+                const descripcionNormalizada = producto.descripcion.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                const busquedaNormalizada = busqueda.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                return descripcionNormalizada.includes(busquedaNormalizada);
+            });
+
+            if (productosFiltrados.length > 0) {
+                productosFiltrados.forEach(producto => {
+                    resultados.append(`
+                        <a href="#" class="list-group-item producto-item" 
+                           data-id="${producto.id}"
+                           data-descripcion="${producto.descripcion}"
+                           data-precio="${producto.precio}"
+                           data-stock="${producto.cantidad}">
+                            ${producto.descripcion} - 
+                            ${parseFloat(producto.precio).toFixed(2).replace('.', ',')} Bs
+                            (Stock: ${producto.cantidad})
+                        </a>
+                    `);
+                });
+                resultados.show();
+            } else {
+                resultados.append(`
+                    <div class="list-group-item">
+                        No se encontraron productos
+                    </div>
+                `);
+                resultados.show();
+            }
+        });
+
+        // Eventos para seleccionar cliente y producto
+        $(document).on('click', '.cliente-item', function(e) {
+            e.preventDefault();
+            const cedula = $(this).data('cedula');
+            const nombre = $(this).data('nombre');
+
+            $('#buscar_cliente').val(nombre);
+            $('#cedula_cliente').val(cedula);
+            $('#resultados_busqueda').hide();
+        });
+
+        $(document).on('click', '.producto-item', function(e) {
+            e.preventDefault();
+            const id = $(this).data('id');
+            const descripcion = $(this).data('descripcion');
+            const precio = $(this).data('precio');
+            const stock = $(this).data('stock');
+
+            $('#buscar_producto').val(descripcion);
+            $('#id_producto').val(id);
+            $('#id_producto').data('precio', precio);
+            $('#id_producto').data('stock', stock);
+            $('#resultados_productos').hide();
+        });
+
+        // Ocultar resultados al hacer clic fuera
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('#buscar_cliente, #resultados_busqueda').length) {
+                $('#resultados_busqueda').hide();
+            }
+            if (!$(e.target).closest('#buscar_producto, #resultados_productos').length) {
+                $('#resultados_productos').hide();
+            }
+        });
+
+        // Función para agregar producto a la tabla
+        $('#agregarProducto').click(function() {
+            const productoId = $('#id_producto').val();
+            const productoTexto = $('#buscar_producto').val();
+            const precio = parseFloat($('#id_producto').data('precio'));
+            const stock = parseInt($('#id_producto').data('stock'));
+            const cantidad = parseInt($('#cantidad').val()) || 1;
+
+            // Validaciones
+            if (!productoId) {
+                Swal.fire('Error', 'Debe seleccionar un producto', 'error');
+                return;
+            }
+
+            if (cantidad < 1) {
+                Swal.fire('Error', 'La cantidad debe ser mayor a 0', 'error');
+                return;
+            }
+
+            if (cantidad > stock) {
+                Swal.fire('Error', 'No hay suficiente stock para este producto', 'error');
+                return;
+            }
+
+            // Verificar si el producto ya existe en la tabla
+            const index = productosAgregados.findIndex(p => p.id === productoId);
+            const subtotal = precio * cantidad;
+
+            if (index >= 0) {
+                // Actualizar cantidad y subtotal si ya existe
+                const nuevaCantidad = productosAgregados[index].cantidad + cantidad;
+                if (nuevaCantidad > stock) {
+                    Swal.fire('Error', 'No hay suficiente stock para esta cantidad total', 'error');
+                    return;
+                }
+                productosAgregados[index].cantidad = nuevaCantidad;
+                productosAgregados[index].subtotal = nuevaCantidad * precio;
+            } else {
+                // Agregar nuevo producto
+                productosAgregados.push({
+                    id: productoId,
+                    descripcion: productoTexto,
+                    precio: precio,
+                    cantidad: cantidad,
+                    subtotal: subtotal
+                });
+            }
+
+            // Renderizar tabla y actualizar total
+            renderizarTablaProductos();
+            recalcularTotalVenta();
+
+            // Limpiar campos
+            $('#buscar_producto').val('');
+            $('#id_producto').val('');
+            $('#cantidad').val(1);
+        });
+
+        // Función para renderizar la tabla de productos
+        function renderizarTablaProductos() {
+            const tbody = $('#productosSeleccionados');
+            tbody.empty();
+
+            productosAgregados.forEach((producto, index) => {
+                const stockActual = productos.find(p => p.id == producto.id)?.cantidad || 0;
+                const row = `
+                    <tr>
+                        <td>
+                            <div class="input-group">
+                                <input type="text" class="form-control buscar-producto" placeholder="Buscar producto..." autocomplete="off"
+                                    value="${producto.descripcion} (Stock: ${stockActual})" readonly>
+                                <input type="hidden" name="productos[${index}][id_producto]" value="${producto.id}">
+                                <input type="hidden" name="productos[${index}][descripcion]" value="${producto.descripcion}">
+                            </div>
+                        </td>
+                        <td>
+                            <input type="number" class="form-control cantidad" name="productos[${index}][cantidad]" 
+                                value="${producto.cantidad}" min="1" max="${stockActual + producto.cantidad}" required>
+                        </td>
+                        <td>
+                            <input type="number" class="form-control precio" name="productos[${index}][precio]"
+                                value="${producto.precio}" step="0.01" required>
+                        </td>
+                        <td class="subtotal">${producto.subtotal.toFixed(2)}</td>
+                        <td>
+                            <button type="button" class="btn btn-danger btn-xs eliminar-producto" data-index="${index}">
+                                <i class="fa fa-trash-o"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.append(row);
+            });
+        }
+
+        // Evento para eliminar producto
+        $(document).on('click', '.eliminar-producto', function() {
+            const index = $(this).data('index');
+            Swal.fire({
+                title: '¿Está seguro?',
+                text: "Se eliminará el producto de la venta",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    productosAgregados.splice(index, 1);
+                    renderizarTablaProductos();
+                    recalcularTotalVenta();
+                }
+            });
+        });
+
+        // Evento para editar cantidad con doble clic
+        $(document).on('dblclick', '.cantidad', function() {
+            const input = $(this);
+            const index = input.closest('tr').find('.eliminar-producto').data('index');
+            const producto = productosAgregados[index];
+            const stockDisponible = productos.find(p => p.id == producto.id)?.cantidad || 0;
+            const stockTotal = stockDisponible + producto.cantidad;
+
+            Swal.fire({
+                title: 'Editar Cantidad',
+                html: `
+                    <div class="form-group">
+                        <label>Producto: ${producto.descripcion}</label>
+                        <label>Stock disponible: ${stockTotal}</label>
+                        <input type="number" id="nuevaCantidad" class="form-control" 
+                               value="${producto.cantidad}" min="1" max="${stockTotal}" 
+                               placeholder="Ingrese la nueva cantidad">
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Actualizar',
+                cancelButtonText: 'Cancelar',
+                preConfirm: () => {
+                    const nuevaCantidad = parseInt(document.getElementById('nuevaCantidad').value);
+                    
+                    if (!nuevaCantidad || nuevaCantidad < 1) {
+                        Swal.showValidationMessage('La cantidad debe ser mayor a 0');
+                        return false;
+                    }
+                    
+                    if (nuevaCantidad > stockTotal) {
+                        Swal.showValidationMessage(`No hay suficiente stock. Máximo: ${stockTotal}`);
+                        return false;
+                    }
+                    
+                    return nuevaCantidad;
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    productosAgregados[index].cantidad = result.value;
+                    productosAgregados[index].subtotal = result.value * producto.precio;
+                    renderizarTablaProductos();
+                    recalcularTotalVenta();
+                }
+            });
+        });
+
         // Evento delegado para eliminar forma de pago
         $(document).on('click', '.eliminar-forma-pago', function() {
             if ($('#formas_pago_container .forma-pago-item').length > 1) {
-                $(this).closest('.forma-pago-item').remove();
+                const $formaPagoItem = $(this).closest('.forma-pago-item');
+                const formaPagoIndex = $('.forma-pago-item').index($formaPagoItem);
+                
+                // Limpiar las asignaciones de productos para esta forma de pago
+                delete productosAsignadosPorFormaPago[formaPagoIndex];
+                
+                // Reindexar las asignaciones después de eliminar
+                const nuevasAsignaciones = {};
+                Object.keys(productosAsignadosPorFormaPago).forEach(index => {
+                    const indexNum = parseInt(index);
+                    if (indexNum > formaPagoIndex) {
+                        nuevasAsignaciones[indexNum - 1] = productosAsignadosPorFormaPago[index];
+                    } else if (indexNum < formaPagoIndex) {
+                        nuevasAsignaciones[indexNum] = productosAsignadosPorFormaPago[index];
+                    }
+                });
+                productosAsignadosPorFormaPago = nuevasAsignaciones;
+                
+                $formaPagoItem.remove();
                 actualizarMontoRestante();
             } else {
                 Swal.fire({
@@ -327,7 +873,17 @@
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label>Monto</label>
-                                <input type="number" class="form-control monto-pago" name="montos_pago[]" step="0.01" required>
+                                <div class="input-group">
+                                    <input type="number" class="form-control monto-pago" name="montos_pago[]" step="0.01" required>
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-info seleccionar-productos" title="Seleccionar productos para esta forma de pago">
+                                            <i class="fa fa-list"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-success usar-monto-restante" title="Completar monto restante">
+                                            <i class="fa fa-level-up"></i>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-3 referencia-container" style="display: none;">
@@ -391,22 +947,6 @@
             }
         });
 
-        // Evento delegado para eliminar forma de pago
-        $(document).on('click', '.eliminar-forma-pago', function() {
-            if ($('#formas_pago_container .forma-pago-item').length > 1) {
-                $(this).closest('.forma-pago-item').remove();
-                actualizarMontoRestante();
-            } else {
-                Swal.fire({
-                    title: 'No se puede eliminar',
-                    text: 'Debe mantener al menos una forma de pago',
-                    icon: 'warning',
-                    timer: 2000,
-                    timerProgressBar: true
-                });
-            }
-        });
-
         $(document).on('input', '.monto-pago', function() {
             actualizarMontoRestante();
         });
@@ -455,8 +995,6 @@
         });
 
         // Client search functionality
-        const clientes = <?php echo json_encode($clientes); ?>;
-
         $('#buscar_cliente').on('input', function() {
             const busqueda = $(this).val().toLowerCase();
             const resultados = $('#resultados_busqueda');
@@ -515,8 +1053,6 @@
         });
 
         // Product search functionality
-        const productos = <?php echo json_encode($productos); ?>;
-
         $(document).on('input', '.buscar-producto', function() {
             const busqueda = $(this).val().toLowerCase();
             const resultados = $(this).closest('td').find('.resultados-busqueda-producto');
