@@ -130,9 +130,14 @@ class VentaController
         
         error_log('Cargando vista crear.php con ' . count($productos) . ' productos y ' . count($clientes) . ' clientes');
         
+        // Get preserved form data if exists
+        $formData = $_SESSION['form_data'] ?? null;
+        unset($_SESSION['form_data']); // Clear after use
+        
         $this->loadView('ventas/crear', [
             'productos' => $productos,
-            'clientes' => $clientes
+            'clientes' => $clientes,
+            'formData' => $formData
         ]);
     }
 
@@ -215,8 +220,11 @@ class VentaController
                 }
 
                 // Register sale
-                $id_venta = $this->model->registrarVenta($data);
-                if ($id_venta) {
+                $resultado_venta = $this->model->registrarVenta($data);
+                if ($resultado_venta && isset($resultado_venta['id_venta'])) {
+                    $id_venta = $resultado_venta['id_venta'];
+                    $numero_transaccion = $resultado_venta['numero_transaccion'];
+                    
                     // Get client info
                     $cliente = $this->clienteModel->obtenerClientePorCedula($data['cedula_cliente']);
                     $nombre_cliente = $cliente['nombres'] . ' ' . $cliente['apellidos'];
@@ -248,7 +256,7 @@ class VentaController
                     // Set success message and download path
                     $_SESSION['mensaje'] = [
                         'title' => 'Éxito',
-                        'text' => 'Venta registrada correctamente',
+                        'text' => 'Venta registrada correctamente. Número de transacción: ' . $numero_transaccion,
                         'icon' => 'success',
                         'factura_path' => 'facturas/factura_' . $id_venta . '.pdf'
                     ];
@@ -258,6 +266,15 @@ class VentaController
                     throw new Exception(!empty($errores) ? $errores[0] : 'Error al registrar la venta');
                 }
             } catch (Exception $e) {
+                // Preserve form data in session when there's an error
+                $_SESSION['form_data'] = [
+                    'cedula_cliente' => $_POST['cedula_cliente'] ?? '',
+                    'productos' => $_POST['productos'] ?? [],
+                    'formas_pago' => $_POST['formas_pago'] ?? [],
+                    'montos_pago' => $_POST['montos_pago'] ?? [],
+                    'referencias_pago' => $_POST['referencias_pago'] ?? []
+                ];
+                
                 $_SESSION['error'] = [
                     'title' => 'Error',
                     'text' => $e->getMessage(),

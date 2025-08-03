@@ -231,4 +231,63 @@ class ProductoProveedorModel
         $stmt->execute();
         return $stmt->fetch(PDO::FETCH_COLUMN);
     }
+
+    public function actualizarOCrearRelacion($id_producto, $cedula_proveedor, $precio_compra)
+    {
+        try {
+            // Verificar si ya existe la relación
+            $query = "SELECT id FROM proveedor_producto 
+                      WHERE id_producto = :id_producto AND cedula_proveedor = :cedula_proveedor";
+            $stmt = $this->db->prepare($query);
+            $stmt->bindParam(":id_producto", $id_producto);
+            $stmt->bindParam(":cedula_proveedor", $cedula_proveedor);
+            $stmt->execute();
+            
+            $relacion_existente = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($relacion_existente) {
+                // Actualizar relación existente
+                $query = "UPDATE proveedor_producto SET 
+                          precio_compra = :precio_compra, 
+                          id_estatus = 1 
+                          WHERE id = :id";
+                $stmt = $this->db->prepare($query);
+                $stmt->bindParam(":precio_compra", $precio_compra);
+                $stmt->bindParam(":id", $relacion_existente['id']);
+                return $stmt->execute();
+            } else {
+                // Crear nueva relación
+                $query = "INSERT INTO proveedor_producto (id_producto, cedula_proveedor, precio_compra, id_estatus)
+                          VALUES (:id_producto, :cedula_proveedor, :precio_compra, 1)";
+                $stmt = $this->db->prepare($query);
+                $stmt->bindParam(":id_producto", $id_producto);
+                $stmt->bindParam(":cedula_proveedor", $cedula_proveedor);
+                $stmt->bindParam(":precio_compra", $precio_compra);
+                return $stmt->execute();
+            }
+        } catch (PDOException $e) {
+            $this->errors[] = "Error al actualizar o crear relación: " . $e->getMessage();
+            return false;
+        }
+    }
+
+    public function obtenerProductosPorProveedor($cedula_proveedor)
+    {
+        try {
+            $query = "SELECT p.id, p.descripcion, pp.precio_compra, p.precio as precio_venta
+                      FROM producto p
+                      JOIN proveedor_producto pp ON p.id = pp.id_producto
+                      WHERE pp.cedula_proveedor = :cedula_proveedor 
+                      AND p.id_estatus = 1 
+                      AND pp.id_estatus = 1
+                      ORDER BY p.descripcion ASC";
+            $stmt = $this->db->prepare($query);
+            $stmt->bindParam(":cedula_proveedor", $cedula_proveedor);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            $this->errors[] = "Error al obtener productos por proveedor: " . $e->getMessage();
+            return [];
+        }
+    }
 }

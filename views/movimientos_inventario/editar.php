@@ -131,12 +131,16 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         const proveedorSelect = document.querySelector('[name="cedula_proveedor"]');
-        const precioInput = document.getElementById('precio_compra');
-        const hiddenPrecioInput = document.getElementById('hidden_precio_unitario');
+        const precioInput = document.querySelector('[name="precio_unitario"]');
+
+        // Verificar que los elementos existan antes de usarlos
+        if (!proveedorSelect || !precioInput) {
+            console.error('Elementos del formulario no encontrados');
+            return;
+        }
 
         // Set current price on load
         precioInput.value = precioActual;
-        hiddenPrecioInput.value = precioActual;
 
         function actualizarPrecio() {
             const proveedorId = proveedorSelect.value;
@@ -147,7 +151,6 @@
                 preciosRelaciones[productoId][proveedorId]) {
                 const nuevoPrecio = preciosRelaciones[productoId][proveedorId];
                 precioInput.value = nuevoPrecio;
-                hiddenPrecioInput.value = nuevoPrecio;
             }
         }
 

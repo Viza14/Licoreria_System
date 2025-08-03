@@ -117,7 +117,15 @@ class ProductoModel
     public function obtenerProductosActivos()
     {
         try {
-            $query = "SELECT p.*, c.nombre as categoria, e.nombre as estatus, tc.nombre as tipo_categoria 
+            $query = "SELECT p.*, c.nombre as categoria, e.nombre as estatus, tc.nombre as tipo_categoria,
+                     COALESCE(
+                         (SELECT pp.precio_compra 
+                          FROM proveedor_producto pp 
+                          WHERE pp.id_producto = p.id AND pp.id_estatus = 1 
+                          ORDER BY pp.fecha_actualizacion DESC 
+                          LIMIT 1), 
+                         0
+                     ) as precio_compra
                      FROM producto p
                      JOIN categorias c ON p.id_categoria = c.id
                      JOIN estatus e ON p.id_estatus = e.id
@@ -132,7 +140,7 @@ class ProductoModel
             
             // Log de productos para debugging
             foreach ($productos as $producto) {
-                error_log("Producto: {$producto['descripcion']} - ID: {$producto['id']} - Estatus: {$producto['id_estatus']}");
+                error_log("Producto: {$producto['descripcion']} - ID: {$producto['id']} - Stock: {$producto['cantidad']} - Precio Compra: {$producto['precio_compra']}");
             }
             
             return $productos;
@@ -305,8 +313,8 @@ class ProductoModel
 
             // 2. Registrar la entrada en movimientos_inventario
             $query = "INSERT INTO movimientos_inventario 
-                 (id_producto, tipo_movimiento, cantidad, precio_unitario, id_usuario, observaciones) 
-                 VALUES (:id_producto, 'ENTRADA', :cantidad, :precio_compra, :id_usuario, :observaciones)";
+                 (id_producto, tipo_movimiento, cantidad, precio_unitario, id_usuario, observaciones, subtipo_movimiento) 
+                 VALUES (:id_producto, 'ENTRADA', :cantidad, :precio_compra, :id_usuario, :observaciones, 'ENTRADA_DIRECTA')";
 
             $stmt = $this->db->prepare($query);
             $stmt->bindParam(":id_producto", $id_producto);

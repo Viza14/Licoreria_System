@@ -236,6 +236,42 @@ try {
                 $controller->modificarVenta($id);
             } elseif ($method === 'actualizarVenta' && $id) {
                 $controller->actualizarVenta($id);
+            } elseif ($method === 'generarMovimiento') {
+                $controller->generarMovimiento();
+            } elseif ($method === 'registrarPerdida') {
+                $controller->registrarPerdida();
+            } elseif ($method === 'guardarPerdida') {
+                $controller->guardarPerdida();
+            } elseif ($method === 'modificarPerdida' && $id) {
+                $controller->modificarPerdida($id);
+            } elseif ($method === 'actualizarPerdida' && $id) {
+                $controller->actualizarPerdida($id);
+            } elseif ($method === 'modificarOtroEntrada' && $id) {
+                $controller->modificarOtroEntrada();
+            } elseif ($method === 'actualizarOtroEntrada') {
+                $controller->actualizarOtroEntrada();
+            } elseif ($method === 'registrarOtro') {
+                $controller->registrarOtro();
+            } elseif ($method === 'guardarOtro') {
+                $controller->guardarOtro();
+            } elseif ($method === 'registrarAjuste') {
+                $controller->registrarAjuste();
+            } elseif ($method === 'buscarTransaccion') {
+                $controller->buscarTransaccion();
+            } elseif ($method === 'guardarAjuste') {
+                $controller->guardarAjuste();
+            } elseif ($method === 'registrarCompra') {
+                $controller->registrarCompra();
+            } elseif ($method === 'guardarCompra') {
+                $controller->guardarCompra();
+            } elseif ($method === 'modificarCompra' && $id) {
+                $controller->modificarCompra();
+            } elseif ($method === 'actualizarCompra' && $id) {
+                $controller->actualizarCompra();
+            } elseif ($method === 'obtenerProductosPorProveedor') {
+                $controller->obtenerProductosPorProveedor();
+            } elseif ($method === 'buscarPorTransaccion') {
+                $controller->buscarPorTransaccion();
             } else {
                 $controller->index();
             }

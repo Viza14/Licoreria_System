@@ -14,13 +14,13 @@
         </div>
         <!--breadcrumbs end-->
 
-        <?php if ($movimiento['id_estatus'] == 2 && $movimiento['id_movimiento_ajustado']): ?>
-            <div class="alert alert-info">
-                <i class="fa fa-info-circle"></i> Este registro ha sido modificado. 
-                <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=mostrar&id=<?= $movimiento['id_movimiento_ajustado'] ?>" class="alert-link">
-                    Ver versión ajustada <i class="fa fa-arrow-right"></i>
-                </a>
-            </div>
+        <?php if ($movimiento['id_estatus'] == 2 && !empty($movimiento['id_movimiento_ajustado'])): ?>
+        <div class="alert alert-info">
+            <i class="fa fa-info-circle"></i> Este registro ha sido modificado. 
+            <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=mostrar&id=<?= $movimiento['id_movimiento_ajustado'] ?>" class="alert-link">
+                Ver versión ajustada <i class="fa fa-arrow-right"></i>
+            </a>
+        </div>
         <?php endif; ?>
 
         <div class="row">
@@ -50,7 +50,7 @@
                                             <p class="form-control-static">
                                                 <span class="label label-danger">SALIDA</span>
                                                 <?php if ($movimiento['id_estatus'] == 2): ?>
-                                                    <span class="label label-default">Inactivo</span>
+                                                    <span class="label label-default">ANULADO</span>
                                                 <?php endif; ?>
                                             </p>
                                         </div>
@@ -78,9 +78,15 @@
                                         </div>
                                     </div>
                                     <div class="form-group">
-                                        <label class="col-sm-4 control-label">Venta:</label>
+                                        <label class="col-sm-4 control-label">Referencia:</label>
                                         <div class="col-sm-8">
-                                            <p class="form-control-static">#<?= $movimiento['id_referencia'] ?></p>
+                                            <p class="form-control-static">
+                                                <?php if ($movimiento['tipo_movimiento'] === 'AJUSTE' && !empty($movimiento['observaciones'])): ?>
+                                                    <?= htmlspecialchars($movimiento['observaciones']) ?>
+                                                <?php else: ?>
+                                                    Venta #<?= $movimiento['id_referencia'] ?>
+                                                <?php endif; ?>
+                                            </p>
                                         </div>
                                     </div>
                                 </div>

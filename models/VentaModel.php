@@ -191,6 +191,12 @@ class VentaModel
 
             $fecha = isset($data['fecha']) ? $data['fecha'] : date('Y-m-d H:i:s');
 
+            // Generar número de transacción único para toda la venta
+            $query = "SELECT GenerarNumeroTransaccion() as numero_transaccion";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute();
+            $numero_transaccion = $stmt->fetch(PDO::FETCH_ASSOC)['numero_transaccion'];
+
             // Register main sale with status
             $query = "INSERT INTO ventas (cedula_cliente, id_usuario, fecha, monto_total, id_estatus) 
                       VALUES (:cedula_cliente, :id_usuario, :fecha, :monto_total, 1)";
@@ -220,17 +226,20 @@ class VentaModel
                 $stmt->bindParam(":precio_unitario", $producto['precio']);
                 $stmt->execute();
 
-                // Register inventory movement
+                // Register inventory movement with shared transaction number
                 $query = "INSERT INTO movimientos_inventario 
-                          (id_producto, tipo_movimiento, cantidad, precio_unitario, id_referencia, tipo_referencia, id_usuario) 
-                          VALUES (:id_producto, 'SALIDA', :cantidad, :precio_unitario, :id_referencia, 'VENTA', :id_usuario)";
+                          (numero_transaccion, id_producto, tipo_movimiento, subtipo_movimiento, cantidad, precio_unitario, id_referencia, tipo_referencia, id_usuario, observaciones) 
+                          VALUES (:numero_transaccion, :id_producto, 'SALIDA', 'VENTA', :cantidad, :precio_unitario, :id_referencia, 'VENTA', :id_usuario, :observaciones)";
                 
+                $observaciones = "Venta #" . $id_venta . " - " . $numero_transaccion;
                 $stmt = $this->db->prepare($query);
+                $stmt->bindParam(":numero_transaccion", $numero_transaccion);
                 $stmt->bindParam(":id_producto", $producto['id']);
                 $stmt->bindParam(":cantidad", $producto['cantidad']);
                 $stmt->bindParam(":precio_unitario", $producto['precio']);
                 $stmt->bindParam(":id_referencia", $id_venta);
                 $stmt->bindParam(":id_usuario", $data['id_usuario']);
+                $stmt->bindParam(":observaciones", $observaciones);
                 $stmt->execute();
 
                 // Update product stock
@@ -264,7 +273,7 @@ class VentaModel
             }
 
             $this->db->commit();
-            return $id_venta;
+            return ['id_venta' => $id_venta, 'numero_transaccion' => $numero_transaccion];
         } catch (PDOException $e) {
             $this->db->rollBack();
             $this->errors[] = "Error al registrar venta: " . $e->getMessage();
@@ -403,11 +412,11 @@ class VentaModel
                     $query = "INSERT INTO movimientos_inventario (
                         id_producto, tipo_movimiento, cantidad, precio_unitario,
                         id_referencia, tipo_referencia, id_usuario, id_movimiento_original,
-                        observaciones, id_estatus
+                        observaciones, id_estatus, subtipo_movimiento
                     ) VALUES (
                         :id_producto, 'SALIDA', :cantidad, :precio_unitario,
                         :id_referencia, 'VENTA', :id_usuario, :id_movimiento_original,
-                        :observaciones, 1
+                        :observaciones, 1, 'VENTA'
                     )";
 
                     $observaciones = "Ajuste de venta #{$id} - Nueva venta #{$nuevo_id_venta}";

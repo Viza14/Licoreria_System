@@ -226,7 +226,13 @@ class ProveedorModel
 
     public function obtenerProveedoresActivos()
     {
-        $query = "SELECT * FROM proveedores WHERE id_estatus = 1";
+        $query = "SELECT DISTINCT p.*, sc.nombre as nombre_simbolo 
+                  FROM proveedores p
+                  JOIN simbolos_cedula sc ON p.id_simbolo_cedula = sc.id
+                  JOIN proveedor_producto pp ON p.cedula = pp.cedula_proveedor
+                  WHERE p.id_estatus = 1 
+                  AND pp.id_estatus = 1
+                  ORDER BY p.nombre ASC";
         $stmt = $this->db->prepare($query);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);

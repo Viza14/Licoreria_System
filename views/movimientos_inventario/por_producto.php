@@ -59,6 +59,9 @@
                                             <span class="label label-<?= $movimiento['tipo_movimiento'] == 'ENTRADA' ? 'success' : ($movimiento['tipo_movimiento'] == 'SALIDA' ? 'danger' : 'warning'); ?>">
                                                 <?= $movimiento['tipo_movimiento']; ?>
                                             </span>
+                                            <?php if (isset($movimiento['id_estatus']) && $movimiento['id_estatus'] == 2): ?>
+                                                <br><span class="label label-default">ANULADO</span>
+                                            <?php endif; ?>
                                         </td>
                                         <td><?= $movimiento['cantidad']; ?></td>
                                         <td><?= number_format($movimiento['precio_unitario'], 2, ',', '.'); ?> Bs</td>

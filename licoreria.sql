@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 04-07-2025 a las 04:05:53
+-- Tiempo de generación: 28-07-2025 a las 06:34:56
 -- Versión del servidor: 10.4.28-MariaDB
 -- Versión de PHP: 8.2.4
 
@@ -25,103 +25,192 @@ DELIMITER $$
 --
 -- Procedimientos
 --
-CREATE DEFINER=`root`@`localhost` PROCEDURE `RegistrarEntradaProducto` (IN `p_id_producto` INT, IN `p_cantidad` INT, IN `p_precio_compra` DECIMAL(10,2), IN `p_cedula_proveedor` VARCHAR(15), IN `p_id_usuario` INT, IN `p_observaciones` VARCHAR(255))   BEGIN
-    DECLARE v_existe_relacion INT;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `BuscarMovimientoPorTransaccion` (IN `p_numero_transaccion` VARCHAR(20))   BEGIN
+    SELECT * FROM vista_movimientos_completa 
+    WHERE numero_transaccion = p_numero_transaccion;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `RegistrarEntradaProducto` (IN `p_id_producto` INT, IN `p_cantidad` INT, IN `p_precio_compra` DECIMAL(10,2), IN `p_id_usuario` INT, IN `p_observaciones` VARCHAR(255), IN `p_numero_transaccion` VARCHAR(20))   BEGIN
+    DECLARE v_numero_trans VARCHAR(20);
+    DECLARE v_observaciones_final VARCHAR(255);
     
-    -- Verificar si existe relación proveedor-producto
-    SELECT COUNT(*) INTO v_existe_relacion
-    FROM proveedor_producto
-    WHERE cedula_proveedor = p_cedula_proveedor AND id_producto = p_id_producto;
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        RESIGNAL SET MESSAGE_TEXT = 'Error al registrar entrada de producto';
+    END;
     
-    -- Actualizar o insertar relación proveedor-producto
-    IF v_existe_relacion > 0 THEN
-        UPDATE proveedor_producto
-        SET precio_compra = p_precio_compra,
-            fecha_actualizacion = NOW()
-        WHERE cedula_proveedor = p_cedula_proveedor AND id_producto = p_id_producto;
+    START TRANSACTION;
+    
+    -- Usar el número de transacción proporcionado o generar uno nuevo
+    IF p_numero_transaccion IS NULL OR p_numero_transaccion = '' THEN
+        SET v_numero_trans = GenerarNumeroTransaccion();
     ELSE
-        INSERT INTO proveedor_producto (cedula_proveedor, id_producto, precio_compra, id_estatus)
-        VALUES (p_cedula_proveedor, p_id_producto, p_precio_compra, 1);
+        SET v_numero_trans = p_numero_transaccion;
     END IF;
+    
+    -- Preparar observaciones
+    IF p_observaciones IS NULL OR p_observaciones = '' THEN
+        SET v_observaciones_final = CONCAT('Entrada #', v_numero_trans);
+    ELSE
+        SET v_observaciones_final = CONCAT(p_observaciones, ' - ', v_numero_trans);
+    END IF;
+    
+    -- Registrar movimiento de inventario
+    INSERT INTO movimientos_inventario (
+        numero_transaccion,
+        id_producto,
+        tipo_movimiento,
+        subtipo_movimiento,
+        cantidad,
+        precio_unitario,
+        id_usuario,
+        observaciones
+    ) VALUES (
+        v_numero_trans,
+        p_id_producto,
+        'ENTRADA',
+        'ENTRADA_DIRECTA',
+        p_cantidad,
+        p_precio_compra,
+        p_id_usuario,
+        v_observaciones_final
+    );
     
     -- Actualizar stock del producto
     UPDATE producto
     SET cantidad = cantidad + p_cantidad
     WHERE id = p_id_producto;
     
-    -- Registrar movimiento de inventario
-    INSERT INTO movimientos_inventario (
-        id_producto, 
-        tipo_movimiento, 
-        cantidad, 
-        precio_unitario, 
-        id_usuario, 
-        observaciones
-    ) VALUES (
-        p_id_producto, 
-        'ENTRADA', 
-        p_cantidad, 
-        p_precio_compra, 
-        p_id_usuario, 
-        p_observaciones
-    );
+    COMMIT;
     
-    SELECT 'Entrada de producto registrada exitosamente.' AS Mensaje;
+    SELECT v_numero_trans as numero_transaccion;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `RegistrarVenta` (IN `p_cedula_cliente` VARCHAR(15), IN `p_id_usuario` INT, IN `p_id_producto` INT, IN `p_cantidad` INT)   BEGIN
-    DECLARE v_precio DECIMAL(10,2);
-    DECLARE v_monto_total DECIMAL(10,2);
+CREATE DEFINER=`root`@`localhost` PROCEDURE `RegistrarPerdida` (IN `p_id_producto` INT, IN `p_cantidad` INT, IN `p_descripcion` VARCHAR(255), IN `p_id_usuario` INT)   BEGIN
     DECLARE v_stock_actual INT;
-    DECLARE v_id_venta INT;
-
-    -- Obtener el precio del producto
-    SELECT precio INTO v_precio
-    FROM producto
-    WHERE id = p_id_producto;
-
-    -- Calcular el monto total de la venta
-    SET v_monto_total = v_precio * p_cantidad;
-
+    
     -- Verificar si hay suficiente stock
     SELECT cantidad INTO v_stock_actual
     FROM producto
     WHERE id = p_id_producto;
-
+    
     IF v_stock_actual >= p_cantidad THEN
-        -- Insertar la venta en la tabla ventas
-        INSERT INTO ventas (cedula_cliente, id_usuario, fecha, monto_total)
-        VALUES (p_cedula_cliente, p_id_usuario, CURDATE(), v_monto_total);
-        
-        SET v_id_venta = LAST_INSERT_ID();
-
-        -- Insertar el detalle de la venta
-        INSERT INTO detalle_venta (id_venta, id_producto, cantidad, monto)
-        VALUES (v_id_venta, p_id_producto, p_cantidad, v_monto_total);
-
-        -- Registrar movimiento de inventario
-        INSERT INTO movimientos_inventario (
-            id_producto, 
-            tipo_movimiento, 
-            cantidad, 
-            precio_unitario, 
-            id_referencia, 
-            tipo_referencia, 
-            id_usuario
+        -- Registrar la pérdida
+        INSERT INTO perdidas (
+            id_producto,
+            cantidad,
+            id_usuario,
+            descripcion
         ) VALUES (
-            p_id_producto, 
-            'SALIDA', 
-            p_cantidad, 
-            v_precio, 
-            v_id_venta, 
-            'VENTA', 
-            p_id_usuario
+            p_id_producto,
+            p_cantidad,
+            p_id_usuario,
+            p_descripcion
         );
-
-        SELECT 'Venta registrada exitosamente.' AS Mensaje;
+        
+        -- Actualizar el stock del producto
+        UPDATE producto
+        SET cantidad = cantidad - p_cantidad
+        WHERE id = p_id_producto;
+        
+        -- Registrar el movimiento de inventario
+        INSERT INTO movimientos_inventario (
+            id_producto,
+            tipo_movimiento,
+            cantidad,
+            id_referencia,
+            tipo_referencia,
+            id_usuario,
+            observaciones
+        ) VALUES (
+            p_id_producto,
+            'SALIDA',
+            p_cantidad,
+            LAST_INSERT_ID(), -- ID de la pérdida registrada
+            'PERDIDA',
+            p_id_usuario,
+            p_descripcion
+        );
+        
+        SELECT 'Pérdida registrada exitosamente.' AS Mensaje;
     ELSE
-        SELECT 'No hay suficiente stock para realizar la venta.' AS Mensaje;
+        SELECT 'No hay suficiente stock para registrar la pérdida.' AS Mensaje;
     END IF;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `RegistrarVenta` (IN `p_cedula_cliente` VARCHAR(15), IN `p_id_usuario` INT, IN `p_id_producto` INT, IN `p_cantidad` INT, IN `p_precio` DECIMAL(10,2), IN `p_fecha` DATETIME, IN `p_numero_transaccion` VARCHAR(20))   BEGIN
+    DECLARE v_id_venta INT;
+    DECLARE v_stock_actual INT;
+    DECLARE v_numero_trans VARCHAR(20);
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        RESIGNAL SET MESSAGE_TEXT = 'Error al registrar la venta';
+    END;
+    
+    START TRANSACTION;
+    
+    -- Usar el número de transacción proporcionado o generar uno nuevo
+    IF p_numero_transaccion IS NULL OR p_numero_transaccion = '' THEN
+        SET v_numero_trans = GenerarNumeroTransaccion();
+    ELSE
+        SET v_numero_trans = p_numero_transaccion;
+    END IF;
+    
+    -- Verificar stock disponible
+    SELECT cantidad INTO v_stock_actual
+    FROM producto
+    WHERE id = p_id_producto;
+    
+    IF v_stock_actual < p_cantidad THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Stock insuficiente';
+    END IF;
+    
+    -- Crear la venta principal
+    INSERT INTO ventas (cedula_cliente, id_usuario, fecha, monto_total, id_estatus)
+    VALUES (p_cedula_cliente, p_id_usuario, p_fecha, p_precio * p_cantidad, 1);
+    
+    SET v_id_venta = LAST_INSERT_ID();
+    
+    -- Insertar detalle de venta
+    INSERT INTO detalle_venta (id_venta, id_producto, cantidad, monto, precio_unitario)
+    VALUES (v_id_venta, p_id_producto, p_cantidad, p_precio * p_cantidad, p_precio);
+    
+    -- Registrar movimiento de inventario
+    INSERT INTO movimientos_inventario (
+        numero_transaccion,
+        id_producto,
+        tipo_movimiento,
+        subtipo_movimiento,
+        cantidad,
+        precio_unitario,
+        id_referencia,
+        tipo_referencia,
+        id_usuario,
+        observaciones
+    ) VALUES (
+        v_numero_trans,
+        p_id_producto,
+        'SALIDA',
+        'VENTA',
+        p_cantidad,
+        p_precio,
+        v_id_venta,
+        'VENTA',
+        p_id_usuario,
+        CONCAT('Venta #', v_id_venta, ' - ', v_numero_trans)
+    );
+    
+    -- Actualizar stock del producto
+    UPDATE producto
+    SET cantidad = cantidad - p_cantidad
+    WHERE id = p_id_producto;
+    
+    COMMIT;
+    
+    SELECT v_id_venta as id_venta, v_numero_trans as numero_transaccion;
 END$$
 
 --
@@ -143,6 +232,22 @@ CREATE DEFINER=`root`@`localhost` FUNCTION `CalcularTotalVentasCliente` (`p_cedu
     RETURN v_total;
 END$$
 
+CREATE DEFINER=`root`@`localhost` FUNCTION `GenerarNumeroTransaccion` () RETURNS VARCHAR(20) CHARSET utf8mb4 COLLATE utf8mb4_general_ci DETERMINISTIC BEGIN
+    DECLARE nuevo_numero VARCHAR(20);
+    DECLARE contador INT;
+    
+    -- Obtener el siguiente número secuencial
+    SELECT IFNULL(MAX(CAST(SUBSTRING(numero_transaccion, 4) AS UNSIGNED)), 0) + 1 
+    INTO contador
+    FROM movimientos_inventario 
+    WHERE numero_transaccion LIKE 'TXN%';
+    
+    -- Formatear el número con ceros a la izquierda
+    SET nuevo_numero = CONCAT('TXN', LPAD(contador, 8, '0'));
+    
+    RETURN nuevo_numero;
+END$$
+
 DELIMITER ;
 
 -- --------------------------------------------------------
@@ -158,7 +263,6 @@ CREATE TABLE `categorias` (
   `id_estatus` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
-
 -- --------------------------------------------------------
 
 --
@@ -173,38 +277,6 @@ CREATE TABLE `clientes` (
   `telefono` varchar(15) NOT NULL,
   `direccion` varchar(255) DEFAULT 'Sin especificar',
   `id_estatus` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
-
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `compras`
---
-
-CREATE TABLE `compras` (
-  `id` int(11) NOT NULL,
-  `cedula_proveedor` varchar(15) NOT NULL,
-  `id_usuario` int(11) NOT NULL,
-  `fecha` date NOT NULL,
-  `monto_total` decimal(10,2) NOT NULL,
-  `estado` enum('PENDIENTE','PAGADA','CANCELADA') NOT NULL DEFAULT 'PENDIENTE',
-  `observaciones` varchar(255) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `detalle_compra`
---
-
-CREATE TABLE `detalle_compra` (
-  `id` int(11) NOT NULL,
-  `id_compra` int(11) NOT NULL,
-  `id_producto` int(10) NOT NULL,
-  `cantidad` int(11) NOT NULL,
-  `precio_unitario` decimal(10,2) NOT NULL,
-  `subtotal` decimal(10,2) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 -- --------------------------------------------------------
@@ -249,8 +321,10 @@ INSERT INTO `estatus` (`id`, `nombre`) VALUES
 
 CREATE TABLE `movimientos_inventario` (
   `id` int(11) NOT NULL,
+  `numero_transaccion` varchar(20) DEFAULT NULL,
   `id_producto` int(10) NOT NULL,
   `tipo_movimiento` enum('ENTRADA','SALIDA','AJUSTE') NOT NULL,
+  `subtipo_movimiento` enum('COMPRA','VENTA','PERDIDA','AJUSTE','OTRO') DEFAULT NULL,
   `cantidad` int(11) NOT NULL,
   `precio_unitario` decimal(10,2) DEFAULT NULL,
   `id_referencia` int(11) DEFAULT NULL COMMENT 'ID de la tabla referencia (venta, compra, etc)',
@@ -263,26 +337,17 @@ CREATE TABLE `movimientos_inventario` (
   `fecha_actualizacion` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
--- --------------------------------------------------------
-
 --
--- Estructura de tabla para la tabla `movimientos_inventario_historico`
+-- Disparadores `movimientos_inventario`
 --
-
-CREATE TABLE `movimientos_inventario_historico` (
-  `id` int(11) NOT NULL,
-  `id_movimiento_original` int(11) NOT NULL,
-  `id_producto` int(10) NOT NULL,
-  `tipo_movimiento` enum('ENTRADA','SALIDA','ENTRADA-AJUSTADA','SALIDA-AJUSTADA','AJUSTE') NOT NULL,
-  `cantidad` int(11) NOT NULL,
-  `precio_unitario` decimal(10,2) DEFAULT NULL,
-  `id_referencia` int(11) DEFAULT NULL,
-  `tipo_referencia` varchar(50) DEFAULT NULL,
-  `fecha_movimiento` datetime NOT NULL,
-  `id_usuario` int(10) NOT NULL,
-  `observaciones` varchar(255) DEFAULT NULL,
-  `fecha_historico` datetime NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+DELIMITER $$
+CREATE TRIGGER `before_movimiento_insert_numero` BEFORE INSERT ON `movimientos_inventario` FOR EACH ROW BEGIN
+    IF NEW.numero_transaccion IS NULL THEN
+        SET NEW.numero_transaccion = GenerarNumeroTransaccion();
+    END IF;
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -299,8 +364,6 @@ CREATE TABLE `pagos_venta` (
   `fecha_pago` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
-
-
 -- --------------------------------------------------------
 
 --
@@ -311,8 +374,10 @@ CREATE TABLE `perdidas` (
   `id` int(11) NOT NULL,
   `id_producto` int(10) NOT NULL,
   `cantidad` int(255) NOT NULL,
+  `id_usuario` int(10) NOT NULL,
   `descripcion` varchar(255) NOT NULL,
-  `fecha_hora` datetime NOT NULL DEFAULT current_timestamp()
+  `fecha_hora` datetime NOT NULL DEFAULT current_timestamp(),
+  `id_estatus` int(11) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 -- --------------------------------------------------------
@@ -329,7 +394,6 @@ CREATE TABLE `producto` (
   `id_categoria` int(11) NOT NULL,
   `id_estatus` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
-
 
 --
 -- Disparadores `producto`
@@ -357,7 +421,6 @@ CREATE TABLE `proveedores` (
   `id_estatus` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
-
 -- --------------------------------------------------------
 
 --
@@ -372,8 +435,6 @@ CREATE TABLE `proveedor_producto` (
   `fecha_actualizacion` datetime NOT NULL DEFAULT current_timestamp(),
   `id_estatus` int(11) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
-
-
 
 -- --------------------------------------------------------
 
@@ -430,8 +491,6 @@ CREATE TABLE `stock_limites` (
   `id_usuario` int(10) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
-
-
 -- --------------------------------------------------------
 
 --
@@ -443,7 +502,6 @@ CREATE TABLE `tipos_categoria` (
   `nombre` varchar(255) NOT NULL,
   `id_estatus` int(11) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
-
 
 -- --------------------------------------------------------
 
@@ -471,7 +529,8 @@ CREATE TABLE `usuarios` (
 --
 
 INSERT INTO `usuarios` (`id`, `cedula`, `id_simbolo_cedula`, `nombres`, `apellidos`, `telefono`, `direccion`, `user`, `password`, `id_rol`, `id_estatus`, `ultimo_inicio_sesion`) VALUES
-(1, '31117854', 1, 'Moises', 'Vizamon', '04125050555', 'Naguanagua', 'admin', '$2y$10$.Dv.UCeKDYG3HIiK.4F7Jed5g2/1FZWq8j6zRHErVQNLYxUBhM4NG', 1, 1, '2025-06-26 14:46:42');
+(1, '12345678', 1, 'Super', 'Admin', '04127654321', 'Naguanagua', 'admin', '$2y$10$.Dv.UCeKDYG3HIiK.4F7Jed5g2/1FZWq8j6zRHErVQNLYxUBhM4NG', 1, 1, '2025-06-26 14:46:42');
+
 --
 -- Disparadores `usuarios`
 --
@@ -501,7 +560,6 @@ CREATE TABLE `ventas` (
   `id_estatus` int(11) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
-
 -- --------------------------------------------------------
 
 --
@@ -518,6 +576,31 @@ CREATE TABLE `vista_detalle_ventas` (
 ,`producto` varchar(255)
 ,`cantidad` int(10)
 ,`monto` decimal(10,2)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura Stand-in para la vista `vista_movimientos_completa`
+-- (Véase abajo para la vista actual)
+--
+CREATE TABLE `vista_movimientos_completa` (
+`id` int(11)
+,`numero_transaccion` varchar(20)
+,`id_producto` int(10)
+,`producto` varchar(255)
+,`tipo_movimiento` enum('ENTRADA','SALIDA','AJUSTE')
+,`subtipo_movimiento` enum('COMPRA','VENTA','PERDIDA','AJUSTE','OTRO')
+,`cantidad` int(11)
+,`precio_unitario` decimal(10,2)
+,`id_referencia` int(11)
+,`tipo_referencia` varchar(50)
+,`fecha_movimiento` datetime
+,`usuario` varchar(511)
+,`observaciones` varchar(255)
+,`estado` varchar(50)
+,`id_movimiento_original` int(11)
+,`categoria` varchar(255)
 );
 
 -- --------------------------------------------------------
@@ -560,6 +643,15 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 -- --------------------------------------------------------
 
 --
+-- Estructura para la vista `vista_movimientos_completa`
+--
+DROP TABLE IF EXISTS `vista_movimientos_completa`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `vista_movimientos_completa`  AS SELECT `mi`.`id` AS `id`, `mi`.`numero_transaccion` AS `numero_transaccion`, `mi`.`id_producto` AS `id_producto`, `p`.`descripcion` AS `producto`, `mi`.`tipo_movimiento` AS `tipo_movimiento`, `mi`.`subtipo_movimiento` AS `subtipo_movimiento`, `mi`.`cantidad` AS `cantidad`, `mi`.`precio_unitario` AS `precio_unitario`, `mi`.`id_referencia` AS `id_referencia`, `mi`.`tipo_referencia` AS `tipo_referencia`, `mi`.`fecha_movimiento` AS `fecha_movimiento`, concat(`u`.`nombres`,' ',`u`.`apellidos`) AS `usuario`, `mi`.`observaciones` AS `observaciones`, `e`.`nombre` AS `estado`, `mi`.`id_movimiento_original` AS `id_movimiento_original`, `c`.`nombre` AS `categoria` FROM ((((`movimientos_inventario` `mi` join `producto` `p` on(`mi`.`id_producto` = `p`.`id`)) join `usuarios` `u` on(`mi`.`id_usuario` = `u`.`id`)) join `estatus` `e` on(`mi`.`id_estatus` = `e`.`id`)) left join `categorias` `c` on(`p`.`id_categoria` = `c`.`id`)) ;
+
+-- --------------------------------------------------------
+
+--
 -- Estructura para la vista `vista_producto_mas_vendido_mes`
 --
 DROP TABLE IF EXISTS `vista_producto_mas_vendido_mes`;
@@ -596,22 +688,6 @@ ALTER TABLE `clientes`
   ADD KEY `clientes_ibfk_simbolo` (`id_simbolo_cedula`);
 
 --
--- Indices de la tabla `compras`
---
-ALTER TABLE `compras`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `cedula_proveedor` (`cedula_proveedor`),
-  ADD KEY `id_usuario` (`id_usuario`);
-
---
--- Indices de la tabla `detalle_compra`
---
-ALTER TABLE `detalle_compra`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `id_compra` (`id_compra`),
-  ADD KEY `id_producto` (`id_producto`);
-
---
 -- Indices de la tabla `detalle_venta`
 --
 ALTER TABLE `detalle_venta`
@@ -633,16 +709,8 @@ ALTER TABLE `movimientos_inventario`
   ADD KEY `id_producto` (`id_producto`),
   ADD KEY `id_usuario` (`id_usuario`),
   ADD KEY `fk_movimientos_estatus` (`id_estatus`),
-  ADD KEY `fk_movimientos_original` (`id_movimiento_original`);
-
---
--- Indices de la tabla `movimientos_inventario_historico`
---
-ALTER TABLE `movimientos_inventario_historico`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `id_movimiento_original` (`id_movimiento_original`),
-  ADD KEY `id_producto` (`id_producto`),
-  ADD KEY `id_usuario` (`id_usuario`);
+  ADD KEY `fk_movimientos_original` (`id_movimiento_original`),
+  ADD KEY `idx_numero_transaccion` (`numero_transaccion`);
 
 --
 -- Indices de la tabla `pagos_venta`
@@ -656,7 +724,9 @@ ALTER TABLE `pagos_venta`
 --
 ALTER TABLE `perdidas`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `id_producto` (`id_producto`);
+  ADD KEY `id_producto` (`id_producto`),
+  ADD KEY `id_usuario` (`id_usuario`),
+  ADD KEY `id_estatus` (`id_estatus`);
 
 --
 -- Indices de la tabla `producto`
@@ -743,18 +813,6 @@ ALTER TABLE `categorias`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT de la tabla `compras`
---
-ALTER TABLE `compras`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT de la tabla `detalle_compra`
---
-ALTER TABLE `detalle_compra`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
 -- AUTO_INCREMENT de la tabla `detalle_venta`
 --
 ALTER TABLE `detalle_venta`
@@ -764,18 +822,12 @@ ALTER TABLE `detalle_venta`
 -- AUTO_INCREMENT de la tabla `estatus`
 --
 ALTER TABLE `estatus`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT de la tabla `movimientos_inventario`
 --
 ALTER TABLE `movimientos_inventario`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT de la tabla `movimientos_inventario_historico`
---
-ALTER TABLE `movimientos_inventario_historico`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
@@ -806,13 +858,13 @@ ALTER TABLE `proveedor_producto`
 -- AUTO_INCREMENT de la tabla `roles`
 --
 ALTER TABLE `roles`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT de la tabla `simbolos_cedula`
 --
 ALTER TABLE `simbolos_cedula`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT de la tabla `stock_limites`
@@ -830,7 +882,7 @@ ALTER TABLE `tipos_categoria`
 -- AUTO_INCREMENT de la tabla `usuarios`
 --
 ALTER TABLE `usuarios`
-  MODIFY `id` int(10) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(10) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT de la tabla `ventas`
@@ -855,20 +907,6 @@ ALTER TABLE `categorias`
 ALTER TABLE `clientes`
   ADD CONSTRAINT `clientes_ibfk_1` FOREIGN KEY (`id_estatus`) REFERENCES `estatus` (`id`),
   ADD CONSTRAINT `clientes_ibfk_simbolo` FOREIGN KEY (`id_simbolo_cedula`) REFERENCES `simbolos_cedula` (`id`);
-
---
--- Filtros para la tabla `compras`
---
-ALTER TABLE `compras`
-  ADD CONSTRAINT `compras_ibfk_1` FOREIGN KEY (`cedula_proveedor`) REFERENCES `proveedores` (`cedula`),
-  ADD CONSTRAINT `compras_ibfk_2` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id`);
-
---
--- Filtros para la tabla `detalle_compra`
---
-ALTER TABLE `detalle_compra`
-  ADD CONSTRAINT `detalle_compra_ibfk_1` FOREIGN KEY (`id_compra`) REFERENCES `compras` (`id`),
-  ADD CONSTRAINT `detalle_compra_ibfk_2` FOREIGN KEY (`id_producto`) REFERENCES `producto` (`id`);
 
 --
 -- Filtros para la tabla `detalle_venta`
@@ -896,7 +934,9 @@ ALTER TABLE `pagos_venta`
 -- Filtros para la tabla `perdidas`
 --
 ALTER TABLE `perdidas`
-  ADD CONSTRAINT `perdidas_ibfk_1` FOREIGN KEY (`id_producto`) REFERENCES `producto` (`id`);
+  ADD CONSTRAINT `perdidas_ibfk_1` FOREIGN KEY (`id_producto`) REFERENCES `producto` (`id`),
+  ADD CONSTRAINT `perdidas_ibfk_2` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id`),
+  ADD CONSTRAINT `perdidas_ibfk_3` FOREIGN KEY (`id_estatus`) REFERENCES `estatus` (`id`);
 
 --
 -- Filtros para la tabla `producto`

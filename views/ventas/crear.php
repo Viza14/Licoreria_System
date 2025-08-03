@@ -928,7 +928,76 @@
             // Inicializar con una forma de pago
             crearFormaPago();
             actualizarMontoRestante();
+            
+            // Restore form data if available
+            <?php if (isset($formData) && $formData): ?>
+            restoreFormData();
+            <?php endif; ?>
         });
+
+        // Function to restore form data after validation error
+        function restoreFormData() {
+            const formData = <?php echo json_encode($formData ?? []); ?>;
+            
+            if (formData) {
+                // Restore client
+                if (formData.cedula_cliente) {
+                    $('#cedula_cliente').val(formData.cedula_cliente);
+                    // Find client in local data and populate client name
+                    const cliente = clientes.find(c => c.cedula === formData.cedula_cliente);
+                    if (cliente) {
+                        $('#buscar_cliente').val(cliente.nombres + ' ' + cliente.apellidos + ' - ' + cliente.cedula);
+                    }
+                }
+                
+                // Restore products
+                if (formData.productos && formData.productos.length > 0) {
+                    productosAgregados.length = 0; // Clear array
+                    formData.productos.forEach(function(producto) {
+                        productosAgregados.push({
+                            id: parseInt(producto.id),
+                            descripcion: producto.descripcion,
+                            precio: parseFloat(producto.precio),
+                            cantidad: parseInt(producto.cantidad),
+                            subtotal: parseFloat(producto.precio) * parseInt(producto.cantidad)
+                        });
+                    });
+                    renderizarTablaProductos();
+                    actualizarTotal();
+                }
+                
+                // Restore payment methods
+                if (formData.formas_pago && formData.formas_pago.length > 0) {
+                    // Clear existing payment forms
+                    $('#formas_pago_container').empty();
+                    
+                    // Add payment forms with data
+                    formData.formas_pago.forEach(function(formaPago, index) {
+                        crearFormaPago();
+                        const lastForm = $('.forma-pago-item').last();
+                        lastForm.find('select[name="formas_pago[]"]').val(formaPago);
+                        
+                        if (formData.montos_pago && formData.montos_pago[index]) {
+                            lastForm.find('input[name="montos_pago[]"]').val(formData.montos_pago[index]);
+                        }
+                        
+                        if (formData.referencias_pago && formData.referencias_pago[index]) {
+                            lastForm.find('input[name="referencias_pago[]"]').val(formData.referencias_pago[index]);
+                        }
+                        
+                        // Show/hide reference field based on payment method
+                        const referenciaContainer = lastForm.find('.referencia-container');
+                        if (formaPago === 'EFECTIVO') {
+                            referenciaContainer.hide();
+                        } else {
+                            referenciaContainer.show();
+                        }
+                    });
+                    
+                    actualizarMontoRestante();
+                }
+            }
+        }
 
         // Validate form before submit
         $('#formVenta').submit(function(e) {

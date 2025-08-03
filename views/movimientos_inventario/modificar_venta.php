@@ -59,7 +59,9 @@ if (!isset($clientes) || !$clientes) {
                                         <label for="fecha">Fecha</label>
                                         <div class="input-group">
                                             <input type="datetime-local" class="form-control" id="fecha" name="fecha"
-                                                value="<?= date('Y-m-d\TH:i', strtotime($venta['fecha'])) ?>" readonly>
+                                                value="<?= !empty($venta['fecha']) ? 
+                                                        (($timestamp = strtotime($venta['fecha'])) !== false ? 
+                                                         date('Y-m-d\TH:i', $timestamp) : date('Y-m-d\TH:i')) : date('Y-m-d\TH:i') ?>" readonly>
                                             <div class="input-group-append">
                                                 <div class="input-group-text">
                                                     <div class="custom-control custom-switch">
@@ -986,7 +988,7 @@ if (!isset($clientes) || !$clientes) {
                 }).then((result) => {
                     if (result.isConfirmed) {
                         $('#fecha').prop('readonly', true);
-                        $('#fecha').val('<?= date('Y-m-d\TH:i', strtotime($venta['fecha'])) ?>');
+                        $('#fecha').val('<?= !empty($venta['fecha']) ? (($timestamp = strtotime($venta['fecha'])) !== false ? date('Y-m-d\TH:i', $timestamp) : date('Y-m-d\TH:i')) : date('Y-m-d\TH:i') ?>');
                     } else {
                         $(this).prop('checked', true);
                     }
