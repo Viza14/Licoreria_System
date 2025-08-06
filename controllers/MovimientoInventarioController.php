@@ -738,37 +738,59 @@ class MovimientoInventarioController
             $movimiento = $this->model->buscarMovimientoPorTransaccion($numero_transaccion);
             
             if ($movimiento) {
-                // Verificar si es una pérdida y redirigir a la vista específica
-                if ($movimiento['subtipo_movimiento'] === 'PERDIDA') {
-                    echo json_encode([
-                        'success' => true,
-                        'es_perdida' => true,
-                        'redirect_url' => BASE_URL . 'index.php?action=movimientos-inventario&method=modificarPerdida&id=' . $movimiento['id'],
-                        'message' => 'Pérdida encontrada. Redirigiendo a la vista de modificación...'
-                    ]);
-                    exit();
-                }
+                // Log de depuración
+                error_log("DEBUG - Movimiento encontrado: " . json_encode($movimiento));
                 
-                // Verificar si es una venta y redirigir a la vista específica
-                if ($movimiento['subtipo_movimiento'] === 'VENTA') {
-                    echo json_encode([
-                        'success' => true,
-                        'es_venta' => true,
-                        'redirect_url' => BASE_URL . 'index.php?action=movimientos-inventario&method=modificarVenta&id=' . $movimiento['id'],
-                        'message' => 'Venta encontrada. Redirigiendo a la vista de modificación...'
-                    ]);
-                    exit();
-                }
+                // Crear clave única para el switch basada en tipo y subtipo
+                $tipo_subtipo = $movimiento['tipo_movimiento'] . '_' . $movimiento['subtipo_movimiento'];
+                error_log("DEBUG - Tipo_Subtipo: " . $tipo_subtipo);
                 
-                // Verificar si es una entrada OTRO y redirigir a la vista específica
-                if ($movimiento['subtipo_movimiento'] === 'OTRO' && $movimiento['tipo_movimiento'] === 'ENTRADA') {
-                    echo json_encode([
-                        'success' => true,
-                        'es_otro_entrada' => true,
-                        'redirect_url' => BASE_URL . 'index.php?action=movimientos-inventario&method=modificarOtroEntrada&id=' . $movimiento['id'],
-                        'message' => 'Entrada OTRO encontrada. Redirigiendo a la vista de modificación...'
-                    ]);
-                    exit();
+                // Switch específico para manejar redirecciones según tipo y subtipo
+                switch ($tipo_subtipo) {
+                    case 'SALIDA_PERDIDA':
+                        error_log("DEBUG - Redirigiendo a modificarPerdida");
+                        echo json_encode([
+                            'success' => true,
+                            'es_perdida' => true,
+                            'redirect_url' => BASE_URL . 'index.php?action=movimientos-inventario&method=modificarPerdida&id=' . $movimiento['id'],
+                            'message' => 'Pérdida encontrada. Redirigiendo a la vista de modificación...'
+                        ]);
+                        exit();
+                        
+                    case 'SALIDA_VENTA':
+                        error_log("DEBUG - Redirigiendo a modificarVenta");
+                        echo json_encode([
+                            'success' => true,
+                            'es_venta' => true,
+                            'redirect_url' => BASE_URL . 'index.php?action=movimientos-inventario&method=modificarVenta&id=' . $movimiento['id'],
+                            'message' => 'Venta encontrada. Redirigiendo a la vista de modificación...'
+                        ]);
+                        exit();
+                        
+                    case 'ENTRADA_OTRO':
+                        error_log("DEBUG - Redirigiendo a modificarOtroEntrada");
+                        echo json_encode([
+                            'success' => true,
+                            'es_otro_entrada' => true,
+                            'redirect_url' => BASE_URL . 'index.php?action=movimientos-inventario&method=modificarOtroEntrada&id=' . $movimiento['id'],
+                            'message' => 'Entrada OTRO encontrada. Redirigiendo a la vista de modificación...'
+                        ]);
+                        exit();
+                        
+                    case 'SALIDA_OTRO':
+                        error_log("DEBUG - Redirigiendo a modificarOtroSalida");
+                        echo json_encode([
+                            'success' => true,
+                            'es_otro_salida' => true,
+                            'redirect_url' => BASE_URL . 'index.php?action=movimientos-inventario&method=modificarOtroSalida&id=' . $movimiento['id'],
+                            'message' => 'Salida OTRO encontrada. Redirigiendo a la vista de modificación...'
+                        ]);
+                        exit();
+                        
+                    default:
+                        error_log("DEBUG - Caso default, mostrando formulario de ajuste");
+                        // Para otros tipos de movimientos (como COMPRA), continuar con el flujo normal
+                        break;
                 }
                 
                 // Formatear fecha para datetime-local
@@ -1223,7 +1245,7 @@ class MovimientoInventarioController
         }
         
         // Verificar que el movimiento esté activo
-        if ($movimiento['estatus'] !== 'ACTIVO') {
+        if ($movimiento['estado'] !== 'Activo') {
             $_SESSION['error'] = [
                 'title' => 'Error',
                 'text' => 'No se puede modificar un movimiento inactivo',
@@ -1290,7 +1312,7 @@ class MovimientoInventarioController
             return;
         }
         
-        if ($movimiento_original['estatus'] !== 'ACTIVO') {
+        if ($movimiento_original['estado'] !== 'Activo') {
             $_SESSION['error'] = [
                 'title' => 'Error',
                 'text' => 'No se puede modificar un movimiento inactivo',
@@ -1355,6 +1377,182 @@ class MovimientoInventarioController
                 'icon' => 'error'
             ];
             $this->redirect('movimientos-inventario&method=modificarOtroEntrada&id=' . $id);
+        }
+    }
+
+    public function modificarOtroSalida()
+    {
+        $this->checkSession();
+        
+        if (!isset($_GET['id'])) {
+            $_SESSION['error'] = [
+                'title' => 'Error',
+                'text' => 'ID de movimiento no especificado',
+                'icon' => 'error'
+            ];
+            $this->redirect('movimientos-inventario');
+            return;
+        }
+        
+        $id = (int)$_GET['id'];
+        
+        // Obtener el movimiento
+        $movimiento = $this->model->obtenerMovimientoPorId($id);
+        
+        if (!$movimiento) {
+            $_SESSION['error'] = [
+                'title' => 'Error',
+                'text' => 'Movimiento no encontrado',
+                'icon' => 'error'
+            ];
+            $this->redirect('movimientos-inventario');
+            return;
+        }
+        
+        // Verificar que sea un movimiento de tipo SALIDA y subtipo OTRO
+        if ($movimiento['tipo_movimiento'] !== 'SALIDA' || $movimiento['subtipo_movimiento'] !== 'OTRO') {
+            $_SESSION['error'] = [
+                'title' => 'Error',
+                'text' => 'Este movimiento no es una salida de tipo OTRO',
+                'icon' => 'error'
+            ];
+            $this->redirect('movimientos-inventario');
+            return;
+        }
+        
+        // Verificar que el movimiento esté activo
+        if ($movimiento['estado'] !== 'Activo') {
+            $_SESSION['error'] = [
+                'title' => 'Error',
+                'text' => 'No se puede modificar un movimiento inactivo',
+                'icon' => 'error'
+            ];
+            $this->redirect('movimientos-inventario');
+            return;
+        }
+        
+        // Obtener productos activos
+        $productos = $this->productoModel->obtenerProductosActivos();
+        
+        // Obtener stock actual del producto
+        $stock_actual = $this->productoModel->obtenerStockProducto($movimiento['id_producto']);
+        
+        $this->loadView('movimientos_inventario/modificar_otro_salida', [
+            'movimiento' => $movimiento,
+            'productos' => $productos,
+            'stock_actual' => $stock_actual
+        ]);
+    }
+    
+    public function actualizarOtroSalida()
+    {
+        $this->checkSession();
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('movimientos-inventario');
+            return;
+        }
+        
+        if (!isset($_POST['id'])) {
+            $_SESSION['error'] = [
+                'title' => 'Error',
+                'text' => 'ID de movimiento no especificado',
+                'icon' => 'error'
+            ];
+            $this->redirect('movimientos-inventario');
+            return;
+        }
+        
+        $id = (int)$_POST['id'];
+        
+        // Verificar que el movimiento existe y es válido
+        $movimiento_original = $this->model->obtenerMovimientoPorId($id);
+        
+        if (!$movimiento_original) {
+            $_SESSION['error'] = [
+                'title' => 'Error',
+                'text' => 'Movimiento no encontrado',
+                'icon' => 'error'
+            ];
+            $this->redirect('movimientos-inventario');
+            return;
+        }
+        
+        if ($movimiento_original['tipo_movimiento'] !== 'SALIDA' || $movimiento_original['subtipo_movimiento'] !== 'OTRO') {
+            $_SESSION['error'] = [
+                'title' => 'Error',
+                'text' => 'Este movimiento no es una salida de tipo OTRO',
+                'icon' => 'error'
+            ];
+            $this->redirect('movimientos-inventario&method=modificarOtroSalida&id=' . $id);
+            return;
+        }
+        
+        if ($movimiento_original['estado'] !== 'Activo') {
+            $_SESSION['error'] = [
+                'title' => 'Error',
+                'text' => 'No se puede modificar un movimiento inactivo',
+                'icon' => 'error'
+            ];
+            $this->redirect('movimientos-inventario&method=modificarOtroSalida&id=' . $id);
+            return;
+        }
+        
+        try {
+            // Preparar datos para la modificación
+            $data = [
+                'id_producto' => (int)$_POST['id_producto'],
+                'cantidad' => (float)$_POST['cantidad'],
+                'precio_unitario' => (float)$_POST['precio_unitario'],
+                'fecha' => $_POST['fecha'],
+                'observaciones' => $_POST['observaciones'] ?? null,
+                'id_usuario' => $_SESSION['user_id']
+            ];
+
+            // Validaciones básicas
+            if ($data['cantidad'] <= 0) {
+                $_SESSION['error'] = [
+                    'title' => 'Error',
+                    'text' => 'La cantidad debe ser mayor a cero',
+                    'icon' => 'error'
+                ];
+                $this->redirect('movimientos-inventario&method=modificarOtroSalida&id=' . $id);
+                return;
+            }
+
+            if ($data['precio_unitario'] <= 0) {
+                $_SESSION['error'] = [
+                    'title' => 'Error',
+                    'text' => 'El precio unitario debe ser mayor a cero',
+                    'icon' => 'error'
+                ];
+                $this->redirect('movimientos-inventario&method=modificarOtroSalida&id=' . $id);
+                return;
+            }
+
+            // Modificar la salida OTRO con ajuste
+            if ($this->model->modificarOtroSalidaConAjuste($id, $data)) {
+                $_SESSION['mensaje'] = [
+                    'title' => 'Éxito',
+                    'text' => 'Salida OTRO modificada correctamente. Se ha creado un nuevo registro de ajuste.',
+                    'icon' => 'success'
+                ];
+                $this->redirect('movimientos-inventario');
+            } else {
+                $_SESSION['error'] = [
+                    'title' => 'Error',
+                    'text' => 'Error al modificar salida OTRO: ' . implode(', ', $this->model->getErrors()),
+                    'icon' => 'error'
+                ];
+                $this->redirect('movimientos-inventario&method=modificarOtroSalida&id=' . $id);
+            }
+        } catch (Exception $e) {
+            $_SESSION['error'] = [
+                'title' => 'Error',
+                'text' => 'Error al procesar la modificación: ' . $e->getMessage(),
+                'icon' => 'error'
+            ];
+            $this->redirect('movimientos-inventario&method=modificarOtroSalida&id=' . $id);
         }
     }
 

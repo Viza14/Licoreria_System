@@ -1,7 +1,12 @@
 <?php
 // 1. Definir constantes básicas
-define('BASE_URL', 'http://localhost/licoreria/');
 define('ROOT_PATH', __DIR__ . DIRECTORY_SEPARATOR);
+
+// Cargar configuración de URL
+require_once ROOT_PATH . 'config/url_config.php';
+
+// Definir la URL base usando la configuración
+define('BASE_URL', getBaseUrl());
 
 // 2. Cargar archivos esenciales
 require_once ROOT_PATH . 'config/database.php';
@@ -250,6 +255,10 @@ try {
                 $controller->modificarOtroEntrada();
             } elseif ($method === 'actualizarOtroEntrada') {
                 $controller->actualizarOtroEntrada();
+            } elseif ($method === 'modificarOtroSalida' && $id) {
+                $controller->modificarOtroSalida();
+            } elseif ($method === 'actualizarOtroSalida') {
+                $controller->actualizarOtroSalida();
             } elseif ($method === 'registrarOtro') {
                 $controller->registrarOtro();
             } elseif ($method === 'guardarOtro') {

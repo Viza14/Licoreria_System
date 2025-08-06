@@ -4,11 +4,11 @@
         <!--breadcrumbs start-->
         <div class="row">
             <div class="col-lg-12">
-                <h3 class="page-header"><i class="fa fa-chart-bar"></i> Resumen de Movimientos</h3>
+                <h3 class="page-header"><i class="fa fa-bar-chart"></i> Resumen de Movimientos</h3>
                 <ol class="breadcrumb">
                     <li><i class="fa fa-home"></i><a href="<?php echo BASE_URL; ?>">Inicio</a></li>
                     <li><i class="fa fa-exchange"></i><a href="<?= BASE_URL ?>index.php?action=movimientos-inventario">Movimientos</a></li>
-                    <li><i class="fa fa-chart-bar"></i> Resumen</li>
+                    <li><i class="fa fa-bar-chart"></i> Resumen</li>
                 </ol>
             </div>
         </div>
@@ -65,7 +65,7 @@
             </div>
             <div class="col-lg-3 col-md-3 col-sm-12 col-xs-12">
                 <div class="info-box green-bg">
-                    <i class="fa fa-truck-loading"></i>
+                    <i class="fa fa-truck"></i>
                     <div class="count"><?= $resumen_general['total_entradas'] ?></div>
                     <div class="title">Total Entradas</div>
                 </div>
@@ -79,7 +79,7 @@
             </div>
             <div class="col-lg-3 col-md-3 col-sm-12 col-xs-12">
                 <div class="info-box blue-bg">
-                    <i class="fa fa-money-bill"></i>
+                    <i class="fa fa-money"></i>
                     <div class="count">$<?= number_format($resumen_general['valor_inventario'], 2) ?></div>
                     <div class="title">Valor del Inventario</div>
                 </div>

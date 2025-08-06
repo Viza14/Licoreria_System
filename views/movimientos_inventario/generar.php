@@ -323,8 +323,8 @@ function buscarMovimiento() {
                     // Ir al formulario de modificar compra usando el ID del movimiento
                     window.location.href = '<?= BASE_URL ?>index.php?action=movimientos-inventario&method=modificarCompra&id=' + movimiento.id;
                 } else if (movimiento.subtipo_movimiento === 'OTRO') {
-                    // Ir al formulario de registrar otro (entrada) con los datos cargados
-                    window.location.href = '<?= BASE_URL ?>index.php?action=movimientos-inventario&method=registrarOtro&tipo=ENTRADA&editar_id=' + movimiento.id;
+                    // Ir al formulario específico de modificar entrada OTRO
+                    window.location.href = '<?= BASE_URL ?>index.php?action=movimientos-inventario&method=modificarOtroEntrada&id=' + movimiento.id;
                 } else {
                     // Para otros tipos de entrada, usar el formulario de editar genérico
                     window.location.href = '<?= BASE_URL ?>index.php?action=movimientos-inventario&method=editar&id=' + movimiento.id;
@@ -335,8 +335,8 @@ function buscarMovimiento() {
                     // Ir al formulario de modificar pérdida
                     window.location.href = '<?= BASE_URL ?>index.php?action=movimientos-inventario&method=modificarPerdida&id=' + movimiento.id;
                 } else if (movimiento.subtipo_movimiento === 'OTRO') {
-                    // Ir al formulario de registrar otro (salida) con los datos cargados
-                    window.location.href = '<?= BASE_URL ?>index.php?action=movimientos-inventario&method=registrarOtro&tipo=SALIDA&editar_id=' + movimiento.id;
+                    // Ir al formulario específico de modificar salida OTRO
+                    window.location.href = '<?= BASE_URL ?>index.php?action=movimientos-inventario&method=modificarOtroSalida&id=' + movimiento.id;
                 } else {
                     // Para otros tipos de salida, usar el formulario de editar genérico
                     window.location.href = '<?= BASE_URL ?>index.php?action=movimientos-inventario&method=editar&id=' + movimiento.id;

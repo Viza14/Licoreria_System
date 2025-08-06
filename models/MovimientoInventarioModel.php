@@ -131,7 +131,17 @@ class MovimientoInventarioModel
                         COALESCE(mi.observaciones, 'Sin observaciones')
                   END as observaciones_completas
                   " . $baseQuery . $whereClause . "
-                  ORDER BY mi.fecha_movimiento DESC
+                  ORDER BY 
+                    mi.fecha_movimiento DESC,
+                    CASE 
+                      WHEN mi.id_movimiento_original IS NOT NULL THEN mi.id_movimiento_original
+                      ELSE mi.id 
+                    END DESC,
+                    CASE 
+                      WHEN mi.id_movimiento_original IS NULL THEN 0
+                      ELSE 1 
+                    END ASC,
+                    mi.id ASC
                   LIMIT ? OFFSET ?";
         
         $stmt = $this->db->prepare($query);
@@ -264,7 +274,17 @@ class MovimientoInventarioModel
                         COALESCE(mi.observaciones, 'Sin observaciones')
                   END as observaciones_completas
                   " . $baseQuery . $whereClause . "
-                  ORDER BY mi.fecha_movimiento DESC";
+                  ORDER BY 
+                    mi.fecha_movimiento DESC,
+                    CASE 
+                      WHEN mi.id_movimiento_original IS NOT NULL THEN mi.id_movimiento_original
+                      ELSE mi.id 
+                    END DESC,
+                    CASE 
+                      WHEN mi.id_movimiento_original IS NULL THEN 0
+                      ELSE 1 
+                    END ASC,
+                    mi.id ASC";
         
         $stmt = $this->db->prepare($query);
         foreach ($params as $i => $param) {
@@ -1879,5 +1899,87 @@ public function modificarVentaConAjuste($id_venta, $data)
         
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return $result ? $result['cedula'] : $id_proveedor;
+    }
+
+    public function modificarOtroSalidaConAjuste($id_salida, $data)
+    {
+        try {
+            $this->db->beginTransaction();
+
+            // 1. Obtener la salida OTRO original
+            $salida_original = $this->obtenerMovimientoPorId($id_salida);
+            if (!$salida_original || $salida_original['tipo_movimiento'] !== 'SALIDA' || $salida_original['subtipo_movimiento'] !== 'OTRO') {
+                throw new PDOException("Salida OTRO no encontrada o no válida");
+            }
+
+            if ($salida_original['id_estatus'] != 1) {
+                throw new PDOException("No se puede modificar una salida OTRO que ya ha sido ajustada");
+            }
+
+            // 2. Marcar la salida original como inactiva
+            $query = "UPDATE movimientos_inventario SET id_estatus = 2 WHERE id = :id";
+            $stmt = $this->db->prepare($query);
+            $stmt->bindParam(":id", $id_salida);
+            $stmt->execute();
+
+            // 3. Generar número de transacción para el ajuste
+            $query_txn = "SELECT GenerarNumeroTransaccion() as numero_transaccion";
+            $stmt_txn = $this->db->prepare($query_txn);
+            $stmt_txn->execute();
+            $result_txn = $stmt_txn->fetch(PDO::FETCH_ASSOC);
+            $numero_transaccion_ajuste = $result_txn['numero_transaccion'];
+
+            // 4. Crear nueva salida OTRO como ajuste
+            $observaciones_ajuste = "AJUSTE - Modificación de salida OTRO #{$salida_original['numero_transaccion']}";
+            if (!empty($data['observaciones'])) {
+                $observaciones_ajuste .= " - " . $data['observaciones'];
+            }
+
+            $query = "INSERT INTO movimientos_inventario (
+                id_producto, tipo_movimiento, subtipo_movimiento, cantidad, precio_unitario,
+                numero_transaccion, fecha_movimiento, observaciones, id_usuario, 
+                id_movimiento_original, id_estatus
+            ) VALUES (
+                :id_producto, 'SALIDA', 'OTRO', :cantidad, :precio_unitario,
+                :numero_transaccion, :fecha_movimiento, :observaciones, :id_usuario,
+                :id_movimiento_original, 1
+            )";
+
+            $stmt = $this->db->prepare($query);
+            $stmt->bindParam(":id_producto", $data['id_producto']);
+            $stmt->bindParam(":cantidad", $data['cantidad']);
+            $stmt->bindParam(":precio_unitario", $data['precio_unitario']);
+            $stmt->bindParam(":numero_transaccion", $numero_transaccion_ajuste);
+            $stmt->bindParam(":fecha_movimiento", $data['fecha']);
+            $stmt->bindParam(":observaciones", $observaciones_ajuste);
+            $stmt->bindParam(":id_usuario", $data['id_usuario']);
+            $stmt->bindParam(":id_movimiento_original", $id_salida);
+            $stmt->execute();
+
+            // 5. Calcular diferencia y ajustar stock
+            $cantidad_original = $salida_original['cantidad'];
+            $cantidad_nueva = $data['cantidad'];
+            
+            // Para salidas OTRO: diferencia = cantidad_original - cantidad_nueva
+            // Si la nueva cantidad es menor, devolvemos stock (positivo)
+            // Si la nueva cantidad es mayor, quitamos más stock (negativo)
+            $diferencia = $cantidad_original - $cantidad_nueva;
+
+            if ($diferencia != 0) {
+                $query = "UPDATE producto SET cantidad = cantidad + :diferencia WHERE id = :id_producto";
+                $stmt = $this->db->prepare($query);
+                $stmt->bindParam(":diferencia", $diferencia);
+                $stmt->bindParam(":id_producto", $data['id_producto']);
+                $stmt->execute();
+            }
+
+            $this->db->commit();
+            return true;
+
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            $this->errors[] = "Error al modificar salida OTRO: " . $e->getMessage();
+            return false;
+        }
     }
 }

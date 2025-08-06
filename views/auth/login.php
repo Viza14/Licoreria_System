@@ -1,6 +1,8 @@
 <?php
+// Cargar configuración de URL si no está definida
 if (!defined('BASE_URL')) {
-    define('BASE_URL', '/licoreria/'); // Ajusta esta ruta según tu configuración
+    require_once __DIR__ . '/../../config/url_config.php';
+    define('BASE_URL', getBaseUrl());
 }
 ?>
 <!DOCTYPE html>

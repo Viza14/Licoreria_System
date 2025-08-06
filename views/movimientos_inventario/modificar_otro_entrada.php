@@ -6,26 +6,37 @@ if (!isset($movimiento) || !isset($productos)) {
 }
 ?>
 
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">
-                        <i class="fas fa-edit"></i>
-                        Modificar Movimiento OTRO - Entrada
-                    </h3>
-                    <div class="card-tools">
-                        <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario" class="btn btn-secondary btn-sm">
-                            <i class="fas fa-arrow-left"></i> Volver
-                        </a>
-                    </div>
-                </div>
+<!--main content start-->
+<section id="main-content">
+    <section class="wrapper">
+        <!--breadcrumbs start-->
+        <div class="row">
+            <div class="col-lg-12">
+                <h3 class="page-header"><i class="fa fa-edit"></i> Modificar Movimiento OTRO - Entrada</h3>
+                <ol class="breadcrumb">
+                    <li><i class="fa fa-home"></i><a href="<?php echo BASE_URL; ?>">Inicio</a></li>
+                    <li><i class="fa fa-exchange"></i><a href="<?php echo BASE_URL; ?>index.php?action=movimientos-inventario">Movimientos de Inventario</a></li>
+                    <li><i class="fa fa-edit"></i> Modificar OTRO - Entrada</li>
+                </ol>
+            </div>
+        </div>
+        <!--breadcrumbs end-->
 
-                <div class="card-body">
+        <div class="row">
+            <div class="col-lg-12">
+                <section class="panel">
+                    <header class="panel-heading">
+                        Modificar Movimiento OTRO - Entrada
+                        <span class="tools pull-right">
+                            <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario" class="btn btn-default btn-sm">
+                                <i class="fa fa-arrow-left"></i> Volver
+                            </a>
+                        </span>
+                    </header>
+                    <div class="panel-body">
                     <!-- Información del movimiento original -->
                     <div class="alert alert-info">
-                        <h5><i class="fas fa-info-circle"></i> Información del Movimiento Original</h5>
+                        <h4><i class="fa fa-info-circle"></i> Información del Movimiento Original</h4>
                         <div class="row">
                             <div class="col-md-3">
                                 <strong>Número de Transacción:</strong><br>
@@ -54,16 +65,14 @@ if (!isset($movimiento) || !isset($productos)) {
                         <?php endif; ?>
                     </div>
 
-                    <!-- Formulario de modificación -->
-                    <form action="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=actualizarOtroEntrada" method="POST" id="formModificarOtroEntrada">
-                        <input type="hidden" name="id" value="<?= $movimiento['id'] ?>">
-                        
-                        <div class="row">
-                            <!-- Selector de producto -->
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="id_producto">Producto <span class="text-danger">*</span></label>
-                                    <select class="form-control select2" id="id_producto" name="id_producto" required onchange="actualizarDatosProducto()">
+                        <!-- Formulario de modificación -->
+                        <form class="form-horizontal" action="<?= BASE_URL ?>index.php?action=movimientos-inventario&method=actualizarOtroEntrada" method="POST" id="formModificarOtroEntrada">
+                            <input type="hidden" name="id" value="<?= $movimiento['id'] ?>">
+                            
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Producto <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
+                                    <select class="form-control" id="id_producto" name="id_producto" required onchange="actualizarDatosProducto()">
                                         <option value="">Seleccione un producto</option>
                                         <?php foreach ($productos as $producto): ?>
                                             <option value="<?= $producto['id'] ?>" 
@@ -78,45 +87,34 @@ if (!isset($movimiento) || !isset($productos)) {
                                 </div>
                             </div>
 
-                            <!-- Stock actual -->
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Stock Actual</label>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Stock Actual</label>
+                                <div class="col-sm-10">
                                     <div class="input-group">
                                         <input type="text" class="form-control" id="stock_actual" 
                                                value="<?= isset($stock_actual) ? number_format($stock_actual, 2) : '0.00' ?>" readonly>
-                                        <div class="input-group-append">
-                                            <span class="input-group-text">unidades</span>
-                                        </div>
+                                        <span class="input-group-addon">unidades</span>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="row">
-                            <!-- Cantidad -->
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="cantidad">Cantidad <span class="text-danger">*</span></label>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Cantidad <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
                                     <div class="input-group">
                                         <input type="number" class="form-control" id="cantidad" name="cantidad" 
                                                value="<?= $movimiento['cantidad'] ?>" 
                                                step="0.01" min="0.01" required>
-                                        <div class="input-group-append">
-                                            <span class="input-group-text">unidades</span>
-                                        </div>
+                                        <span class="input-group-addon">unidades</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Precio unitario -->
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="precio_unitario">Precio Unitario <span class="text-danger">*</span></label>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Precio Unitario <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
                                     <div class="input-group">
-                                        <div class="input-group-prepend">
-                                            <span class="input-group-text">$</span>
-                                        </div>
+                                        <span class="input-group-addon">Bs</span>
                                         <input type="number" class="form-control" id="precio_unitario" name="precio_unitario" 
                                                value="<?= $movimiento['precio_unitario'] ?>" 
                                                step="0.01" min="0.01" required>
@@ -124,80 +122,67 @@ if (!isset($movimiento) || !isset($productos)) {
                                 </div>
                             </div>
 
-                            <!-- Fecha -->
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="fecha">Fecha y Hora <span class="text-danger">*</span></label>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Fecha y Hora <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
                                     <input type="datetime-local" class="form-control" id="fecha" name="fecha" 
                                            value="<?= date('Y-m-d\TH:i', strtotime($movimiento['fecha_movimiento'])) ?>" required>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Observaciones -->
-                        <div class="row">
-                            <div class="col-12">
-                                <div class="form-group">
-                                    <label for="observaciones">Observaciones</label>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Observaciones</label>
+                                <div class="col-sm-10">
                                     <textarea class="form-control" id="observaciones" name="observaciones" rows="3" 
                                               placeholder="Ingrese observaciones adicionales sobre la modificación..."><?= htmlspecialchars($movimiento['observaciones'] ?? '') ?></textarea>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Total -->
-                        <div class="row">
-                            <div class="col-md-6 offset-md-6">
-                                <div class="card bg-light">
-                                    <div class="card-body">
-                                        <h5>Total del Movimiento</h5>
-                                        <div class="d-flex justify-content-between">
-                                            <span>Cantidad:</span>
-                                            <span id="total_cantidad">0.00</span>
-                                        </div>
-                                        <div class="d-flex justify-content-between">
-                                            <span>Precio Unitario:</span>
-                                            <span id="total_precio">$0.00</span>
-                                        </div>
-                                        <hr>
-                                        <div class="d-flex justify-content-between">
-                                            <strong>Total:</strong>
-                                            <strong id="total_general">$0.00</strong>
+                            <!-- Total -->
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Total del Movimiento</label>
+                                <div class="col-sm-10">
+                                    <div class="panel panel-default">
+                                        <div class="panel-body">
+                                            <div class="row">
+                                                <div class="col-sm-6">
+                                                    <strong>Cantidad:</strong> <span id="total_cantidad">0.00</span> unidades
+                                                </div>
+                                                <div class="col-sm-6">
+                                                    <strong>Precio Unitario:</strong> Bs <span id="total_precio">0.00</span>
+                                                </div>
+                                            </div>
+                                            <hr>
+                                            <div class="text-center">
+                                                <h4><strong>Total: Bs <span id="total_general">0.00</span></strong></h4>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Botones -->
-                        <div class="row mt-3">
-                            <div class="col-12">
-                                <div class="float-right">
-                                    <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario" class="btn btn-secondary">
-                                        <i class="fas fa-times"></i> Cancelar
-                                    </a>
+                            <!-- Botones -->
+                            <div class="form-group">
+                                <div class="col-sm-offset-2 col-sm-10">
                                     <button type="submit" class="btn btn-primary">
-                                        <i class="fas fa-save"></i> Guardar Modificación
+                                        <i class="fa fa-save"></i> Guardar Modificación
                                     </button>
+                                    <a href="<?= BASE_URL ?>index.php?action=movimientos-inventario" class="btn btn-default">
+                                        <i class="fa fa-times"></i> Cancelar
+                                    </a>
                                 </div>
                             </div>
-                        </div>
-                    </form>
-                </div>
+                        </form>
+                    </div>
+                </section>
             </div>
         </div>
-    </div>
-</div>
+    </section>
+</section>
+<!--main content end-->
 
 <script>
 $(document).ready(function() {
-    // Inicializar Select2
-    $('.select2').select2({
-        theme: 'bootstrap4',
-        placeholder: 'Seleccione un producto',
-        allowClear: true
-    });
-
     // Calcular total inicial
     calcularTotal();
 
@@ -234,8 +219,8 @@ function calcularTotal() {
     const total = cantidad * precio;
     
     document.getElementById('total_cantidad').textContent = cantidad.toFixed(2);
-    document.getElementById('total_precio').textContent = '$' + precio.toFixed(2);
-    document.getElementById('total_general').textContent = '$' + total.toFixed(2);
+    document.getElementById('total_precio').textContent = precio.toFixed(2);
+    document.getElementById('total_general').textContent = total.toFixed(2);
 }
 
 // Validación del formulario

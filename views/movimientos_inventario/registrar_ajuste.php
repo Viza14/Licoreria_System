@@ -344,6 +344,34 @@ $(document).ready(function() {
                         return;
                     }
                     
+                    // Verificar si es una entrada OTRO y redirigir
+                    if (response.es_otro_entrada) {
+                        Swal.fire({
+                            title: '¡Entrada OTRO Encontrada!',
+                            text: response.message,
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            window.location.href = response.redirect_url;
+                        });
+                        return;
+                    }
+                    
+                    // Verificar si es una salida OTRO y redirigir
+                    if (response.es_otro_salida) {
+                        Swal.fire({
+                            title: '¡Salida OTRO Encontrada!',
+                            text: response.message,
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            window.location.href = response.redirect_url;
+                        });
+                        return;
+                    }
+                    
                     // Mostrar información de la transacción
                     $('#info_numero_transaccion').text(response.movimiento.numero_transaccion);
                     $('#info_tipo_movimiento').text(response.movimiento.tipo_movimiento);

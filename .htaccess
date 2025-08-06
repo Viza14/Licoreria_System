@@ -2,6 +2,24 @@
     php_value date.timezone "America/Caracas"
 </IfModule>
 
+# Configuración de tipos MIME para fuentes
+<IfModule mod_mime.c>
+    AddType application/vnd.ms-fontobject .eot
+    AddType font/truetype .ttf
+    AddType font/opentype .otf
+    AddType application/font-woff .woff
+    AddType application/font-woff2 .woff2
+    AddType image/svg+xml .svg
+</IfModule>
+
+# Configuración de headers para fuentes
+<IfModule mod_headers.c>
+    <FilesMatch "\.(eot|ttf|otf|woff|woff2|svg)$">
+        Header set Access-Control-Allow-Origin "*"
+        Header set Cache-Control "max-age=31536000, public"
+    </FilesMatch>
+</IfModule>
+
 RewriteEngine On
 RewriteBase /licoreria/
 
