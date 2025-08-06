@@ -3,6 +3,24 @@ include 'views/layouts/header.php';
 include 'views/layouts/sidebar.php';
 ?>
 
+<!-- Mensaje de éxito -->
+<?php if (isset($_SESSION['success'])): ?>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            Swal.fire({
+                icon: '<?= $_SESSION['success']['icon'] ?>',
+                title: '<?= addslashes($_SESSION['success']['title']) ?>',
+                text: '<?= addslashes($_SESSION['success']['text']) ?>',
+                confirmButtonColor: '#f27c1f',
+                timer: 3000,
+                timerProgressBar: true,
+                showConfirmButton: false
+            });
+        });
+    </script>
+    <?php unset($_SESSION['success']); ?>
+<?php endif; ?>
+
 <!--main content start-->
 <section id="main-content">
     <section class="wrapper">

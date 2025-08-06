@@ -33,6 +33,13 @@ class AuthController
                 $_SESSION['user_rol'] = $usuario['id_rol'];
                 $_SESSION['last_activity'] = time(); // Marcar tiempo de última actividad
 
+                // Mensaje de éxito para mostrar en el dashboard
+                $_SESSION['success'] = [
+                    'title' => '¡Bienvenido!',
+                    'text' => 'Has iniciado sesión correctamente',
+                    'icon' => 'success'
+                ];
+
                 $this->usuarioModel->actualizarUltimoLogin($usuario['id']);
 
                 header("Location: " . BASE_URL . "index.php?action=dashboard");
