@@ -104,24 +104,41 @@ class ReporteController
         
         $filtros = [];
         $pagina = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
-        $por_pagina = 10;
+        $por_pagina = isset($_GET['por_pagina']) ? (int)$_GET['por_pagina'] : 20;
 
-        // Obtener filtros de POST o GET
+        // Obtener filtros de POST y GET
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $filtros = [
-                'fecha_inicio' => $_POST['fecha_inicio'] ?? null,
-                'fecha_fin' => $_POST['fecha_fin'] ?? null,
-                'id_producto' => $_POST['id_producto'] ?? null
-            ];
-            // Redirigir a GET con los filtros
-            $queryString = http_build_query(['filtros' => $filtros]);
-            header("Location: " . BASE_URL . "index.php?action=reportes&method=detalleVentas&" . $queryString);
-            exit();
-        } elseif (isset($_GET['filtros'])) {
-            $filtros = $_GET['filtros'];
+            if (!empty($_POST['fecha_inicio'])) {
+                $filtros['fecha_inicio'] = $_POST['fecha_inicio'];
+            }
+            if (!empty($_POST['fecha_fin'])) {
+                $filtros['fecha_fin'] = $_POST['fecha_fin'];
+            }
+            if (!empty($_POST['id_producto'])) {
+                $filtros['id_producto'] = $_POST['id_producto'];
+            }
+        } else {
+            if (isset($_GET['fecha_inicio']) && !empty($_GET['fecha_inicio'])) {
+                $filtros['fecha_inicio'] = $_GET['fecha_inicio'];
+            }
+            if (isset($_GET['fecha_fin']) && !empty($_GET['fecha_fin'])) {
+                $filtros['fecha_fin'] = $_GET['fecha_fin'];
+            }
+            if (isset($_GET['id_producto']) && !empty($_GET['id_producto'])) {
+                $filtros['id_producto'] = $_GET['id_producto'];
+            }
         }
         
-        $resultado = $this->model->generarDetalleVentas($filtros, $pagina, $por_pagina);
+        // Si hay búsqueda dinámica (parámetro especial), obtener todos los registros
+        $obtener_todos = isset($_GET['busqueda_dinamica']) && $_GET['busqueda_dinamica'] == '1';
+        
+        // Obtener datos del modelo
+        if ($obtener_todos) {
+            // Para búsqueda dinámica, obtener todos los registros sin paginación
+            $resultado = $this->model->generarDetalleVentas($filtros, 1, 10000);
+        } else {
+            $resultado = $this->model->generarDetalleVentas($filtros, $pagina, $por_pagina);
+        }
         $productos = $this->productoModel->obtenerProductosActivos();
         
         $this->loadView('reportes/detalle_ventas', [
@@ -139,16 +156,20 @@ class ReporteController
         $this->checkSession();
         
         $filtros = [];
+        $periodo = 'mensual'; // Por defecto mensual
+        
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Validate and sanitize dates
             $fechaInicio = filter_input(INPUT_POST, 'fecha_inicio', FILTER_SANITIZE_STRING);
             $fechaFin = filter_input(INPUT_POST, 'fecha_fin', FILTER_SANITIZE_STRING);
+            $periodo = filter_input(INPUT_POST, 'periodo', FILTER_SANITIZE_STRING) ?: 'mensual';
             
             // Validate date format
             if ($this->validateDate($fechaInicio) && $this->validateDate($fechaFin)) {
                 $filtros = [
                     'fecha_inicio' => $fechaInicio,
-                    'fecha_fin' => $fechaFin
+                    'fecha_fin' => $fechaFin,
+                    'periodo' => $periodo
                 ];
             } else {
                 $_SESSION['error'] = [
@@ -157,13 +178,28 @@ class ReporteController
                     'icon' => 'error'
                 ];
             }
+        } elseif (isset($_GET['periodo'])) {
+            $periodo = $_GET['periodo'];
+            $filtros['periodo'] = $periodo;
         }
         
-        $reporte = $this->model->obtenerResumenVentas($filtros);
+        // Obtener datos según el período seleccionado
+        switch ($periodo) {
+            case 'semanal':
+                $reporte = $this->model->obtenerResumenVentasSemanal($filtros);
+                break;
+            case 'diario':
+                $reporte = $this->model->obtenerResumenVentasDiario($filtros);
+                break;
+            default:
+                $reporte = $this->model->obtenerResumenVentas($filtros);
+                break;
+        }
         
         $this->loadView('reportes/resumen_ventas', [
             'reporte' => $reporte,
-            'filtros' => $filtros
+            'filtros' => $filtros,
+            'periodo' => $periodo
         ]);
     }
 

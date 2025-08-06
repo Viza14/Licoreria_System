@@ -239,6 +239,8 @@ class ReporteModel
                 $params[':id_producto'] = $filtros['id_producto'];
             }
 
+
+
             // Ejecutar query para contar registros
             $stmtCount = $this->db->prepare($queryCount);
             $stmtCount->execute($params);
@@ -310,6 +312,85 @@ class ReporteModel
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             $this->errors[] = "Error al generar resumen de ventas: " . $e->getMessage();
+            return false;
+        }
+    }
+
+    public function obtenerResumenVentasSemanal($filtros = [])
+    {
+        try {
+            $query = "SELECT 
+                        CONCAT(YEAR(v.fecha), '-W', LPAD(WEEK(v.fecha, 1), 2, '0')) as semana,
+                        DATE(DATE_SUB(v.fecha, INTERVAL WEEKDAY(v.fecha) DAY)) as inicio_semana,
+                        DATE(DATE_ADD(DATE_SUB(v.fecha, INTERVAL WEEKDAY(v.fecha) DAY), INTERVAL 6 DAY)) as fin_semana,
+                        COUNT(v.id) as total_ventas,
+                        SUM(v.monto_total) as monto_total,
+                        ROUND(AVG(v.monto_total), 2) as promedio_venta,
+                        MAX(v.monto_total) as venta_maxima,
+                        MIN(v.monto_total) as venta_minima
+                    FROM ventas v
+                    WHERE v.id_estatus = 1";
+
+            $params = [];
+            
+            if (!empty($filtros['fecha_inicio'])) {
+                $query .= " AND v.fecha >= :fecha_inicio";
+                $params[':fecha_inicio'] = $filtros['fecha_inicio'];
+            }
+
+            if (!empty($filtros['fecha_fin'])) {
+                $query .= " AND v.fecha <= :fecha_fin";
+                $params[':fecha_fin'] = $filtros['fecha_fin'];
+            }
+
+            $query .= " GROUP BY YEAR(v.fecha), WEEK(v.fecha, 1)
+                      ORDER BY YEAR(v.fecha) DESC, WEEK(v.fecha, 1) DESC";
+
+            $stmt = $this->db->prepare($query);
+            $stmt->execute($params);
+
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            $this->errors[] = "Error al generar resumen semanal de ventas: " . $e->getMessage();
+            return false;
+        }
+    }
+
+    public function obtenerResumenVentasDiario($filtros = [])
+    {
+        try {
+            $query = "SELECT 
+                        DATE(v.fecha) as fecha,
+                        DAYNAME(v.fecha) as dia_semana,
+                        COUNT(v.id) as total_ventas,
+                        SUM(v.monto_total) as monto_total,
+                        ROUND(AVG(v.monto_total), 2) as promedio_venta,
+                        MAX(v.monto_total) as venta_maxima,
+                        MIN(v.monto_total) as venta_minima
+                    FROM ventas v
+                    WHERE v.id_estatus = 1";
+
+            $params = [];
+            
+            if (!empty($filtros['fecha_inicio'])) {
+                $query .= " AND v.fecha >= :fecha_inicio";
+                $params[':fecha_inicio'] = $filtros['fecha_inicio'];
+            }
+
+            if (!empty($filtros['fecha_fin'])) {
+                $query .= " AND v.fecha <= :fecha_fin";
+                $params[':fecha_fin'] = $filtros['fecha_fin'];
+            }
+
+            $query .= " GROUP BY DATE(v.fecha)
+                      ORDER BY fecha DESC";
+
+            $stmt = $this->db->prepare($query);
+            $stmt->execute($params);
+
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            $this->errors[] = "Error al generar resumen diario de ventas: " . $e->getMessage();
             return false;
         }
     }

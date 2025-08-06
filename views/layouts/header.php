@@ -82,7 +82,7 @@ if (!isset($_SESSION['user_id'])) {
         /* Botón de cerrar sesión */
         .logout {
              background-color: transparent !important;
-            color: white !important;
+            color: #6c757d !important;
             transition: background-color 0.3s ease, transform 0.2s ease;
         }
         .logout:hover {
