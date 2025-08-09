@@ -28,12 +28,7 @@
                                     <input type="text" class="form-control" name="descripcion" value="<?= htmlspecialchars($producto['descripcion']); ?>" required>
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label class="col-sm-2 control-label">Cantidad</label>
-                                <div class="col-sm-10">
-                                    <input type="number" class="form-control" name="cantidad" min="0" value="<?= $producto['cantidad']; ?>" required>
-                                </div>
-                            </div>
+                            <!-- Campo de cantidad removido - se maneja a través de entradas de productos -->
                             <div class="form-group">
                                 <label class="col-sm-2 control-label">Precio</label>
                                 <div class="col-sm-10">
@@ -126,7 +121,6 @@
         // Validar antes de enviar el formulario
         $('#formProducto').submit(function(e) {
             const descripcion = $('input[name="descripcion"]').val().trim();
-            const cantidad = $('input[name="cantidad"]').val();
             const precio = $('input[name="precio"]').val();
             const categoria = $('select[name="id_categoria"]').val();
 
@@ -135,16 +129,6 @@
                 Swal.fire({
                     title: 'Error',
                     text: 'La descripción del producto es requerida',
-                    icon: 'error'
-                });
-                return false;
-            }
-
-            if (cantidad < 0) {
-                e.preventDefault();
-                Swal.fire({
-                    title: 'Error',
-                    text: 'La cantidad no puede ser negativa',
                     icon: 'error'
                 });
                 return false;

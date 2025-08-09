@@ -26,9 +26,6 @@
                             <a href="<?php echo BASE_URL; ?>index.php?action=productos&method=crear" class="btn btn-primary btn-xs">
                                 <i class="fa fa-plus"></i> Nuevo Producto
                             </a>
-                            <a href="<?= BASE_URL ?>index.php?action=productos&method=registrarEntrada" class="btn btn-info btn-xs">
-                                <i class="fa fa-sign-in"></i> Entrada de Productos
-                            </a>
                             <?php endif; ?>
                         </div>
                     </header>

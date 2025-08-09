@@ -106,7 +106,7 @@ class ProductoController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data = [
                 'descripcion' => trim($_POST['descripcion']),
-                'cantidad' => (int)$_POST['cantidad'],
+                'cantidad' => 0, // Cantidad inicial en 0, se maneja por entradas
                 'precio' => (float)$_POST['precio'],
                 'id_categoria' => (int)$_POST['id_categoria'],
                 'id_estatus' => (int)$_POST['id_estatus']
@@ -135,7 +135,7 @@ class ProductoController
             if ($this->model->crearProducto($data)) {
                 $_SESSION['mensaje'] = [
                     'title' => 'Éxito',
-                    'text' => 'Producto creado exitosamente',
+                    'text' => 'Producto creado exitosamente. Recuerda registrar una entrada para agregar stock.',
                     'icon' => 'success'
                 ];
                 $this->redirect('productos');
@@ -176,9 +176,12 @@ class ProductoController
     {
         $this->checkSession();
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Obtener la cantidad actual del producto para mantenerla
+            $productoActual = $this->model->obtenerProductoPorId($id);
+            
             $data = [
                 'descripcion' => trim($_POST['descripcion']),
-                'cantidad' => (int)$_POST['cantidad'],
+                'cantidad' => $productoActual['cantidad'], // Mantener la cantidad actual
                 'precio' => (float)$_POST['precio'],
                 'id_categoria' => (int)$_POST['id_categoria'],
                 'id_estatus' => (int)$_POST['id_estatus']
